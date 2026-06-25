@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Xml.Linq;
 using SimplePatchToolCore;
 
 namespace UpdateManager.Core
@@ -13,17 +12,14 @@ namespace UpdateManager.Core
     /// </summary>
     public class ProjectService
     {
-        /// <summary>Файл настроек движка в корне проекта.</summary>
-        public const string EngineSettingsFile = "Settings.xml";
+        /// <summary>Файл настроек движка в корне проекта (источник истины — сам движок).</summary>
+        public const string EngineSettingsFile = PatchParameters.PROJECT_SETTINGS_FILENAME;
 
         /// <summary>Папка движка с версиями-билдами.</summary>
-        public const string VersionsFolder = "Versions";
+        public const string VersionsFolder = PatchParameters.PROJECT_VERSIONS_DIRECTORY;
 
         /// <summary>Папка движка с self-patcher'ом (для self-patching приложений).</summary>
         public const string SelfPatcherFolder = "SelfPatcher";
-
-        /// <summary>Элемент с именем проекта внутри Settings.xml движка.</summary>
-        private const string EngineNameElement = "Name";
 
         // Встроенный self-patcher лежит рядом с нашим exe (папка приложения\SelfPatcher),
         // куда его кладёт сборка (Content + CopyToOutputDirectory). Кладём его в каждый новый проект.
@@ -42,13 +38,16 @@ namespace UpdateManager.Core
             Directory.CreateDirectory(folder);
 
             // 1. Движок создаёт Settings.xml + папки Versions/ Output/ SelfPatcher/ Other/.
-            new ProjectManager(folder).CreateProject();
+            var manager = new ProjectManager(folder);
+            manager.CreateProject();
 
             // 2. Кладём self-patcher в SelfPatcher/ — без него self-patching приложение не применит патч.
             InstallSelfPatcher(folder);
 
-            // 3. Прописываем имя проекта в Settings.xml (по умолчанию движок ставит "NewProject").
-            SetEngineProjectName(folder, name);
+            // 3. Прописываем имя проекта через движковый ProjectInfo (по умолчанию там "NewProject").
+            var info = manager.LoadProjectInfo();
+            info.Name = name;
+            manager.SaveProjectInfo(info);
 
             // 4. Пишем наш файл проекта (updatemanager.project.xml).
             new ProjectMeta().Save(folder);
@@ -77,24 +76,30 @@ namespace UpdateManager.Core
             };
         }
 
-        // --- Settings.xml движка (элемент Name) ---
+        /// <summary>Есть ли уже папка такой версии в Versions/.</summary>
+        public bool VersionExists(string projectRoot, string version)
+        {
+            return Directory.Exists(Path.Combine(projectRoot, VersionsFolder, version));
+        }
+
+        /// <summary>
+        /// Поставить билд как версию: копирует папку-источник в Versions/&lt;версия&gt;.
+        /// Если такая версия уже есть — сначала удаляет её (чистая перезапись).
+        /// </summary>
+        public void StageBuild(string projectRoot, string buildSource, string version)
+        {
+            var dest = Path.Combine(projectRoot, VersionsFolder, version);
+            if (Directory.Exists(dest))
+                Directory.Delete(dest, recursive: true);
+
+            CopyDirectory(buildSource, dest);
+        }
+
+        // --- имя проекта (движковый ProjectInfo) ---
 
         private static string GetEngineProjectName(string folder)
         {
-            var root = XDocument.Load(Path.Combine(folder, EngineSettingsFile)).Root;
-            return (string)root.Element(EngineNameElement) ?? "";
-        }
-
-        private static void SetEngineProjectName(string folder, string name)
-        {
-            var path = Path.Combine(folder, EngineSettingsFile);
-            var doc = XDocument.Load(path);
-            var nameElement = doc.Root.Element(EngineNameElement);
-            if (nameElement == null)
-                doc.Root.Add(new XElement(EngineNameElement, name));
-            else
-                nameElement.Value = name;
-            doc.Save(path);
+            return new ProjectManager(folder).LoadProjectInfo().Name ?? "";
         }
 
         // --- self-patcher ---

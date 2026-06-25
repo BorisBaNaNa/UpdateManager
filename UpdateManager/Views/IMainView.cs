@@ -14,15 +14,21 @@ namespace UpdateManager.Views
         event EventHandler CreateProjectRequested;
         event EventHandler OpenProjectRequested;
         event EventHandler<string> OpenRecentRequested; // выбран недавний проект (путь)
+        event EventHandler BrowseBuildSourceRequested;  // нажата кнопка выбора папки билда
+        event EventHandler CreatePatchRequested;        // нажата кнопка "Создать патч"
 
         // Команды презентера к вью — обновить отображение.
         void RenderProject(UpdateProject project);
         void RenderNoProject();
         void RenderRecentProjects(IReadOnlyList<string> projectPaths);
+        void RenderBuildSource(string sourcePath, string mainExecutable, string version);
 
         // Диалоги: за UI отвечает вью, презентер только просит результат.
         string BrowseForFolder(string description);   // null = пользователь отменил
         string PromptProjectName(string defaultName); // null = пользователь отменил
+        string ConfirmVersion(string detectedVersion); // подтверждение/ввод версии; null = отмена
+        bool Confirm(string message);                  // да/нет
         void ShowError(string message);
+        void ShowPatchProgress(PatchBuilder builder);  // модальное окно сборки
     }
 }

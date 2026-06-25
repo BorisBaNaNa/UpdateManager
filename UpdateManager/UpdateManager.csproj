@@ -53,9 +53,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Core\PatchBuilder.cs" />
     <Compile Include="Core\ProjectMeta.cs" />
     <Compile Include="Core\ProjectService.cs" />
     <Compile Include="Core\RecentProjectsStore.cs" />
+    <Compile Include="Core\VersionDetector.cs" />
+    <Compile Include="Core\VersionRules.cs" />
     <Compile Include="Core\ProjectVersion.cs" />
     <Compile Include="Core\UpdateProject.cs" />
     <Compile Include="Forms\MainForm.cs">
@@ -63,6 +66,12 @@
     </Compile>
     <Compile Include="Forms\MainForm.Designer.cs">
       <DependentUpon>MainForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\PatchProgressForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\PatchProgressForm.Designer.cs">
+      <DependentUpon>PatchProgressForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Presenters\MainPresenter.cs" />
     <Compile Include="Program.cs" />

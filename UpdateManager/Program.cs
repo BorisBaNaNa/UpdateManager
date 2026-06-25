@@ -21,7 +21,7 @@ namespace UpdateManager
 
             // Презентер в конструкторе подписывается на события формы и дальше живёт,
             // пока жива форма (она держит его через эти подписки) — отдельная ссылка не нужна.
-            new MainPresenter(view, new ProjectService(), new RecentProjectsStore());
+            new MainPresenter(view, new ProjectService(), new RecentProjectsStore(), new VersionDetector());
 
             Application.Run(view);
         }
