@@ -231,6 +231,16 @@ namespace UpdateManager.Presenters
                 return;
             }
 
+            // Защита: BaseDownloadURL запекается в патч при сборке. Пустой — соберётся молча,
+            // но клиент не сможет скачать файлы (битые ссылки). Блокируем заранее.
+            if ((_service.LoadSettings(_project.RootPath).BaseDownloadURL ?? "").Trim().Length == 0)
+            {
+                _view.ShowError("Не задан BaseDownloadURL.\n" +
+                    "Он запекается в патч при сборке — без него клиент не скачает файлы.\n" +
+                    "Укажите его в настройках проекта и соберите снова.");
+                return;
+            }
+
             // C — подтверждение версии (всегда, даже если определили сами).
             var detected = _detector.Detect(source, _project.Name, _project.Meta.MainExecutable);
             var version = _view.ConfirmVersion(detected.Version);
