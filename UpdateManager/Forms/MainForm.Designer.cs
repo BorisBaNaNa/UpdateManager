@@ -130,7 +130,7 @@ namespace UpdateManager.Forms
             this.grpVersions.Controls.Add(this.listViewVersions);
             this.grpVersions.Location = new System.Drawing.Point(12, 58);
             this.grpVersions.Name = "grpVersions";
-            this.grpVersions.Size = new System.Drawing.Size(340, 360);
+            this.grpVersions.Size = new System.Drawing.Size(354, 360);
             this.grpVersions.TabIndex = 2;
             this.grpVersions.TabStop = false;
             this.grpVersions.Text = "Версии (из Versions/)";
@@ -148,7 +148,7 @@ namespace UpdateManager.Forms
             this.listViewVersions.HideSelection = false;
             this.listViewVersions.Location = new System.Drawing.Point(10, 22);
             this.listViewVersions.Name = "listViewVersions";
-            this.listViewVersions.Size = new System.Drawing.Size(320, 326);
+            this.listViewVersions.Size = new System.Drawing.Size(338, 326);
             this.listViewVersions.TabIndex = 0;
             this.listViewVersions.UseCompatibleStateImageBehavior = false;
             this.listViewVersions.View = System.Windows.Forms.View.Details;
@@ -166,7 +166,7 @@ namespace UpdateManager.Forms
             // colDelivered
             // 
             this.colDelivered.Text = "Доставлено";
-            this.colDelivered.Width = 90;
+            this.colDelivered.Width = 105;
             // 
             // lblSource
             // 
@@ -249,9 +249,9 @@ namespace UpdateManager.Forms
             this.btnVerify.TabIndex = 10;
             this.btnVerify.Text = "Проверить";
             this.btnVerify.UseVisualStyleBackColor = true;
-            //
+            // 
             // btnOpenInExplorer
-            //
+            // 
             this.btnOpenInExplorer.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.btnOpenInExplorer.Enabled = false;
             this.btnOpenInExplorer.Location = new System.Drawing.Point(436, 30);
@@ -260,9 +260,9 @@ namespace UpdateManager.Forms
             this.btnOpenInExplorer.TabIndex = 11;
             this.btnOpenInExplorer.Text = "Открыть в проводнике";
             this.btnOpenInExplorer.UseVisualStyleBackColor = true;
-            //
+            // 
             // btnSettings
-            //
+            // 
             this.btnSettings.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.btnSettings.Enabled = false;
             this.btnSettings.Location = new System.Drawing.Point(602, 30);

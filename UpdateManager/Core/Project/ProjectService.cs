@@ -68,12 +68,15 @@ namespace UpdateManager.Core.Project
                 throw new InvalidOperationException(
                     "В выбранной папке нет " + EngineSettingsFile + " — это не проект обновления.");
 
+            var outputPath = new ProjectManager(folder).outputPath;
+
             return new UpdateProject
             {
                 RootPath = folder,
                 Name = GetEngineProjectName(folder),
                 Meta = ProjectMeta.Load(folder),
-                Versions = ReadVersions(folder)
+                Versions = ReadVersions(folder),
+                OutputReady = Directory.Exists(outputPath) && Directory.GetFileSystemEntries(outputPath).Length > 0
             };
         }
 
@@ -141,6 +144,7 @@ namespace UpdateManager.Core.Project
                 CreateRepairPatch = info.CreateRepairPatch,
                 CreateInstallerPatch = info.CreateInstallerPatch,
                 CreateIncrementalPatch = info.CreateIncrementalPatch,
+                CreateAllIncrementalPatches = info.CreateAllIncrementalPatches,
                 IgnoredPaths = new List<string>(info.IgnoredPaths)
             };
         }
@@ -161,6 +165,7 @@ namespace UpdateManager.Core.Project
             info.CreateRepairPatch = settings.CreateRepairPatch;
             info.CreateInstallerPatch = settings.CreateInstallerPatch;
             info.CreateIncrementalPatch = settings.CreateIncrementalPatch;
+            info.CreateAllIncrementalPatches = settings.CreateAllIncrementalPatches;
             info.IgnoredPaths.Clear();
             info.IgnoredPaths.AddRange(settings.IgnoredPaths);
 
@@ -195,8 +200,7 @@ namespace UpdateManager.Core.Project
                 .Select(dir => new ProjectVersion
                 {
                     Version = Path.GetFileName(dir),
-                    BuildDate = Directory.GetLastWriteTime(dir),
-                    Delivered = false
+                    BuildDate = Directory.GetLastWriteTime(dir)
                 })
                 .OrderBy(v => v.Version)
                 .ToList();

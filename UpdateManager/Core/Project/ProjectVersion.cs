@@ -12,8 +12,5 @@ namespace UpdateManager.Core.Project
 
         /// <summary>Время последнего изменения папки версии (приблизительно — когда собран билд).</summary>
         public DateTime BuildDate { get; set; }
-
-        /// <summary>Доставлен ли патч этой версии на сервер. Пока всегда false — добавим позже.</summary>
-        public bool Delivered { get; set; }
     }
 }

@@ -24,6 +24,9 @@ namespace UpdateManager.Core.Project
         public bool CreateInstallerPatch { get; set; }
         public bool CreateIncrementalPatch { get; set; }
 
+        /// <summary>Делать инкрементальные патчи от каждой предыдущей версии к новой, а не только от ближайшей.</summary>
+        public bool CreateAllIncrementalPatches { get; set; }
+
         /// <summary>Игнорируемые пути/маски (по одному на элемент).</summary>
         public List<string> IgnoredPaths { get; set; } = new List<string>();
     }

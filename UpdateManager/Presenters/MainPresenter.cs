@@ -95,13 +95,9 @@ namespace UpdateManager.Presenters
         // Общий хвост создания/открытия: показать проект и обновить список недавних.
         private void OnProjectOpened(string folder)
         {
-            _view.RenderProject(_project);
             _recent.Add(folder);
             RefreshRecent();
-
-            // Если источник билда уже запомнен — показать его и определить версию (без повторной записи).
-            if (!string.IsNullOrEmpty(_project.Meta.LastBuildSource))
-                ApplyBuildSource(_project.Meta.LastBuildSource, persist: false);
+            ShowProject();
         }
 
         private void OnOpenInExplorer(object sender, EventArgs e)
@@ -136,6 +132,12 @@ namespace UpdateManager.Presenters
             try
             {
                 DeliveryFactory.Create(config).Deliver(outputDir);
+
+                // Отмечаем факт доставки — отсюда считается «Доставлено» по версиям.
+                _project.Meta.LastDeliveredAt = DateTime.Now;
+                _project.Meta.Save(_project.RootPath);
+                ShowProject();
+
                 _view.ShowInfo("Патч доставлен в:\n" + config.Path);
             }
             catch (Exception ex)
@@ -202,9 +204,7 @@ namespace UpdateManager.Presenters
 
             // Имя проекта могло измениться — перечитываем и показываем заново.
             _project = _service.Open(_project.RootPath);
-            _view.RenderProject(_project);
-            if (!string.IsNullOrEmpty(_project.Meta.LastBuildSource))
-                ApplyBuildSource(_project.Meta.LastBuildSource, persist: false);
+            ShowProject();
         }
 
         private void OnBrowseBuildSource(object sender, EventArgs e)
@@ -277,9 +277,7 @@ namespace UpdateManager.Presenters
 
             // Обновляем проект (в Versions/ появилась новая версия) и показываем заново.
             _project = _service.Open(_project.RootPath);
-            _view.RenderProject(_project);
-            if (!string.IsNullOrEmpty(_project.Meta.LastBuildSource))
-                ApplyBuildSource(_project.Meta.LastBuildSource, persist: false);
+            ShowProject();
         }
 
         // Запомнить папку-источник (опц. сохранить в файл проекта), определить версию и показать.
@@ -296,6 +294,14 @@ namespace UpdateManager.Presenters
         private void RefreshRecent()
         {
             _view.RenderRecentProjects(_recent.Load());
+        }
+
+        // Показать текущий проект: отрисовать + подхватить запомненный источник билда (с версией).
+        private void ShowProject()
+        {
+            _view.RenderProject(_project);
+            if (!string.IsNullOrEmpty(_project.Meta.LastBuildSource))
+                ApplyBuildSource(_project.Meta.LastBuildSource, persist: false);
         }
     }
 }

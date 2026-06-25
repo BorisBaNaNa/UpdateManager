@@ -19,5 +19,8 @@ namespace UpdateManager.Core.Project
 
         /// <summary>Версии проекта (подпапки Versions/).</summary>
         public List<ProjectVersion> Versions { get; set; } = new List<ProjectVersion>();
+
+        /// <summary>Есть ли в Output/ собранный патч, готовый к доставке.</summary>
+        public bool OutputReady { get; set; }
     }
 }

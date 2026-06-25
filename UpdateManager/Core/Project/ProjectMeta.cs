@@ -1,3 +1,5 @@
+using System;
+using System.Globalization;
 using System.IO;
 using System.Xml.Linq;
 using UpdateManager.Core.Delivery;
@@ -24,6 +26,7 @@ namespace UpdateManager.Core.Project
         private const string DeliveryElement = "Delivery";
         private const string DeliveryMethodAttribute = "method";
         private const string DeliveryPathElement = "Path";
+        private const string LastDeliveredAtElement = "LastDeliveredAt";
 
         /// <summary>Версия схемы этого файла — чтобы в будущем безболезненно менять формат.</summary>
         public int SchemaVersion { get; set; } = CurrentSchemaVersion;
@@ -36,6 +39,9 @@ namespace UpdateManager.Core.Project
 
         /// <summary>Сохранённая конфигурация доставки (метод + путь).</summary>
         public DeliveryConfig Delivery { get; set; } = new DeliveryConfig();
+
+        /// <summary>Когда патч последний раз доставляли (null = ещё не доставляли).</summary>
+        public DateTime? LastDeliveredAt { get; set; }
 
         /// <summary>Прочитать наш файл из корня проекта. Если его нет — вернуть значения по умолчанию.</summary>
         public static ProjectMeta Load(string projectRoot)
@@ -59,6 +65,12 @@ namespace UpdateManager.Core.Project
                 meta.Delivery.Path = (string)delivery.Element(DeliveryPathElement) ?? "";
             }
 
+            var deliveredAt = (string)root.Element(LastDeliveredAtElement);
+            DateTime parsed;
+            if (!string.IsNullOrEmpty(deliveredAt) &&
+                DateTime.TryParse(deliveredAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out parsed))
+                meta.LastDeliveredAt = parsed;
+
             return meta;
         }
 
@@ -72,7 +84,10 @@ namespace UpdateManager.Core.Project
                     new XElement(LastBuildSourceElement, LastBuildSource ?? ""),
                     new XElement(DeliveryElement,
                         new XAttribute(DeliveryMethodAttribute, Delivery.Method ?? DeliveryMethods.Folder),
-                        new XElement(DeliveryPathElement, Delivery.Path ?? ""))
+                        new XElement(DeliveryPathElement, Delivery.Path ?? "")),
+                    LastDeliveredAt.HasValue
+                        ? new XElement(LastDeliveredAtElement, LastDeliveredAt.Value.ToString("o", CultureInfo.InvariantCulture))
+                        : null
                 ));
             doc.Save(Path.Combine(projectRoot, FileName));
         }

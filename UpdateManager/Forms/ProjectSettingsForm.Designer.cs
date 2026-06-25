@@ -28,6 +28,7 @@ namespace UpdateManager.Forms
             this.chkRepair = new System.Windows.Forms.CheckBox();
             this.chkInstaller = new System.Windows.Forms.CheckBox();
             this.chkIncremental = new System.Windows.Forms.CheckBox();
+            this.chkAllIncremental = new System.Windows.Forms.CheckBox();
             this.lblIgnored = new System.Windows.Forms.Label();
             this.txtIgnored = new System.Windows.Forms.TextBox();
             this.btnOk = new System.Windows.Forms.Button();
@@ -103,9 +104,10 @@ namespace UpdateManager.Forms
             this.grpPatchTypes.Controls.Add(this.chkRepair);
             this.grpPatchTypes.Controls.Add(this.chkInstaller);
             this.grpPatchTypes.Controls.Add(this.chkIncremental);
+            this.grpPatchTypes.Controls.Add(this.chkAllIncremental);
             this.grpPatchTypes.Location = new System.Drawing.Point(15, 135);
             this.grpPatchTypes.Name = "grpPatchTypes";
-            this.grpPatchTypes.Size = new System.Drawing.Size(453, 60);
+            this.grpPatchTypes.Size = new System.Drawing.Size(453, 88);
             this.grpPatchTypes.TabIndex = 4;
             this.grpPatchTypes.TabStop = false;
             this.grpPatchTypes.Text = "Типы патчей";
@@ -140,10 +142,20 @@ namespace UpdateManager.Forms
             this.chkIncremental.Text = "Incremental";
             this.chkIncremental.UseVisualStyleBackColor = true;
             //
+            // chkAllIncremental
+            //
+            this.chkAllIncremental.AutoSize = true;
+            this.chkAllIncremental.Location = new System.Drawing.Point(15, 52);
+            this.chkAllIncremental.Name = "chkAllIncremental";
+            this.chkAllIncremental.Size = new System.Drawing.Size(286, 17);
+            this.chkAllIncremental.TabIndex = 3;
+            this.chkAllIncremental.Text = "Инкрементальные от каждой предыдущей версии";
+            this.chkAllIncremental.UseVisualStyleBackColor = true;
+            //
             // lblIgnored
             //
             this.lblIgnored.AutoSize = true;
-            this.lblIgnored.Location = new System.Drawing.Point(12, 210);
+            this.lblIgnored.Location = new System.Drawing.Point(12, 238);
             this.lblIgnored.Name = "lblIgnored";
             this.lblIgnored.Size = new System.Drawing.Size(238, 13);
             this.lblIgnored.Text = "Игнорируемые пути (по одному в строке):";
@@ -153,11 +165,11 @@ namespace UpdateManager.Forms
             this.txtIgnored.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
             | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtIgnored.Location = new System.Drawing.Point(15, 230);
+            this.txtIgnored.Location = new System.Drawing.Point(15, 258);
             this.txtIgnored.Multiline = true;
             this.txtIgnored.Name = "txtIgnored";
             this.txtIgnored.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.txtIgnored.Size = new System.Drawing.Size(453, 120);
+            this.txtIgnored.Size = new System.Drawing.Size(453, 92);
             this.txtIgnored.TabIndex = 5;
             this.txtIgnored.WordWrap = false;
             //
@@ -224,6 +236,7 @@ namespace UpdateManager.Forms
         private System.Windows.Forms.CheckBox chkRepair;
         private System.Windows.Forms.CheckBox chkInstaller;
         private System.Windows.Forms.CheckBox chkIncremental;
+        private System.Windows.Forms.CheckBox chkAllIncremental;
         private System.Windows.Forms.Label lblIgnored;
         private System.Windows.Forms.TextBox txtIgnored;
         private System.Windows.Forms.Button btnOk;

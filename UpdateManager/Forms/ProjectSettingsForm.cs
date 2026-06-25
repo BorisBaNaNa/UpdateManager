@@ -25,6 +25,7 @@ namespace UpdateManager.Forms
             chkRepair.Checked = settings.CreateRepairPatch;
             chkInstaller.Checked = settings.CreateInstallerPatch;
             chkIncremental.Checked = settings.CreateIncrementalPatch;
+            chkAllIncremental.Checked = settings.CreateAllIncrementalPatches;
             txtIgnored.Lines = settings.IgnoredPaths.ToArray();
 
             btnOk.Click += OnOk;
@@ -42,6 +43,7 @@ namespace UpdateManager.Forms
                 CreateRepairPatch = chkRepair.Checked,
                 CreateInstallerPatch = chkInstaller.Checked,
                 CreateIncrementalPatch = chkIncremental.Checked,
+                CreateAllIncrementalPatches = chkAllIncremental.Checked,
                 IgnoredPaths = txtIgnored.Lines
                     .Select(line => line.Trim())
                     .Where(line => line.Length > 0)

@@ -61,13 +61,21 @@ namespace UpdateManager.Forms
             btnVerify.Enabled = true;
             btnCreatePatch.Enabled = !string.IsNullOrEmpty(project.Meta.LastBuildSource);
 
+            lblOutput.Text = project.OutputReady ? "Output/: патч готов" : "Output/: пусто";
+
+            var deliveredAt = project.Meta.LastDeliveredAt;
+
             listViewVersions.BeginUpdate();
             listViewVersions.Items.Clear();
             foreach (var v in project.Versions)
             {
                 var item = new ListViewItem(v.Version);
                 item.SubItems.Add(v.BuildDate.ToString("yyyy-MM-dd HH:mm"));
-                item.SubItems.Add(v.Delivered ? "Да" : "—");
+
+                // Версия считается доставленной, если была в Output на момент последней доставки.
+                bool delivered = deliveredAt.HasValue && v.BuildDate <= deliveredAt.Value;
+                item.SubItems.Add(delivered ? deliveredAt.Value.ToString("yyyy-MM-dd HH:mm") : "—");
+
                 listViewVersions.Items.Add(item);
             }
             listViewVersions.EndUpdate();
@@ -78,6 +86,7 @@ namespace UpdateManager.Forms
             lblProjectTitle.Text = "Проект: (не открыт)";
             lblMainExe.Text = "Главный exe: —";
             txtSource.Text = "";
+            lblOutput.Text = "Output/: —";
             listViewVersions.Items.Clear();
 
             // Проект не открыт — действия с проектом недоступны.
