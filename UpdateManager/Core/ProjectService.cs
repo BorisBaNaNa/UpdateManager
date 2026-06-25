@@ -92,7 +92,13 @@ namespace UpdateManager.Core
             if (Directory.Exists(dest))
                 Directory.Delete(dest, recursive: true);
 
-            CopyDirectory(buildSource, dest);
+            FileUtils.CopyDirectory(buildSource, dest);
+        }
+
+        /// <summary>Абсолютный путь к папке Output/ проекта (берём у движка).</summary>
+        public string GetOutputPath(string projectRoot)
+        {
+            return new ProjectManager(projectRoot).outputPath;
         }
 
         // --- настройки проекта (движковый ProjectInfo) ---
@@ -154,19 +160,7 @@ namespace UpdateManager.Core
                     "Не найден self-patcher по пути " + SelfPatcherSourceDir +
                     ".\nБез него self-patching приложение не сможет применить патч.");
 
-            CopyDirectory(SelfPatcherSourceDir, Path.Combine(projectRoot, SelfPatcherFolder));
-        }
-
-        /// <summary>Рекурсивно копирует содержимое одной папки в другую (с перезаписью).</summary>
-        private static void CopyDirectory(string source, string destination)
-        {
-            Directory.CreateDirectory(destination);
-
-            foreach (var file in Directory.GetFiles(source))
-                File.Copy(file, Path.Combine(destination, Path.GetFileName(file)), overwrite: true);
-
-            foreach (var subDir in Directory.GetDirectories(source))
-                CopyDirectory(subDir, Path.Combine(destination, Path.GetFileName(subDir)));
+            FileUtils.CopyDirectory(SelfPatcherSourceDir, Path.Combine(projectRoot, SelfPatcherFolder));
         }
 
         // --- список версий из папки Versions/ ---

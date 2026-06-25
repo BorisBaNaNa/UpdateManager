@@ -20,7 +20,9 @@ namespace UpdateManager.Core
         private const string SchemaVersionAttribute = "schemaVersion";
         private const string MainExecutableElement = "MainExecutable";
         private const string LastBuildSourceElement = "LastBuildSource";
-        private const string DeliveryTargetsElement = "DeliveryTargets";
+        private const string DeliveryElement = "Delivery";
+        private const string DeliveryMethodAttribute = "method";
+        private const string DeliveryPathElement = "Path";
 
         /// <summary>Версия схемы этого файла — чтобы в будущем безболезненно менять формат.</summary>
         public int SchemaVersion { get; set; } = CurrentSchemaVersion;
@@ -31,7 +33,8 @@ namespace UpdateManager.Core
         /// <summary>Последняя выбранная папка-источник билда (запоминаем между выкатками).</summary>
         public string LastBuildSource { get; set; } = "";
 
-        // DeliveryTargets (цели доставки: папка / FTP) — зарезервировано, добавим позже.
+        /// <summary>Сохранённая конфигурация доставки (метод + путь).</summary>
+        public DeliveryConfig Delivery { get; set; } = new DeliveryConfig();
 
         /// <summary>Прочитать наш файл из корня проекта. Если его нет — вернуть значения по умолчанию.</summary>
         public static ProjectMeta Load(string projectRoot)
@@ -41,12 +44,21 @@ namespace UpdateManager.Core
                 return new ProjectMeta();
 
             var root = XDocument.Load(path).Root;
-            return new ProjectMeta
+            var meta = new ProjectMeta
             {
                 SchemaVersion = (int?)root.Attribute(SchemaVersionAttribute) ?? CurrentSchemaVersion,
                 MainExecutable = (string)root.Element(MainExecutableElement) ?? "",
                 LastBuildSource = (string)root.Element(LastBuildSourceElement) ?? ""
             };
+
+            var delivery = root.Element(DeliveryElement);
+            if (delivery != null)
+            {
+                meta.Delivery.Method = (string)delivery.Attribute(DeliveryMethodAttribute) ?? DeliveryMethods.Folder;
+                meta.Delivery.Path = (string)delivery.Element(DeliveryPathElement) ?? "";
+            }
+
+            return meta;
         }
 
         /// <summary>Записать наш файл в корень проекта.</summary>
@@ -57,7 +69,9 @@ namespace UpdateManager.Core
                     new XAttribute(SchemaVersionAttribute, SchemaVersion),
                     new XElement(MainExecutableElement, MainExecutable ?? ""),
                     new XElement(LastBuildSourceElement, LastBuildSource ?? ""),
-                    new XElement(DeliveryTargetsElement) // зарезервировано под папку / FTP
+                    new XElement(DeliveryElement,
+                        new XAttribute(DeliveryMethodAttribute, Delivery.Method ?? DeliveryMethods.Folder),
+                        new XElement(DeliveryPathElement, Delivery.Path ?? ""))
                 ));
             doc.Save(Path.Combine(projectRoot, FileName));
         }

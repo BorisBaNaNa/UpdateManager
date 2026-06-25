@@ -26,6 +26,7 @@ namespace UpdateManager.Forms
             btnCreatePatch.Click += (s, e) => CreatePatchRequested?.Invoke(this, EventArgs.Empty);
             btnOpenInExplorer.Click += (s, e) => OpenInExplorerRequested?.Invoke(this, EventArgs.Empty);
             btnSettings.Click += (s, e) => EditSettingsRequested?.Invoke(this, EventArgs.Empty);
+            btnDeliver.Click += (s, e) => DeliverPatchRequested?.Invoke(this, EventArgs.Empty);
         }
 
         // --- IMainView: события ---
@@ -37,6 +38,7 @@ namespace UpdateManager.Forms
         public event EventHandler CreatePatchRequested;
         public event EventHandler OpenInExplorerRequested;
         public event EventHandler EditSettingsRequested;
+        public event EventHandler DeliverPatchRequested;
 
         // --- IMainView: отрисовка ---
 
@@ -51,6 +53,7 @@ namespace UpdateManager.Forms
             btnBrowseSource.Enabled = true;
             btnOpenInExplorer.Enabled = true;
             btnSettings.Enabled = true;
+            btnDeliver.Enabled = true;
             btnCreatePatch.Enabled = !string.IsNullOrEmpty(project.Meta.LastBuildSource);
 
             listViewVersions.BeginUpdate();
@@ -76,6 +79,7 @@ namespace UpdateManager.Forms
             btnBrowseSource.Enabled = false;
             btnOpenInExplorer.Enabled = false;
             btnSettings.Enabled = false;
+            btnDeliver.Enabled = false;
             btnCreatePatch.Enabled = false;
         }
 
@@ -150,6 +154,11 @@ namespace UpdateManager.Forms
             MessageBox.Show(this, message, "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
+        public void ShowInfo(string message)
+        {
+            MessageBox.Show(this, message, "Готово", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
         public void ShowPatchProgress(PatchBuilder builder)
         {
             using (var dialog = new PatchProgressForm(builder))
@@ -159,6 +168,12 @@ namespace UpdateManager.Forms
         public ProjectSettings EditSettings(ProjectSettings current)
         {
             using (var dialog = new ProjectSettingsForm(current))
+                return dialog.ShowDialog(this) == DialogResult.OK ? dialog.Result : null;
+        }
+
+        public DeliveryConfig ConfigureDelivery(DeliveryConfig current)
+        {
+            using (var dialog = new DeliveryForm(current))
                 return dialog.ShowDialog(this) == DialogResult.OK ? dialog.Result : null;
         }
 

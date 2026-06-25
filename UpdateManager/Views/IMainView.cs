@@ -18,6 +18,7 @@ namespace UpdateManager.Views
         event EventHandler CreatePatchRequested;        // нажата кнопка "Создать патч"
         event EventHandler OpenInExplorerRequested;     // "Открыть в проводнике"
         event EventHandler EditSettingsRequested;       // "Настройки"
+        event EventHandler DeliverPatchRequested;       // "Доставить патч"
 
         // Команды презентера к вью — обновить отображение.
         void RenderProject(UpdateProject project);
@@ -31,8 +32,10 @@ namespace UpdateManager.Views
         string ConfirmVersion(string detectedVersion); // подтверждение/ввод версии; null = отмена
         bool Confirm(string message);                  // да/нет
         void ShowError(string message);
+        void ShowInfo(string message);
         void ShowPatchProgress(PatchBuilder builder);     // модальное окно сборки
         ProjectSettings EditSettings(ProjectSettings current); // окно настроек; null = отмена
+        DeliveryConfig ConfigureDelivery(DeliveryConfig current); // окно доставки; null = отмена
         void OpenInExplorer(string path);                 // открыть папку в проводнике
     }
 }

@@ -32,6 +32,7 @@ namespace UpdateManager.Presenters
             _view.CreatePatchRequested += OnCreatePatch;
             _view.OpenInExplorerRequested += OnOpenInExplorer;
             _view.EditSettingsRequested += OnEditSettings;
+            _view.DeliverPatchRequested += OnDeliverPatch;
 
             _view.RenderNoProject(); // стартовое состояние — проект не открыт
             RefreshRecent();
@@ -103,6 +104,40 @@ namespace UpdateManager.Presenters
         {
             if (_project != null)
                 _view.OpenInExplorer(_project.RootPath);
+        }
+
+        private void OnDeliverPatch(object sender, EventArgs e)
+        {
+            if (_project == null)
+                return;
+
+            // Есть ли что доставлять?
+            var outputDir = _service.GetOutputPath(_project.RootPath);
+            if (!Directory.Exists(outputDir) || Directory.GetFileSystemEntries(outputDir).Length == 0)
+            {
+                _view.ShowError("Папка Output пуста — нечего доставлять. Сначала соберите патч.");
+                return;
+            }
+
+            // Окно доставки: метод (преселект сохранённого) + путь.
+            var config = _view.ConfigureDelivery(_project.Meta.Delivery);
+            if (config == null)
+                return; // отмена
+
+            // Запоминаем выбор.
+            _project.Meta.Delivery = config;
+            _project.Meta.Save(_project.RootPath);
+
+            // Доставляем через выбранный обработчик.
+            try
+            {
+                DeliveryFactory.Create(config).Deliver(outputDir);
+                _view.ShowInfo("Патч доставлен в:\n" + config.Path);
+            }
+            catch (Exception ex)
+            {
+                _view.ShowError("Доставка не удалась:\n" + ex.Message);
+            }
         }
 
         private void OnEditSettings(object sender, EventArgs e)
