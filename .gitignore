@@ -1,0 +1,23 @@
+## Visual Studio / .NET Framework
+
+# Build output
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio cache / options
+.vs/
+*.suo
+*.user
+*.userprefs
+
+# ReSharper / Rider
+_ReSharper*/
+*.[Rr]e[Ss]harper
+.idea/
+
+# OS
+Thumbs.db
+desktop.ini
+
+# Local engine playground / test fixture
+/TEST_PATCHER_DIR/
