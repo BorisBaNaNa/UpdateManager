@@ -55,6 +55,7 @@
   <ItemGroup>
     <Compile Include="Core\ProjectMeta.cs" />
     <Compile Include="Core\ProjectService.cs" />
+    <Compile Include="Core\RecentProjectsStore.cs" />
     <Compile Include="Core\ProjectVersion.cs" />
     <Compile Include="Core\UpdateProject.cs" />
     <Compile Include="Forms\MainForm.cs">

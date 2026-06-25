@@ -13,18 +13,22 @@ namespace UpdateManager.Presenters
     {
         private readonly IMainView _view;
         private readonly ProjectService _service;
+        private readonly RecentProjectsStore _recent;
 
         private UpdateProject _project; // текущий открытый проект (null = не открыт)
 
-        public MainPresenter(IMainView view, ProjectService service)
+        public MainPresenter(IMainView view, ProjectService service, RecentProjectsStore recent)
         {
             _view = view;
             _service = service;
+            _recent = recent;
 
             _view.CreateProjectRequested += OnCreateProject;
             _view.OpenProjectRequested += OnOpenProject;
+            _view.OpenRecentRequested += OnOpenRecent;
 
             _view.RenderNoProject(); // стартовое состояние — проект не открыт
+            RefreshRecent();
         }
 
         private void OnCreateProject(object sender, EventArgs e)
@@ -41,7 +45,7 @@ namespace UpdateManager.Presenters
             try
             {
                 _project = _service.Create(folder, name);
-                _view.RenderProject(_project);
+                OnProjectOpened(folder);
             }
             catch (Exception ex)
             {
@@ -55,15 +59,39 @@ namespace UpdateManager.Presenters
             if (folder == null)
                 return;
 
+            OpenPath(folder);
+        }
+
+        private void OnOpenRecent(object sender, string path)
+        {
+            OpenPath(path);
+        }
+
+        // Открыть проект по известному пути (из диалога или из списка недавних).
+        private void OpenPath(string folder)
+        {
             try
             {
                 _project = _service.Open(folder);
-                _view.RenderProject(_project);
+                OnProjectOpened(folder);
             }
             catch (Exception ex)
             {
                 _view.ShowError("Не удалось открыть проект:\n" + ex.Message);
             }
+        }
+
+        // Общий хвост создания/открытия: показать проект и обновить список недавних.
+        private void OnProjectOpened(string folder)
+        {
+            _view.RenderProject(_project);
+            _recent.Add(folder);
+            RefreshRecent();
+        }
+
+        private void RefreshRecent()
+        {
+            _view.RenderRecentProjects(_recent.Load());
         }
     }
 }

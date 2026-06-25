@@ -1,7 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Windows.Forms;
 using UpdateManager.Core;
-using UpdateManager.Presenters;
 using UpdateManager.Views;
 
 namespace UpdateManager.Forms
@@ -12,26 +12,22 @@ namespace UpdateManager.Forms
     /// </summary>
     public partial class MainForm : Form, IMainView
     {
-        // Держим презентер в поле, чтобы он не уехал в сборщик мусора.
-        private readonly MainPresenter _presenter;
-
         public MainForm()
         {
             InitializeComponent();
 
-            // Клики меню -> события интерфейса (логику дальше дёргает презентер).
+            // Форма знает только про свои контролы: клики меню -> события интерфейса.
+            // Кто и как на них реагирует (презентер) — форму не касается.
             createProjectMenuItem.Click += (s, e) => CreateProjectRequested?.Invoke(this, EventArgs.Empty);
             openProjectMenuItem.Click += (s, e) => OpenProjectRequested?.Invoke(this, EventArgs.Empty);
             exitMenuItem.Click += (s, e) => Close();
-
-            // Композиция: создаём презентер и отдаём ему себя как вью.
-            _presenter = new MainPresenter(this, new ProjectService());
         }
 
         // --- IMainView: события ---
 
         public event EventHandler CreateProjectRequested;
         public event EventHandler OpenProjectRequested;
+        public event EventHandler<string> OpenRecentRequested;
 
         // --- IMainView: отрисовка ---
 
@@ -60,6 +56,24 @@ namespace UpdateManager.Forms
             lblMainExe.Text = "Главный exe: —";
             txtSource.Text = "";
             listViewVersions.Items.Clear();
+        }
+
+        public void RenderRecentProjects(IReadOnlyList<string> projectPaths)
+        {
+            recentProjectsMenuItem.DropDownItems.Clear();
+
+            if (projectPaths.Count == 0)
+            {
+                recentProjectsMenuItem.DropDownItems.Add(new ToolStripMenuItem("(пусто)") { Enabled = false });
+                return;
+            }
+
+            foreach (var path in projectPaths)
+            {
+                var item = new ToolStripMenuItem(path);
+                item.Click += (s, e) => OpenRecentRequested?.Invoke(this, path);
+                recentProjectsMenuItem.DropDownItems.Add(item);
+            }
         }
 
         // --- IMainView: диалоги ---
