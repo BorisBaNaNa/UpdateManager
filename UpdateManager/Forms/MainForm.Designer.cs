@@ -52,6 +52,7 @@ namespace UpdateManager.Forms
             this.btnVerify = new System.Windows.Forms.Button();
             this.btnOpenInExplorer = new System.Windows.Forms.Button();
             this.btnSettings = new System.Windows.Forms.Button();
+            this.btnPickExe = new System.Windows.Forms.Button();
             this.menuStrip.SuspendLayout();
             this.grpVersions.SuspendLayout();
             this.SuspendLayout();
@@ -271,6 +272,17 @@ namespace UpdateManager.Forms
             this.btnSettings.TabIndex = 12;
             this.btnSettings.Text = "Настройки";
             this.btnSettings.UseVisualStyleBackColor = true;
+            //
+            // btnPickExe
+            //
+            this.btnPickExe.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnPickExe.Enabled = false;
+            this.btnPickExe.Location = new System.Drawing.Point(612, 111);
+            this.btnPickExe.Name = "btnPickExe";
+            this.btnPickExe.Size = new System.Drawing.Size(100, 23);
+            this.btnPickExe.TabIndex = 13;
+            this.btnPickExe.Text = "Выбрать exe…";
+            this.btnPickExe.UseVisualStyleBackColor = true;
             // 
             // MainForm
             // 
@@ -281,6 +293,7 @@ namespace UpdateManager.Forms
             this.Controls.Add(this.btnDeliver);
             this.Controls.Add(this.lblOutput);
             this.Controls.Add(this.btnCreatePatch);
+            this.Controls.Add(this.btnPickExe);
             this.Controls.Add(this.lblMainExe);
             this.Controls.Add(this.btnBrowseSource);
             this.Controls.Add(this.txtSource);
@@ -328,5 +341,6 @@ namespace UpdateManager.Forms
         private System.Windows.Forms.Button btnVerify;
         private System.Windows.Forms.Button btnOpenInExplorer;
         private System.Windows.Forms.Button btnSettings;
+        private System.Windows.Forms.Button btnPickExe;
     }
 }

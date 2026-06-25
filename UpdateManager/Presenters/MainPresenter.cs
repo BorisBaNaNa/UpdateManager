@@ -32,6 +32,7 @@ namespace UpdateManager.Presenters
             _view.OpenProjectRequested += OnOpenProject;
             _view.OpenRecentRequested += OnOpenRecent;
             _view.BrowseBuildSourceRequested += OnBrowseBuildSource;
+            _view.BrowseMainExecutableRequested += OnBrowseMainExecutable;
             _view.CreatePatchRequested += OnCreatePatch;
             _view.OpenInExplorerRequested += OnOpenInExplorer;
             _view.EditSettingsRequested += OnEditSettings;
@@ -216,6 +217,10 @@ namespace UpdateManager.Presenters
             if (folder == null)
                 return;
 
+            // Сменили папку — старый ручной exe в новом пути не нужен, возвращаемся к авто.
+            if (!string.Equals(folder, _project.Meta.LastBuildSource, StringComparison.OrdinalIgnoreCase))
+                _project.Meta.MainExecutable = "";
+
             ApplyBuildSource(folder, persist: true);
         }
 
@@ -278,6 +283,40 @@ namespace UpdateManager.Presenters
             // Обновляем проект (в Versions/ появилась новая версия) и показываем заново.
             _project = _service.Open(_project.RootPath);
             ShowProject();
+        }
+
+        private void OnBrowseMainExecutable(object sender, EventArgs e)
+        {
+            if (_project == null)
+                return;
+
+            var folder = _project.Meta.LastBuildSource;
+            if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder))
+            {
+                _view.ShowError("Сначала выберите папку билда.");
+                return;
+            }
+
+            var fullPath = _view.BrowseForFile("Выберите главный exe", folder,
+                "Исполняемые файлы (*.exe)|*.exe|Все файлы (*.*)|*.*");
+            if (fullPath == null)
+                return;
+
+            // Храним путь относительно папки билда — VersionDetector клеит buildFolder + это значение.
+            _project.Meta.MainExecutable = MakeRelativeToBuild(folder, fullPath);
+            _project.Meta.Save(_project.RootPath);
+
+            // Переопределяем версию с выбранным главным exe.
+            ApplyBuildSource(folder, persist: false);
+        }
+
+        private static string MakeRelativeToBuild(string buildFolder, string fullPath)
+        {
+            var baseWithSep = buildFolder.TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
+            if (fullPath.StartsWith(baseWithSep, StringComparison.OrdinalIgnoreCase))
+                return fullPath.Substring(baseWithSep.Length);
+
+            return Path.GetFileName(fullPath); // выбрали вне папки билда — берём только имя
         }
 
         // Запомнить папку-источник (опц. сохранить в файл проекта), определить версию и показать.

@@ -17,6 +17,7 @@ namespace UpdateManager.Views
         event EventHandler OpenProjectRequested;
         event EventHandler<string> OpenRecentRequested; // выбран недавний проект (путь)
         event EventHandler BrowseBuildSourceRequested;  // нажата кнопка выбора папки билда
+        event EventHandler BrowseMainExecutableRequested; // "Выбрать exe…"
         event EventHandler CreatePatchRequested;        // нажата кнопка "Создать патч"
         event EventHandler OpenInExplorerRequested;     // "Открыть в проводнике"
         event EventHandler EditSettingsRequested;       // "Настройки"
@@ -31,6 +32,7 @@ namespace UpdateManager.Views
 
         // Диалоги: за UI отвечает вью, презентер только просит результат.
         string BrowseForFolder(string description);   // null = пользователь отменил
+        string BrowseForFile(string title, string initialDirectory, string filter); // null = отмена
         string PromptProjectName(string defaultName); // null = пользователь отменил
         string ConfirmVersion(string detectedVersion); // подтверждение/ввод версии; null = отмена
         bool Confirm(string message);                  // да/нет

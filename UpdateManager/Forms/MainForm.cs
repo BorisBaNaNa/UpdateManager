@@ -25,6 +25,7 @@ namespace UpdateManager.Forms
             openProjectMenuItem.Click += (s, e) => OpenProjectRequested?.Invoke(this, EventArgs.Empty);
             exitMenuItem.Click += (s, e) => Close();
             btnBrowseSource.Click += (s, e) => BrowseBuildSourceRequested?.Invoke(this, EventArgs.Empty);
+            btnPickExe.Click += (s, e) => BrowseMainExecutableRequested?.Invoke(this, EventArgs.Empty);
             btnCreatePatch.Click += (s, e) => CreatePatchRequested?.Invoke(this, EventArgs.Empty);
             btnOpenInExplorer.Click += (s, e) => OpenInExplorerRequested?.Invoke(this, EventArgs.Empty);
             btnSettings.Click += (s, e) => EditSettingsRequested?.Invoke(this, EventArgs.Empty);
@@ -38,6 +39,7 @@ namespace UpdateManager.Forms
         public event EventHandler OpenProjectRequested;
         public event EventHandler<string> OpenRecentRequested;
         public event EventHandler BrowseBuildSourceRequested;
+        public event EventHandler BrowseMainExecutableRequested;
         public event EventHandler CreatePatchRequested;
         public event EventHandler OpenInExplorerRequested;
         public event EventHandler EditSettingsRequested;
@@ -60,6 +62,7 @@ namespace UpdateManager.Forms
             btnDeliver.Enabled = true;
             btnVerify.Enabled = true;
             btnCreatePatch.Enabled = !string.IsNullOrEmpty(project.Meta.LastBuildSource);
+            btnPickExe.Enabled = !string.IsNullOrEmpty(project.Meta.LastBuildSource);
 
             lblOutput.Text = project.OutputReady ? "Output/: патч готов" : "Output/: пусто";
 
@@ -96,6 +99,7 @@ namespace UpdateManager.Forms
             btnDeliver.Enabled = false;
             btnVerify.Enabled = false;
             btnCreatePatch.Enabled = false;
+            btnPickExe.Enabled = false;
         }
 
         public void RenderBuildSource(string sourcePath, string mainExecutable, string version)
@@ -109,6 +113,7 @@ namespace UpdateManager.Forms
                     (version != null ? " (" + version + ")" : "");
 
             btnCreatePatch.Enabled = !string.IsNullOrEmpty(sourcePath);
+            btnPickExe.Enabled = !string.IsNullOrEmpty(sourcePath);
         }
 
         public void RenderRecentProjects(IReadOnlyList<string> projectPaths)
@@ -138,6 +143,18 @@ namespace UpdateManager.Forms
                 dialog.Description = description;
                 dialog.ShowNewFolderButton = true;
                 return dialog.ShowDialog(this) == DialogResult.OK ? dialog.SelectedPath : null;
+            }
+        }
+
+        public string BrowseForFile(string title, string initialDirectory, string filter)
+        {
+            using (var dialog = new OpenFileDialog())
+            {
+                dialog.Title = title;
+                dialog.Filter = filter;
+                if (!string.IsNullOrEmpty(initialDirectory) && System.IO.Directory.Exists(initialDirectory))
+                    dialog.InitialDirectory = initialDirectory;
+                return dialog.ShowDialog(this) == DialogResult.OK ? dialog.FileName : null;
             }
         }
 
