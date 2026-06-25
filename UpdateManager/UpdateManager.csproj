@@ -58,7 +58,9 @@
     <Compile Include="Core\FileUtils.cs" />
     <Compile Include="Core\FolderDeliveryTarget.cs" />
     <Compile Include="Core\IDeliveryTarget.cs" />
+    <Compile Include="Core\IEngineOperation.cs" />
     <Compile Include="Core\PatchBuilder.cs" />
+    <Compile Include="Core\PatchVerifier.cs" />
     <Compile Include="Core\ProjectMeta.cs" />
     <Compile Include="Core\ProjectService.cs" />
     <Compile Include="Core\ProjectSettings.cs" />
@@ -79,11 +81,11 @@
     <Compile Include="Forms\MainForm.Designer.cs">
       <DependentUpon>MainForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="Forms\PatchProgressForm.cs">
+    <Compile Include="Forms\OperationProgressForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Forms\PatchProgressForm.Designer.cs">
-      <DependentUpon>PatchProgressForm.cs</DependentUpon>
+    <Compile Include="Forms\OperationProgressForm.Designer.cs">
+      <DependentUpon>OperationProgressForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Forms\ProjectSettingsForm.cs">
       <SubType>Form</SubType>

@@ -27,6 +27,7 @@ namespace UpdateManager.Forms
             btnOpenInExplorer.Click += (s, e) => OpenInExplorerRequested?.Invoke(this, EventArgs.Empty);
             btnSettings.Click += (s, e) => EditSettingsRequested?.Invoke(this, EventArgs.Empty);
             btnDeliver.Click += (s, e) => DeliverPatchRequested?.Invoke(this, EventArgs.Empty);
+            btnVerify.Click += (s, e) => VerifyRequested?.Invoke(this, EventArgs.Empty);
         }
 
         // --- IMainView: события ---
@@ -39,6 +40,7 @@ namespace UpdateManager.Forms
         public event EventHandler OpenInExplorerRequested;
         public event EventHandler EditSettingsRequested;
         public event EventHandler DeliverPatchRequested;
+        public event EventHandler VerifyRequested;
 
         // --- IMainView: отрисовка ---
 
@@ -54,6 +56,7 @@ namespace UpdateManager.Forms
             btnOpenInExplorer.Enabled = true;
             btnSettings.Enabled = true;
             btnDeliver.Enabled = true;
+            btnVerify.Enabled = true;
             btnCreatePatch.Enabled = !string.IsNullOrEmpty(project.Meta.LastBuildSource);
 
             listViewVersions.BeginUpdate();
@@ -80,6 +83,7 @@ namespace UpdateManager.Forms
             btnOpenInExplorer.Enabled = false;
             btnSettings.Enabled = false;
             btnDeliver.Enabled = false;
+            btnVerify.Enabled = false;
             btnCreatePatch.Enabled = false;
         }
 
@@ -159,9 +163,9 @@ namespace UpdateManager.Forms
             MessageBox.Show(this, message, "Готово", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
-        public void ShowPatchProgress(PatchBuilder builder)
+        public void ShowOperation(IEngineOperation operation)
         {
-            using (var dialog = new PatchProgressForm(builder))
+            using (var dialog = new OperationProgressForm(operation))
                 dialog.ShowDialog(this);
         }
 

@@ -1,6 +1,6 @@
 namespace UpdateManager.Forms
 {
-    partial class PatchProgressForm
+    partial class OperationProgressForm
     {
         private System.ComponentModel.IContainer components = null;
 
@@ -76,9 +76,9 @@ namespace UpdateManager.Forms
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.MinimumSize = new System.Drawing.Size(400, 250);
-            this.Name = "PatchProgressForm";
+            this.Name = "OperationProgressForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-            this.Text = "Сборка патча";
+            this.Text = "Операция";
             this.ResumeLayout(false);
             this.PerformLayout();
         }

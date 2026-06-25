@@ -3,10 +3,10 @@ using SimplePatchToolCore;
 namespace UpdateManager.Core
 {
     /// <summary>
-    /// Обёртка над ProjectManager для сборки патча. Движок крутит работу в своём потоке,
-    /// снаружи мы просто поллим: запустить -> тянуть лог + проверять IsRunning -> прочитать результат.
+    /// Сборка патча через ProjectManager. Движок крутит работу в своём потоке,
+    /// снаружи поллим через IEngineOperation. Процент на создании движок не отдаёт — только лог.
     /// </summary>
-    public class PatchBuilder
+    public class PatchBuilder : IEngineOperation
     {
         private readonly ProjectManager _project;
 
@@ -15,31 +15,36 @@ namespace UpdateManager.Core
             _project = new ProjectManager(projectRoot);
         }
 
-        /// <summary>Запустить сборку. true = запущено, false = не удалось (например, уже идёт).</summary>
+        public string Title { get { return "Сборка патча"; } }
+
         public bool Start()
         {
             return _project.GeneratePatch();
         }
 
-        /// <summary>
-        /// Очередная строка лога, либо null если логов в очереди нет.
-        /// (Прогресс в процентах движок на стороне СОЗДАНИЯ патча не отдаёт — только лог.)
-        /// </summary>
         public string FetchLog()
         {
             return _project.FetchLog();
         }
 
-        /// <summary>Идёт ли сборка прямо сейчас.</summary>
+        public int? FetchProgressPercentage()
+        {
+            return null; // движок на создании патча процент не отдаёт
+        }
+
         public bool IsRunning
         {
             get { return _project.IsRunning; }
         }
 
-        /// <summary>Завершилась ли сборка неудачей (читать после IsRunning == false).</summary>
-        public bool Failed
+        public bool Succeeded
         {
-            get { return _project.Result == PatchResult.Failed; }
+            get { return _project.Result != PatchResult.Failed; }
+        }
+
+        public string ResultDetails
+        {
+            get { return ""; }
         }
     }
 }

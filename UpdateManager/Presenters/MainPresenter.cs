@@ -33,6 +33,7 @@ namespace UpdateManager.Presenters
             _view.OpenInExplorerRequested += OnOpenInExplorer;
             _view.EditSettingsRequested += OnEditSettings;
             _view.DeliverPatchRequested += OnDeliverPatch;
+            _view.VerifyRequested += OnVerify;
 
             _view.RenderNoProject(); // стартовое состояние — проект не открыт
             RefreshRecent();
@@ -140,6 +141,42 @@ namespace UpdateManager.Presenters
             }
         }
 
+        private void OnVerify(object sender, EventArgs e)
+        {
+            if (_project == null)
+                return;
+
+            // versionInfoURL берём из BaseDownloadURL (всё лежит в одном месте).
+            var baseUrl = (_service.LoadSettings(_project.RootPath).BaseDownloadURL ?? "").Trim();
+            if (baseUrl.Length == 0)
+            {
+                _view.ShowError("Не задан BaseDownloadURL. Укажите его в настройках проекта.");
+                return;
+            }
+
+            var versionInfoUrl = _service.BuildVersionInfoUrl(baseUrl);
+
+            // Движок реально качает патч во временную папку; после — удаляем её.
+            var tempDir = Path.Combine(Path.GetTempPath(), "UpdateManagerVerify_" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                Directory.CreateDirectory(tempDir);
+                _view.ShowOperation(new PatchVerifier(tempDir, versionInfoUrl));
+            }
+            finally
+            {
+                try
+                {
+                    if (Directory.Exists(tempDir))
+                        Directory.Delete(tempDir, recursive: true);
+                }
+                catch
+                {
+                    // не критично, если временную папку не удалить
+                }
+            }
+        }
+
         private void OnEditSettings(object sender, EventArgs e)
         {
             if (_project == null)
@@ -223,7 +260,7 @@ namespace UpdateManager.Presenters
             }
 
             // E — сборка патча в модальном окне с логом.
-            _view.ShowPatchProgress(new PatchBuilder(_project.RootPath));
+            _view.ShowOperation(new PatchBuilder(_project.RootPath));
 
             // Обновляем проект (в Versions/ появилась новая версия) и показываем заново.
             _project = _service.Open(_project.RootPath);

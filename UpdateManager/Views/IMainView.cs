@@ -19,6 +19,7 @@ namespace UpdateManager.Views
         event EventHandler OpenInExplorerRequested;     // "Открыть в проводнике"
         event EventHandler EditSettingsRequested;       // "Настройки"
         event EventHandler DeliverPatchRequested;       // "Доставить патч"
+        event EventHandler VerifyRequested;             // "Проверить"
 
         // Команды презентера к вью — обновить отображение.
         void RenderProject(UpdateProject project);
@@ -33,7 +34,7 @@ namespace UpdateManager.Views
         bool Confirm(string message);                  // да/нет
         void ShowError(string message);
         void ShowInfo(string message);
-        void ShowPatchProgress(PatchBuilder builder);     // модальное окно сборки
+        void ShowOperation(IEngineOperation operation);   // модальное окно операции (сборка/проверка)
         ProjectSettings EditSettings(ProjectSettings current); // окно настроек; null = отмена
         DeliveryConfig ConfigureDelivery(DeliveryConfig current); // окно доставки; null = отмена
         void OpenInExplorer(string path);                 // открыть папку в проводнике

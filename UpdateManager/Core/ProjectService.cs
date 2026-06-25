@@ -101,6 +101,25 @@ namespace UpdateManager.Core
             return new ProjectManager(projectRoot).outputPath;
         }
 
+        /// <summary>
+        /// URL манифеста VersionInfo.info из BaseDownloadURL (всё лежит в одном месте).
+        /// </summary>
+        public string BuildVersionInfoUrl(string baseDownloadUrl)
+        {
+            return baseDownloadUrl.TrimEnd('/') + "/" + PatchParameters.VERSION_INFO_FILENAME;
+        }
+
+        /// <summary>
+        /// Нормализует BaseDownloadURL: гарантирует завершающий «/».
+        /// Движок клеит ссылки как BaseDownloadURL + путь без вставки слеша, поэтому без него
+        /// файлы патча не скачиваются (классическая неочевидная ошибка).
+        /// </summary>
+        private static string NormalizeBaseUrl(string url)
+        {
+            url = (url ?? "").Trim();
+            return url.Length == 0 ? "" : url.TrimEnd('/') + "/";
+        }
+
         // --- настройки проекта (движковый ProjectInfo) ---
 
         private static string GetEngineProjectName(string folder)
@@ -135,7 +154,7 @@ namespace UpdateManager.Core
             var info = manager.LoadProjectInfo();
 
             info.Name = settings.Name;
-            info.BaseDownloadURL = settings.BaseDownloadURL;
+            info.BaseDownloadURL = NormalizeBaseUrl(settings.BaseDownloadURL);
             info.MaintenanceCheckURL = settings.MaintenanceCheckURL;
             info.IsSelfPatchingApp = settings.IsSelfPatchingApp;
             info.CreateRepairPatch = settings.CreateRepairPatch;
