@@ -95,11 +95,50 @@ namespace UpdateManager.Core
             CopyDirectory(buildSource, dest);
         }
 
-        // --- имя проекта (движковый ProjectInfo) ---
+        // --- настройки проекта (движковый ProjectInfo) ---
 
         private static string GetEngineProjectName(string folder)
         {
             return new ProjectManager(folder).LoadProjectInfo().Name ?? "";
+        }
+
+        /// <summary>Прочитать основные настройки проекта в наш DTO.</summary>
+        public ProjectSettings LoadSettings(string projectRoot)
+        {
+            var info = new ProjectManager(projectRoot).LoadProjectInfo();
+            return new ProjectSettings
+            {
+                Name = info.Name ?? "",
+                BaseDownloadURL = info.BaseDownloadURL ?? "",
+                MaintenanceCheckURL = info.MaintenanceCheckURL ?? "",
+                IsSelfPatchingApp = info.IsSelfPatchingApp,
+                CreateRepairPatch = info.CreateRepairPatch,
+                CreateInstallerPatch = info.CreateInstallerPatch,
+                CreateIncrementalPatch = info.CreateIncrementalPatch,
+                IgnoredPaths = new List<string>(info.IgnoredPaths)
+            };
+        }
+
+        /// <summary>
+        /// Сохранить основные настройки. Сначала грузим текущий ProjectInfo,
+        /// чтобы НЕ потерять продвинутые поля (компрессия и т.п.), которые мы не показываем.
+        /// </summary>
+        public void SaveSettings(string projectRoot, ProjectSettings settings)
+        {
+            var manager = new ProjectManager(projectRoot);
+            var info = manager.LoadProjectInfo();
+
+            info.Name = settings.Name;
+            info.BaseDownloadURL = settings.BaseDownloadURL;
+            info.MaintenanceCheckURL = settings.MaintenanceCheckURL;
+            info.IsSelfPatchingApp = settings.IsSelfPatchingApp;
+            info.CreateRepairPatch = settings.CreateRepairPatch;
+            info.CreateInstallerPatch = settings.CreateInstallerPatch;
+            info.CreateIncrementalPatch = settings.CreateIncrementalPatch;
+            info.IgnoredPaths.Clear();
+            info.IgnoredPaths.AddRange(settings.IgnoredPaths);
+
+            manager.SaveProjectInfo(info);
         }
 
         // --- self-patcher ---

@@ -16,6 +16,8 @@ namespace UpdateManager.Views
         event EventHandler<string> OpenRecentRequested; // выбран недавний проект (путь)
         event EventHandler BrowseBuildSourceRequested;  // нажата кнопка выбора папки билда
         event EventHandler CreatePatchRequested;        // нажата кнопка "Создать патч"
+        event EventHandler OpenInExplorerRequested;     // "Открыть в проводнике"
+        event EventHandler EditSettingsRequested;       // "Настройки"
 
         // Команды презентера к вью — обновить отображение.
         void RenderProject(UpdateProject project);
@@ -29,6 +31,8 @@ namespace UpdateManager.Views
         string ConfirmVersion(string detectedVersion); // подтверждение/ввод версии; null = отмена
         bool Confirm(string message);                  // да/нет
         void ShowError(string message);
-        void ShowPatchProgress(PatchBuilder builder);  // модальное окно сборки
+        void ShowPatchProgress(PatchBuilder builder);     // модальное окно сборки
+        ProjectSettings EditSettings(ProjectSettings current); // окно настроек; null = отмена
+        void OpenInExplorer(string path);                 // открыть папку в проводнике
     }
 }

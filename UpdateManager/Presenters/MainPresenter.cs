@@ -30,6 +30,8 @@ namespace UpdateManager.Presenters
             _view.OpenRecentRequested += OnOpenRecent;
             _view.BrowseBuildSourceRequested += OnBrowseBuildSource;
             _view.CreatePatchRequested += OnCreatePatch;
+            _view.OpenInExplorerRequested += OnOpenInExplorer;
+            _view.EditSettingsRequested += OnEditSettings;
 
             _view.RenderNoProject(); // стартовое состояние — проект не открыт
             RefreshRecent();
@@ -93,6 +95,39 @@ namespace UpdateManager.Presenters
             RefreshRecent();
 
             // Если источник билда уже запомнен — показать его и определить версию (без повторной записи).
+            if (!string.IsNullOrEmpty(_project.Meta.LastBuildSource))
+                ApplyBuildSource(_project.Meta.LastBuildSource, persist: false);
+        }
+
+        private void OnOpenInExplorer(object sender, EventArgs e)
+        {
+            if (_project != null)
+                _view.OpenInExplorer(_project.RootPath);
+        }
+
+        private void OnEditSettings(object sender, EventArgs e)
+        {
+            if (_project == null)
+                return;
+
+            var current = _service.LoadSettings(_project.RootPath);
+            var updated = _view.EditSettings(current);
+            if (updated == null)
+                return; // отмена
+
+            try
+            {
+                _service.SaveSettings(_project.RootPath, updated);
+            }
+            catch (Exception ex)
+            {
+                _view.ShowError("Не удалось сохранить настройки:\n" + ex.Message);
+                return;
+            }
+
+            // Имя проекта могло измениться — перечитываем и показываем заново.
+            _project = _service.Open(_project.RootPath);
+            _view.RenderProject(_project);
             if (!string.IsNullOrEmpty(_project.Meta.LastBuildSource))
                 ApplyBuildSource(_project.Meta.LastBuildSource, persist: false);
         }

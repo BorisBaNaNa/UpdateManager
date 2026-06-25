@@ -50,6 +50,8 @@ namespace UpdateManager.Forms
             this.lblOutput = new System.Windows.Forms.Label();
             this.btnDeliver = new System.Windows.Forms.Button();
             this.btnVerify = new System.Windows.Forms.Button();
+            this.btnOpenInExplorer = new System.Windows.Forms.Button();
+            this.btnSettings = new System.Windows.Forms.Button();
             this.menuStrip.SuspendLayout();
             this.grpVersions.SuspendLayout();
             this.SuspendLayout();
@@ -247,6 +249,28 @@ namespace UpdateManager.Forms
             this.btnVerify.TabIndex = 10;
             this.btnVerify.Text = "Проверить";
             this.btnVerify.UseVisualStyleBackColor = true;
+            //
+            // btnOpenInExplorer
+            //
+            this.btnOpenInExplorer.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnOpenInExplorer.Enabled = false;
+            this.btnOpenInExplorer.Location = new System.Drawing.Point(436, 30);
+            this.btnOpenInExplorer.Name = "btnOpenInExplorer";
+            this.btnOpenInExplorer.Size = new System.Drawing.Size(160, 25);
+            this.btnOpenInExplorer.TabIndex = 11;
+            this.btnOpenInExplorer.Text = "Открыть в проводнике";
+            this.btnOpenInExplorer.UseVisualStyleBackColor = true;
+            //
+            // btnSettings
+            //
+            this.btnSettings.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnSettings.Enabled = false;
+            this.btnSettings.Location = new System.Drawing.Point(602, 30);
+            this.btnSettings.Name = "btnSettings";
+            this.btnSettings.Size = new System.Drawing.Size(110, 25);
+            this.btnSettings.TabIndex = 12;
+            this.btnSettings.Text = "Настройки";
+            this.btnSettings.UseVisualStyleBackColor = true;
             // 
             // MainForm
             // 
@@ -262,6 +286,8 @@ namespace UpdateManager.Forms
             this.Controls.Add(this.txtSource);
             this.Controls.Add(this.lblSource);
             this.Controls.Add(this.grpVersions);
+            this.Controls.Add(this.btnSettings);
+            this.Controls.Add(this.btnOpenInExplorer);
             this.Controls.Add(this.lblProjectTitle);
             this.Controls.Add(this.menuStrip);
             this.MainMenuStrip = this.menuStrip;
@@ -300,5 +326,7 @@ namespace UpdateManager.Forms
         private System.Windows.Forms.Label lblOutput;
         private System.Windows.Forms.Button btnDeliver;
         private System.Windows.Forms.Button btnVerify;
+        private System.Windows.Forms.Button btnOpenInExplorer;
+        private System.Windows.Forms.Button btnSettings;
     }
 }

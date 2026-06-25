@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Windows.Forms;
 using UpdateManager.Core;
 using UpdateManager.Views;
@@ -23,6 +24,8 @@ namespace UpdateManager.Forms
             exitMenuItem.Click += (s, e) => Close();
             btnBrowseSource.Click += (s, e) => BrowseBuildSourceRequested?.Invoke(this, EventArgs.Empty);
             btnCreatePatch.Click += (s, e) => CreatePatchRequested?.Invoke(this, EventArgs.Empty);
+            btnOpenInExplorer.Click += (s, e) => OpenInExplorerRequested?.Invoke(this, EventArgs.Empty);
+            btnSettings.Click += (s, e) => EditSettingsRequested?.Invoke(this, EventArgs.Empty);
         }
 
         // --- IMainView: события ---
@@ -32,6 +35,8 @@ namespace UpdateManager.Forms
         public event EventHandler<string> OpenRecentRequested;
         public event EventHandler BrowseBuildSourceRequested;
         public event EventHandler CreatePatchRequested;
+        public event EventHandler OpenInExplorerRequested;
+        public event EventHandler EditSettingsRequested;
 
         // --- IMainView: отрисовка ---
 
@@ -42,8 +47,10 @@ namespace UpdateManager.Forms
                 (string.IsNullOrEmpty(project.Meta.MainExecutable) ? "—" : project.Meta.MainExecutable);
             txtSource.Text = project.Meta.LastBuildSource ?? "";
 
-            // Проект открыт — выбор источника доступен; "Создать патч" — если источник уже задан.
+            // Проект открыт — действия с проектом доступны.
             btnBrowseSource.Enabled = true;
+            btnOpenInExplorer.Enabled = true;
+            btnSettings.Enabled = true;
             btnCreatePatch.Enabled = !string.IsNullOrEmpty(project.Meta.LastBuildSource);
 
             listViewVersions.BeginUpdate();
@@ -65,8 +72,10 @@ namespace UpdateManager.Forms
             txtSource.Text = "";
             listViewVersions.Items.Clear();
 
-            // Проект не открыт — действия с билдом недоступны.
+            // Проект не открыт — действия с проектом недоступны.
             btnBrowseSource.Enabled = false;
+            btnOpenInExplorer.Enabled = false;
+            btnSettings.Enabled = false;
             btnCreatePatch.Enabled = false;
         }
 
@@ -145,6 +154,17 @@ namespace UpdateManager.Forms
         {
             using (var dialog = new PatchProgressForm(builder))
                 dialog.ShowDialog(this);
+        }
+
+        public ProjectSettings EditSettings(ProjectSettings current)
+        {
+            using (var dialog = new ProjectSettingsForm(current))
+                return dialog.ShowDialog(this) == DialogResult.OK ? dialog.Result : null;
+        }
+
+        public void OpenInExplorer(string path)
+        {
+            Process.Start("explorer.exe", path);
         }
     }
 }
