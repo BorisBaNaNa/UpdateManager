@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace UpdateManager.Core
+namespace UpdateManager.Core.Common
 {
     /// <summary>Файловые утилиты, общие для нескольких сервисов.</summary>
     public static class FileUtils

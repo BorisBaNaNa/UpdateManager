@@ -1,6 +1,6 @@
 using SimplePatchToolCore;
 
-namespace UpdateManager.Core
+namespace UpdateManager.Core.Operations
 {
     /// <summary>
     /// Проверка доставки: клиентский движок реально качает патч во временную папку.

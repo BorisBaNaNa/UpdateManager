@@ -1,6 +1,6 @@
 using SimplePatchToolCore;
 
-namespace UpdateManager.Core
+namespace UpdateManager.Core.Versioning
 {
     /// <summary>
     /// Правила версий. Используем движковый VersionCode, чтобы наша проверка

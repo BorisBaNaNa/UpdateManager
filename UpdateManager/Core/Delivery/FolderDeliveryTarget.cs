@@ -1,7 +1,8 @@
 using System;
 using System.IO;
+using UpdateManager.Core.Common;
 
-namespace UpdateManager.Core
+namespace UpdateManager.Core.Delivery
 {
     /// <summary>Доставка в локальную папку: копирует Output/ в папку назначения.</summary>
     public class FolderDeliveryTarget : IDeliveryTarget

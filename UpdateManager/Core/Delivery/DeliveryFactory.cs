@@ -1,6 +1,6 @@
 using System;
 
-namespace UpdateManager.Core
+namespace UpdateManager.Core.Delivery
 {
     /// <summary>Создаёт обработчик доставки по сохранённой конфигурации (метод -> реализация).</summary>
     public static class DeliveryFactory

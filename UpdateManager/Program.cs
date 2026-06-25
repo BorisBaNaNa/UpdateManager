@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Windows.Forms;
-using UpdateManager.Core;
+using UpdateManager.Core.Project;
+using UpdateManager.Core.Versioning;
 using UpdateManager.Forms;
 using UpdateManager.Presenters;
 
@@ -12,7 +13,7 @@ namespace UpdateManager
         /// Главная точка входа и композиционный корень: здесь связываем вью, презентер и сервисы.
         /// </summary>
         [STAThread]
-        static void Main()
+        private static void Main()
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);

@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Xml.Linq;
 
-namespace UpdateManager.Core
+namespace UpdateManager.Core.Project
 {
     /// <summary>
     /// Список недавно открытых проектов. Это настройка УРОВНЯ ПРИЛОЖЕНИЯ

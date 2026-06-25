@@ -1,4 +1,4 @@
-namespace UpdateManager.Core
+namespace UpdateManager.Core.Operations
 {
     /// <summary>
     /// Фоновая операция движка (сборка/проверка): запускается, крутится в своём потоке,

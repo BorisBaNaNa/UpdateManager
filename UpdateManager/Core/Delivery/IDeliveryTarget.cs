@@ -1,4 +1,4 @@
-namespace UpdateManager.Core
+namespace UpdateManager.Core.Delivery
 {
     /// <summary>
     /// Способ доставки готового патча. Реализации: папка (сейчас), FTP (позже).

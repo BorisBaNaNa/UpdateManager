@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
-using UpdateManager.Core;
+using UpdateManager.Core.Delivery;
+using UpdateManager.Core.Operations;
+using UpdateManager.Core.Project;
 
 namespace UpdateManager.Views
 {

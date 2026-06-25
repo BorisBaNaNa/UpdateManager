@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Windows.Forms;
-using UpdateManager.Core;
+using UpdateManager.Core.Delivery;
+using UpdateManager.Core.Operations;
+using UpdateManager.Core.Project;
 using UpdateManager.Views;
 
 namespace UpdateManager.Forms

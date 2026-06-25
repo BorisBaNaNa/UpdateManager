@@ -1,4 +1,4 @@
-namespace UpdateManager.Core
+namespace UpdateManager.Core.Delivery
 {
     /// <summary>Сохранённая конфигурация доставки (метод + путь). Хранится в нашем файле проекта.</summary>
     public class DeliveryConfig

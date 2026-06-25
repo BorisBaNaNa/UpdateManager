@@ -1,6 +1,6 @@
 using System;
 
-namespace UpdateManager.Core
+namespace UpdateManager.Core.Project
 {
     /// <summary>
     /// Одна версия проекта = подпапка внутри Versions/ (например "1.0.0").

@@ -1,6 +1,6 @@
 using SimplePatchToolCore;
 
-namespace UpdateManager.Core
+namespace UpdateManager.Core.Operations
 {
     /// <summary>
     /// Сборка патча через ProjectManager. Движок крутит работу в своём потоке,

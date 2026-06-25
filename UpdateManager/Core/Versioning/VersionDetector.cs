@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 
-namespace UpdateManager.Core
+namespace UpdateManager.Core.Versioning
 {
     /// <summary>Результат определения версии билда.</summary>
     public class DetectedBuild

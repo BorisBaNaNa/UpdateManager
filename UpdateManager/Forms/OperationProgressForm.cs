@@ -1,6 +1,6 @@
 using System;
 using System.Windows.Forms;
-using UpdateManager.Core;
+using UpdateManager.Core.Operations;
 
 namespace UpdateManager.Forms
 {

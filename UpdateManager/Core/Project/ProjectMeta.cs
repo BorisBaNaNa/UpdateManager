@@ -1,7 +1,8 @@
 using System.IO;
 using System.Xml.Linq;
+using UpdateManager.Core.Delivery;
 
-namespace UpdateManager.Core
+namespace UpdateManager.Core.Project
 {
     /// <summary>
     /// Наш файл проекта updatemanager.project.xml — мета-информация UpdateManager,

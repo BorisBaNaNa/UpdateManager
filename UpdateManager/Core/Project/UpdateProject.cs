@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace UpdateManager.Core
+namespace UpdateManager.Core.Project
 {
     /// <summary>
     /// Открытый проект обновления в памяти: путь к корню, имя (из Settings.xml движка),

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace UpdateManager.Core
+namespace UpdateManager.Core.Project
 {
     /// <summary>
     /// Основные настройки проекта для редактирования в UI — наш DTO поверх движкового ProjectInfo.

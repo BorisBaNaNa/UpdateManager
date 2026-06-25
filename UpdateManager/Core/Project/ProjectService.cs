@@ -1,10 +1,11 @@
+using SimplePatchToolCore;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using SimplePatchToolCore;
+using UpdateManager.Core.Common;
 
-namespace UpdateManager.Core
+namespace UpdateManager.Core.Project
 {
     /// <summary>
     /// Создание и открытие проектов обновления.
