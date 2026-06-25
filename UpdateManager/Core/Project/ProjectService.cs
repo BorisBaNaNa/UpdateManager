@@ -196,14 +196,18 @@ namespace UpdateManager.Core.Project
             if (!Directory.Exists(versionsDir))
                 return new List<ProjectVersion>();
 
-            return Directory.GetDirectories(versionsDir)
+            var versions = Directory.GetDirectories(versionsDir)
                 .Select(dir => new ProjectVersion
                 {
                     Version = Path.GetFileName(dir),
                     BuildDate = Directory.GetLastWriteTime(dir)
                 })
-                .OrderBy(v => v.Version)
                 .ToList();
+
+            // Числовая сортировка версий через движковый VersionCode (1.0.0.10 после 1.0.0.2),
+            // а не строковая, где "10" < "2".
+            versions.Sort((a, b) => new VersionCode(a.Version).CompareTo(new VersionCode(b.Version)));
+            return versions;
         }
     }
 }
