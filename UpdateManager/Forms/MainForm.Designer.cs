@@ -28,6 +28,7 @@ namespace UpdateManager.Forms
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             this.menuStrip = new System.Windows.Forms.MenuStrip();
             this.projectMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.createProjectMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -119,37 +120,37 @@ namespace UpdateManager.Forms
             this.exitMenuItem.Name = "exitMenuItem";
             this.exitMenuItem.Size = new System.Drawing.Size(171, 22);
             this.exitMenuItem.Text = "Выход";
-            //
+            // 
             // viewMenuItem
-            //
+            // 
             this.viewMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.themeLightItem,
             this.themeDarkItem,
             this.themeSystemItem});
             this.viewMenuItem.Name = "viewMenuItem";
-            this.viewMenuItem.Size = new System.Drawing.Size(48, 20);
+            this.viewMenuItem.Size = new System.Drawing.Size(39, 20);
             this.viewMenuItem.Text = "Вид";
-            //
+            // 
             // themeLightItem
-            //
+            // 
             this.themeLightItem.Name = "themeLightItem";
-            this.themeLightItem.Size = new System.Drawing.Size(180, 22);
+            this.themeLightItem.Size = new System.Drawing.Size(154, 22);
             this.themeLightItem.Text = "Светлая тема";
-            //
+            // 
             // themeDarkItem
-            //
+            // 
             this.themeDarkItem.Name = "themeDarkItem";
-            this.themeDarkItem.Size = new System.Drawing.Size(180, 22);
+            this.themeDarkItem.Size = new System.Drawing.Size(154, 22);
             this.themeDarkItem.Text = "Тёмная тема";
-            //
+            // 
             // themeSystemItem
-            //
+            // 
             this.themeSystemItem.Name = "themeSystemItem";
-            this.themeSystemItem.Size = new System.Drawing.Size(180, 22);
+            this.themeSystemItem.Size = new System.Drawing.Size(154, 22);
             this.themeSystemItem.Text = "Как в Windows";
-            //
+            // 
             // lblProjectTitle
-            //
+            // 
             this.lblProjectTitle.AutoSize = true;
             this.lblProjectTitle.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Bold);
             this.lblProjectTitle.Location = new System.Drawing.Point(12, 32);
@@ -262,9 +263,9 @@ namespace UpdateManager.Forms
             this.lblOutput.Size = new System.Drawing.Size(56, 13);
             this.lblOutput.TabIndex = 8;
             this.lblOutput.Text = "Output/: —";
-            //
+            // 
             // btnFtpServer
-            //
+            // 
             this.btnFtpServer.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.btnFtpServer.Enabled = false;
             this.btnFtpServer.Location = new System.Drawing.Point(338, 430);
@@ -273,9 +274,9 @@ namespace UpdateManager.Forms
             this.btnFtpServer.TabIndex = 14;
             this.btnFtpServer.Text = "FTP-сервер…";
             this.btnFtpServer.UseVisualStyleBackColor = true;
-            //
+            // 
             // btnDeliver
-            //
+            // 
             this.btnDeliver.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.btnDeliver.Enabled = false;
             this.btnDeliver.Location = new System.Drawing.Point(462, 430);
@@ -317,9 +318,9 @@ namespace UpdateManager.Forms
             this.btnSettings.TabIndex = 12;
             this.btnSettings.Text = "Настройки";
             this.btnSettings.UseVisualStyleBackColor = true;
-            //
+            // 
             // btnPickExe
-            //
+            // 
             this.btnPickExe.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.btnPickExe.Enabled = false;
             this.btnPickExe.Location = new System.Drawing.Point(612, 111);
@@ -349,6 +350,7 @@ namespace UpdateManager.Forms
             this.Controls.Add(this.btnOpenInExplorer);
             this.Controls.Add(this.lblProjectTitle);
             this.Controls.Add(this.menuStrip);
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MainMenuStrip = this.menuStrip;
             this.MinimumSize = new System.Drawing.Size(620, 420);
             this.Name = "MainForm";

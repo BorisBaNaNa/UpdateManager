@@ -18,15 +18,16 @@ namespace UpdateManager.Forms
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(OperationProgressForm));
             this.progressBar = new System.Windows.Forms.ProgressBar();
             this.txtLog = new System.Windows.Forms.TextBox();
             this.btnClose = new System.Windows.Forms.Button();
             this.pollTimer = new System.Windows.Forms.Timer(this.components);
             this.SuspendLayout();
-            //
+            // 
             // progressBar
-            //
-            this.progressBar.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            // 
+            this.progressBar.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.progressBar.Location = new System.Drawing.Point(12, 12);
             this.progressBar.MarqueeAnimationSpeed = 30;
@@ -34,11 +35,11 @@ namespace UpdateManager.Forms
             this.progressBar.Size = new System.Drawing.Size(536, 23);
             this.progressBar.Style = System.Windows.Forms.ProgressBarStyle.Marquee;
             this.progressBar.TabIndex = 0;
-            //
+            // 
             // txtLog
-            //
-            this.txtLog.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)
+            // 
+            this.txtLog.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.txtLog.Font = new System.Drawing.Font("Consolas", 9F);
             this.txtLog.Location = new System.Drawing.Point(12, 41);
@@ -48,9 +49,9 @@ namespace UpdateManager.Forms
             this.txtLog.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
             this.txtLog.Size = new System.Drawing.Size(536, 314);
             this.txtLog.TabIndex = 1;
-            //
+            // 
             // btnClose
-            //
+            // 
             this.btnClose.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.btnClose.Enabled = false;
             this.btnClose.Location = new System.Drawing.Point(448, 365);
@@ -59,20 +60,21 @@ namespace UpdateManager.Forms
             this.btnClose.TabIndex = 2;
             this.btnClose.Text = "Закрыть";
             this.btnClose.UseVisualStyleBackColor = true;
-            //
+            // 
             // pollTimer
-            //
+            // 
             this.pollTimer.Interval = 250;
             this.pollTimer.Tick += new System.EventHandler(this.pollTimer_Tick);
-            //
-            // PatchProgressForm
-            //
+            // 
+            // OperationProgressForm
+            // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(560, 405);
             this.Controls.Add(this.btnClose);
             this.Controls.Add(this.txtLog);
             this.Controls.Add(this.progressBar);
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.MinimumSize = new System.Drawing.Size(400, 250);
@@ -81,6 +83,7 @@ namespace UpdateManager.Forms
             this.Text = "Операция";
             this.ResumeLayout(false);
             this.PerformLayout();
+
         }
 
         #endregion
