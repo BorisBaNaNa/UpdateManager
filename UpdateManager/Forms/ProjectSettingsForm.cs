@@ -2,6 +2,7 @@ using SimplePatchToolCore;
 using System;
 using System.Linq;
 using System.Windows.Forms;
+using UpdateManager.Core.Common;
 using UpdateManager.Core.Project;
 
 namespace UpdateManager.Forms
@@ -27,7 +28,11 @@ namespace UpdateManager.Forms
             cmbCompIncremental.Items.AddRange(formats);
 
             txtName.Text = settings.Name;
-            txtBaseUrl.Text = settings.BaseDownloadURL;
+            // BaseDownloadURL показываем двумя полями: адрес сервера + директория загрузки.
+            string server, directory;
+            DownloadUrl.Split(settings.BaseDownloadURL, out server, out directory);
+            txtServer.Text = server;
+            txtUploadDir.Text = directory;
             txtMaintUrl.Text = settings.MaintenanceCheckURL;
             chkSelfPatching.Checked = settings.IsSelfPatchingApp;
             chkRepair.Checked = settings.CreateRepairPatch;
@@ -52,7 +57,7 @@ namespace UpdateManager.Forms
             Result = new ProjectSettings
             {
                 Name = txtName.Text.Trim(),
-                BaseDownloadURL = txtBaseUrl.Text.Trim(),
+                BaseDownloadURL = DownloadUrl.Join(txtServer.Text, txtUploadDir.Text),
                 MaintenanceCheckURL = txtMaintUrl.Text.Trim(),
                 IsSelfPatchingApp = chkSelfPatching.Checked,
                 CreateRepairPatch = chkRepair.Checked,

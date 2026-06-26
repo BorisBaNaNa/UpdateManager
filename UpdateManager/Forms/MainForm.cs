@@ -233,9 +233,9 @@ namespace UpdateManager.Forms
                 return dialog.ShowDialog(this) == DialogResult.OK ? dialog.Result : null;
         }
 
-        public FtpConnection ConfigureFtp(FtpConnection current)
+        public FtpConnection ConfigureFtp(FtpConnection current, string uploadDirectory)
         {
-            using (var dialog = new FtpConnectionForm(current))
+            using (var dialog = new FtpConnectionForm(current, uploadDirectory))
                 return dialog.ShowDialog(this) == DialogResult.OK ? dialog.Result : null;
         }
 

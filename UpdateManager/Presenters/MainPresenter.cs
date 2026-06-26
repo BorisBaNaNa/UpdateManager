@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using UpdateManager.Core.Common;
 using UpdateManager.Core.Delivery;
 using UpdateManager.Core.Operations;
 using UpdateManager.Core.Project;
@@ -154,26 +155,39 @@ namespace UpdateManager.Presenters
         }
 
         // Заливка на FTP: реквизиты берём из профиля пользователя; если их нет — просим сейчас.
+        // Путь = корень патчей (из реквизитов) + директория загрузки проекта (хвост BaseDownloadURL).
         private void DeliverViaFtp(string outputDir)
         {
+            var uploadDir = GetUploadDirectory();
+
             var conn = _ftpStore.Load(_project.RootPath);
             if (conn == null || !conn.IsComplete())
             {
-                conn = _view.ConfigureFtp(conn ?? new FtpConnection());
+                conn = _view.ConfigureFtp(conn ?? new FtpConnection(), uploadDir);
                 if (conn == null)
                     return; // отмена
                 _ftpStore.Save(_project.RootPath, conn);
             }
 
+            var remotePath = DownloadUrl.CombineRemote(conn.RemotePath, uploadDir);
+
             // Окно операции модальное: после его закрытия op.Succeeded уже валиден.
-            var op = new FtpUploadOperation(conn, outputDir);
+            var op = new FtpUploadOperation(conn, outputDir, remotePath);
             _view.ShowOperation(op);
 
             if (op.Succeeded)
             {
                 MarkDelivered();
-                _view.ShowInfo("Патч залит на FTP: " + conn.Host);
+                _view.ShowInfo("Патч залит на FTP:\n" + remotePath);
             }
+        }
+
+        // Директория загрузки проекта = хвост BaseDownloadURL (общий и для URL, и для пути на FTP).
+        private string GetUploadDirectory()
+        {
+            string server, directory;
+            DownloadUrl.Split(_service.LoadSettings(_project.RootPath).BaseDownloadURL, out server, out directory);
+            return directory;
         }
 
         // Отмечаем факт доставки — отсюда считается «Доставлено» по версиям.
@@ -190,7 +204,7 @@ namespace UpdateManager.Presenters
                 return;
 
             var current = _ftpStore.Load(_project.RootPath) ?? new FtpConnection();
-            var updated = _view.ConfigureFtp(current);
+            var updated = _view.ConfigureFtp(current, GetUploadDirectory());
             if (updated == null)
                 return; // отмена
 

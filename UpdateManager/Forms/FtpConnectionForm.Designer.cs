@@ -28,6 +28,7 @@ namespace UpdateManager.Forms
             this.lblRemote = new System.Windows.Forms.Label();
             this.txtRemote = new System.Windows.Forms.TextBox();
             this.btnBrowseRemote = new System.Windows.Forms.Button();
+            this.lblComputed = new System.Windows.Forms.Label();
             this.lblHint = new System.Windows.Forms.Label();
             this.btnTest = new System.Windows.Forms.Button();
             this.btnOk = new System.Windows.Forms.Button();
@@ -104,8 +105,8 @@ namespace UpdateManager.Forms
             this.lblRemote.AutoSize = true;
             this.lblRemote.Location = new System.Drawing.Point(12, 114);
             this.lblRemote.Name = "lblRemote";
-            this.lblRemote.Size = new System.Drawing.Size(106, 13);
-            this.lblRemote.Text = "Папка на сервере:";
+            this.lblRemote.Size = new System.Drawing.Size(98, 13);
+            this.lblRemote.Text = "Папка с патчами:";
             //
             // txtRemote
             //
@@ -123,18 +124,27 @@ namespace UpdateManager.Forms
             this.btnBrowseRemote.Text = "…";
             this.btnBrowseRemote.UseVisualStyleBackColor = true;
             //
+            // lblComputed
+            //
+            this.lblComputed.AutoEllipsis = true;
+            this.lblComputed.ForeColor = System.Drawing.SystemColors.GrayText;
+            this.lblComputed.Location = new System.Drawing.Point(12, 138);
+            this.lblComputed.Name = "lblComputed";
+            this.lblComputed.Size = new System.Drawing.Size(420, 15);
+            this.lblComputed.Text = "Итоговый путь загрузки: —";
+            //
             // lblHint
             //
             this.lblHint.AutoSize = true;
             this.lblHint.ForeColor = System.Drawing.SystemColors.GrayText;
-            this.lblHint.Location = new System.Drawing.Point(12, 144);
+            this.lblHint.Location = new System.Drawing.Point(12, 162);
             this.lblHint.Name = "lblHint";
             this.lblHint.Size = new System.Drawing.Size(379, 13);
             this.lblHint.Text = "Реквизиты хранятся в профиле пользователя; пароль зашифрован (DPAPI).";
             //
             // btnTest
             //
-            this.btnTest.Location = new System.Drawing.Point(12, 172);
+            this.btnTest.Location = new System.Drawing.Point(12, 192);
             this.btnTest.Name = "btnTest";
             this.btnTest.Size = new System.Drawing.Size(160, 28);
             this.btnTest.TabIndex = 8;
@@ -143,7 +153,7 @@ namespace UpdateManager.Forms
             //
             // btnOk
             //
-            this.btnOk.Location = new System.Drawing.Point(246, 172);
+            this.btnOk.Location = new System.Drawing.Point(246, 192);
             this.btnOk.Name = "btnOk";
             this.btnOk.Size = new System.Drawing.Size(90, 28);
             this.btnOk.TabIndex = 6;
@@ -152,7 +162,7 @@ namespace UpdateManager.Forms
             //
             // btnCancel
             //
-            this.btnCancel.Location = new System.Drawing.Point(342, 172);
+            this.btnCancel.Location = new System.Drawing.Point(342, 192);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(90, 28);
             this.btnCancel.TabIndex = 7;
@@ -165,11 +175,12 @@ namespace UpdateManager.Forms
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.CancelButton = this.btnCancel;
-            this.ClientSize = new System.Drawing.Size(444, 212);
+            this.ClientSize = new System.Drawing.Size(444, 232);
             this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.btnOk);
             this.Controls.Add(this.btnTest);
             this.Controls.Add(this.lblHint);
+            this.Controls.Add(this.lblComputed);
             this.Controls.Add(this.btnBrowseRemote);
             this.Controls.Add(this.txtRemote);
             this.Controls.Add(this.lblRemote);
@@ -205,6 +216,7 @@ namespace UpdateManager.Forms
         private System.Windows.Forms.Label lblRemote;
         private System.Windows.Forms.TextBox txtRemote;
         private System.Windows.Forms.Button btnBrowseRemote;
+        private System.Windows.Forms.Label lblComputed;
         private System.Windows.Forms.Label lblHint;
         private System.Windows.Forms.Button btnTest;
         private System.Windows.Forms.Button btnOk;

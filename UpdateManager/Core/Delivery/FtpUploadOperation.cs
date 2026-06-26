@@ -16,6 +16,7 @@ namespace UpdateManager.Core.Delivery
     {
         private readonly FtpConnection _conn;
         private readonly string _localDir;
+        private readonly string _remotePath;
 
         private readonly Queue<string> _log = new Queue<string>();
         private readonly object _logLock = new object();
@@ -27,10 +28,11 @@ namespace UpdateManager.Core.Delivery
         private string _details = "";
         private string _lastLoggedFile;
 
-        public FtpUploadOperation(FtpConnection conn, string localDir)
+        public FtpUploadOperation(FtpConnection conn, string localDir, string remotePath)
         {
             _conn = conn;
             _localDir = localDir;
+            _remotePath = remotePath;
         }
 
         public string Title { get { return "Заливка на FTP"; } }
@@ -50,7 +52,7 @@ namespace UpdateManager.Core.Delivery
         {
             try
             {
-                var remote = string.IsNullOrWhiteSpace(_conn.RemotePath) ? "/" : _conn.RemotePath;
+                var remote = string.IsNullOrWhiteSpace(_remotePath) ? "/" : _remotePath;
                 AppendLog("Подключение к " + _conn.Host + ":" + _conn.Port + " (" + _conn.Username + ")…");
 
                 using (var client = new FtpClient(_conn.Host, _conn.Username, _conn.Password, _conn.Port))

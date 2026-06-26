@@ -42,7 +42,7 @@ namespace UpdateManager.Views
         void ShowOperation(IEngineOperation operation);   // модальное окно операции (сборка/проверка)
         ProjectSettings EditSettings(ProjectSettings current); // окно настроек; null = отмена
         DeliveryConfig ConfigureDelivery(DeliveryConfig current); // окно доставки; null = отмена
-        FtpConnection ConfigureFtp(FtpConnection current); // окно реквизитов FTP; null = отмена
+        FtpConnection ConfigureFtp(FtpConnection current, string uploadDirectory); // окно реквизитов FTP; null = отмена
         void OpenInExplorer(string path);                 // открыть папку в проводнике
     }
 }

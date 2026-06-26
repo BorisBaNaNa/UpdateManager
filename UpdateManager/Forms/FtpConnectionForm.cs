@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Windows.Forms;
+using UpdateManager.Core.Common;
 using UpdateManager.Core.Delivery;
 
 namespace UpdateManager.Forms
@@ -8,16 +9,21 @@ namespace UpdateManager.Forms
     /// <summary>
     /// Окно реквизитов FTP-подключения для доставки. По «Сохранить» возвращает FtpConnection
     /// в Result и DialogResult.OK. Реквизиты хранятся в профиле пользователя (пароль — DPAPI),
-    /// а не в файле проекта.
+    /// а не в файле проекта. Поле «Папка с патчами» — общий корень всех патчей; реальный путь
+    /// загрузки = корень + директория загрузки проекта (показывается строкой «Итоговый путь»).
     /// </summary>
     public partial class FtpConnectionForm : Form
     {
+        private readonly string _uploadDirectory;
+
         public FtpConnection Result { get; private set; }
 
-        public FtpConnectionForm(FtpConnection current)
+        public FtpConnectionForm(FtpConnection current, string uploadDirectory)
         {
             InitializeComponent();
             Theming.ThemeManager.Register(this);
+
+            _uploadDirectory = uploadDirectory ?? "";
 
             txtHost.Text = current.Host;
             numPort.Value = Math.Max(numPort.Minimum, Math.Min(numPort.Maximum, current.Port));
@@ -25,10 +31,20 @@ namespace UpdateManager.Forms
             txtPass.Text = current.Password;
             txtRemote.Text = current.RemotePath;
 
+            txtRemote.TextChanged += (s, e) => UpdateComputedPath();
+            UpdateComputedPath();
+
             btnBrowseRemote.Click += OnBrowseRemote;
             btnTest.Click += OnTest;
             btnOk.Click += OnOk;
             btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
+        }
+
+        // Итоговый путь загрузки = корень патчей + директория загрузки проекта.
+        private void UpdateComputedPath()
+        {
+            lblComputed.Text = "Итоговый путь загрузки: " +
+                DownloadUrl.CombineRemote(txtRemote.Text, _uploadDirectory);
         }
 
         // Считать реквизиты из полей; null = не заполнен хост (с предупреждением).

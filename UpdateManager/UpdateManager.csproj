@@ -57,6 +57,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Core\Common\DownloadUrl.cs" />
     <Compile Include="Core\Common\FileUtils.cs" />
     <Compile Include="Core\Common\SecretProtector.cs" />
     <Compile Include="Core\Delivery\DeliveryConfig.cs" />

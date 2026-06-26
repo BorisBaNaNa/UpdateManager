@@ -19,8 +19,10 @@ namespace UpdateManager.Forms
         {
             this.lblName = new System.Windows.Forms.Label();
             this.txtName = new System.Windows.Forms.TextBox();
-            this.lblBaseUrl = new System.Windows.Forms.Label();
-            this.txtBaseUrl = new System.Windows.Forms.TextBox();
+            this.lblServer = new System.Windows.Forms.Label();
+            this.txtServer = new System.Windows.Forms.TextBox();
+            this.lblUploadDir = new System.Windows.Forms.Label();
+            this.txtUploadDir = new System.Windows.Forms.TextBox();
             this.lblMaintUrl = new System.Windows.Forms.Label();
             this.txtMaintUrl = new System.Windows.Forms.TextBox();
             this.chkSelfPatching = new System.Windows.Forms.CheckBox();
@@ -65,27 +67,44 @@ namespace UpdateManager.Forms
             this.txtName.Size = new System.Drawing.Size(318, 20);
             this.txtName.TabIndex = 0;
             //
-            // lblBaseUrl
+            // lblServer
             //
-            this.lblBaseUrl.AutoSize = true;
-            this.lblBaseUrl.Location = new System.Drawing.Point(12, 45);
-            this.lblBaseUrl.Name = "lblBaseUrl";
-            this.lblBaseUrl.Size = new System.Drawing.Size(98, 13);
-            this.lblBaseUrl.Text = "BaseDownloadURL:";
+            this.lblServer.AutoSize = true;
+            this.lblServer.Location = new System.Drawing.Point(12, 45);
+            this.lblServer.Name = "lblServer";
+            this.lblServer.Size = new System.Drawing.Size(83, 13);
+            this.lblServer.Text = "Адрес сервера:";
             //
-            // txtBaseUrl
+            // txtServer
             //
-            this.txtBaseUrl.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            this.txtServer.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtBaseUrl.Location = new System.Drawing.Point(150, 42);
-            this.txtBaseUrl.Name = "txtBaseUrl";
-            this.txtBaseUrl.Size = new System.Drawing.Size(318, 20);
-            this.txtBaseUrl.TabIndex = 1;
+            this.txtServer.Location = new System.Drawing.Point(150, 42);
+            this.txtServer.Name = "txtServer";
+            this.txtServer.Size = new System.Drawing.Size(318, 20);
+            this.txtServer.TabIndex = 1;
+            //
+            // lblUploadDir
+            //
+            this.lblUploadDir.AutoSize = true;
+            this.lblUploadDir.Location = new System.Drawing.Point(12, 75);
+            this.lblUploadDir.Name = "lblUploadDir";
+            this.lblUploadDir.Size = new System.Drawing.Size(123, 13);
+            this.lblUploadDir.Text = "Директория загрузки:";
+            //
+            // txtUploadDir
+            //
+            this.txtUploadDir.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.txtUploadDir.Location = new System.Drawing.Point(150, 72);
+            this.txtUploadDir.Name = "txtUploadDir";
+            this.txtUploadDir.Size = new System.Drawing.Size(318, 20);
+            this.txtUploadDir.TabIndex = 2;
             //
             // lblMaintUrl
             //
             this.lblMaintUrl.AutoSize = true;
-            this.lblMaintUrl.Location = new System.Drawing.Point(12, 75);
+            this.lblMaintUrl.Location = new System.Drawing.Point(12, 105);
             this.lblMaintUrl.Name = "lblMaintUrl";
             this.lblMaintUrl.Size = new System.Drawing.Size(120, 13);
             this.lblMaintUrl.Text = "MaintenanceCheckURL:";
@@ -94,18 +113,18 @@ namespace UpdateManager.Forms
             //
             this.txtMaintUrl.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtMaintUrl.Location = new System.Drawing.Point(150, 72);
+            this.txtMaintUrl.Location = new System.Drawing.Point(150, 102);
             this.txtMaintUrl.Name = "txtMaintUrl";
             this.txtMaintUrl.Size = new System.Drawing.Size(318, 20);
-            this.txtMaintUrl.TabIndex = 2;
+            this.txtMaintUrl.TabIndex = 3;
             //
             // chkSelfPatching
             //
             this.chkSelfPatching.AutoSize = true;
-            this.chkSelfPatching.Location = new System.Drawing.Point(15, 105);
+            this.chkSelfPatching.Location = new System.Drawing.Point(15, 135);
             this.chkSelfPatching.Name = "chkSelfPatching";
             this.chkSelfPatching.Size = new System.Drawing.Size(168, 17);
-            this.chkSelfPatching.TabIndex = 3;
+            this.chkSelfPatching.TabIndex = 4;
             this.chkSelfPatching.Text = "Self-patching приложение";
             this.chkSelfPatching.UseVisualStyleBackColor = true;
             //
@@ -117,10 +136,10 @@ namespace UpdateManager.Forms
             this.grpPatchTypes.Controls.Add(this.chkInstaller);
             this.grpPatchTypes.Controls.Add(this.chkIncremental);
             this.grpPatchTypes.Controls.Add(this.chkAllIncremental);
-            this.grpPatchTypes.Location = new System.Drawing.Point(15, 135);
+            this.grpPatchTypes.Location = new System.Drawing.Point(15, 165);
             this.grpPatchTypes.Name = "grpPatchTypes";
             this.grpPatchTypes.Size = new System.Drawing.Size(453, 88);
-            this.grpPatchTypes.TabIndex = 4;
+            this.grpPatchTypes.TabIndex = 5;
             this.grpPatchTypes.TabStop = false;
             this.grpPatchTypes.Text = "Типы патчей";
             //
@@ -177,10 +196,10 @@ namespace UpdateManager.Forms
             this.grpAdvanced.Controls.Add(this.lblBinaryDiff);
             this.grpAdvanced.Controls.Add(this.numBinaryDiff);
             this.grpAdvanced.Controls.Add(this.chkDontPatchUnchanged);
-            this.grpAdvanced.Location = new System.Drawing.Point(15, 232);
+            this.grpAdvanced.Location = new System.Drawing.Point(15, 262);
             this.grpAdvanced.Name = "grpAdvanced";
             this.grpAdvanced.Size = new System.Drawing.Size(453, 140);
-            this.grpAdvanced.TabIndex = 5;
+            this.grpAdvanced.TabIndex = 6;
             this.grpAdvanced.TabStop = false;
             this.grpAdvanced.Text = "Дополнительно";
             //
@@ -261,7 +280,7 @@ namespace UpdateManager.Forms
             // lblIgnored
             //
             this.lblIgnored.AutoSize = true;
-            this.lblIgnored.Location = new System.Drawing.Point(12, 385);
+            this.lblIgnored.Location = new System.Drawing.Point(12, 415);
             this.lblIgnored.Name = "lblIgnored";
             this.lblIgnored.Size = new System.Drawing.Size(238, 13);
             this.lblIgnored.Text = "Игнорируемые пути (по одному в строке):";
@@ -271,31 +290,31 @@ namespace UpdateManager.Forms
             this.txtIgnored.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
             | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtIgnored.Location = new System.Drawing.Point(15, 405);
+            this.txtIgnored.Location = new System.Drawing.Point(15, 435);
             this.txtIgnored.Multiline = true;
             this.txtIgnored.Name = "txtIgnored";
             this.txtIgnored.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
             this.txtIgnored.Size = new System.Drawing.Size(453, 78);
-            this.txtIgnored.TabIndex = 6;
+            this.txtIgnored.TabIndex = 7;
             this.txtIgnored.WordWrap = false;
             //
             // btnOk
             //
             this.btnOk.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnOk.Location = new System.Drawing.Point(282, 495);
+            this.btnOk.Location = new System.Drawing.Point(282, 525);
             this.btnOk.Name = "btnOk";
             this.btnOk.Size = new System.Drawing.Size(90, 28);
-            this.btnOk.TabIndex = 7;
+            this.btnOk.TabIndex = 8;
             this.btnOk.Text = "Сохранить";
             this.btnOk.UseVisualStyleBackColor = true;
             //
             // btnCancel
             //
             this.btnCancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnCancel.Location = new System.Drawing.Point(378, 495);
+            this.btnCancel.Location = new System.Drawing.Point(378, 525);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(90, 28);
-            this.btnCancel.TabIndex = 8;
+            this.btnCancel.TabIndex = 9;
             this.btnCancel.Text = "Отмена";
             this.btnCancel.UseVisualStyleBackColor = true;
             //
@@ -305,7 +324,7 @@ namespace UpdateManager.Forms
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.CancelButton = this.btnCancel;
-            this.ClientSize = new System.Drawing.Size(480, 535);
+            this.ClientSize = new System.Drawing.Size(480, 565);
             this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.btnOk);
             this.Controls.Add(this.txtIgnored);
@@ -315,12 +334,14 @@ namespace UpdateManager.Forms
             this.Controls.Add(this.chkSelfPatching);
             this.Controls.Add(this.txtMaintUrl);
             this.Controls.Add(this.lblMaintUrl);
-            this.Controls.Add(this.txtBaseUrl);
-            this.Controls.Add(this.lblBaseUrl);
+            this.Controls.Add(this.txtUploadDir);
+            this.Controls.Add(this.lblUploadDir);
+            this.Controls.Add(this.txtServer);
+            this.Controls.Add(this.lblServer);
             this.Controls.Add(this.txtName);
             this.Controls.Add(this.lblName);
             this.MinimizeBox = false;
-            this.MinimumSize = new System.Drawing.Size(420, 480);
+            this.MinimumSize = new System.Drawing.Size(420, 510);
             this.Name = "ProjectSettingsForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
             this.Text = "Настройки проекта";
@@ -337,8 +358,10 @@ namespace UpdateManager.Forms
 
         private System.Windows.Forms.Label lblName;
         private System.Windows.Forms.TextBox txtName;
-        private System.Windows.Forms.Label lblBaseUrl;
-        private System.Windows.Forms.TextBox txtBaseUrl;
+        private System.Windows.Forms.Label lblServer;
+        private System.Windows.Forms.TextBox txtServer;
+        private System.Windows.Forms.Label lblUploadDir;
+        private System.Windows.Forms.TextBox txtUploadDir;
         private System.Windows.Forms.Label lblMaintUrl;
         private System.Windows.Forms.TextBox txtMaintUrl;
         private System.Windows.Forms.CheckBox chkSelfPatching;
