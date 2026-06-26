@@ -48,6 +48,7 @@ namespace UpdateManager.Forms
             this.lblMainExe = new System.Windows.Forms.Label();
             this.btnCreatePatch = new System.Windows.Forms.Button();
             this.lblOutput = new System.Windows.Forms.Label();
+            this.btnFtpServer = new System.Windows.Forms.Button();
             this.btnDeliver = new System.Windows.Forms.Button();
             this.btnVerify = new System.Windows.Forms.Button();
             this.btnOpenInExplorer = new System.Windows.Forms.Button();
@@ -228,9 +229,20 @@ namespace UpdateManager.Forms
             this.lblOutput.Size = new System.Drawing.Size(56, 13);
             this.lblOutput.TabIndex = 8;
             this.lblOutput.Text = "Output/: —";
-            // 
+            //
+            // btnFtpServer
+            //
+            this.btnFtpServer.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnFtpServer.Enabled = false;
+            this.btnFtpServer.Location = new System.Drawing.Point(338, 430);
+            this.btnFtpServer.Name = "btnFtpServer";
+            this.btnFtpServer.Size = new System.Drawing.Size(118, 28);
+            this.btnFtpServer.TabIndex = 14;
+            this.btnFtpServer.Text = "FTP-сервер…";
+            this.btnFtpServer.UseVisualStyleBackColor = true;
+            //
             // btnDeliver
-            // 
+            //
             this.btnDeliver.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.btnDeliver.Enabled = false;
             this.btnDeliver.Location = new System.Drawing.Point(462, 430);
@@ -291,6 +303,7 @@ namespace UpdateManager.Forms
             this.ClientSize = new System.Drawing.Size(724, 470);
             this.Controls.Add(this.btnVerify);
             this.Controls.Add(this.btnDeliver);
+            this.Controls.Add(this.btnFtpServer);
             this.Controls.Add(this.lblOutput);
             this.Controls.Add(this.btnCreatePatch);
             this.Controls.Add(this.btnPickExe);
@@ -337,6 +350,7 @@ namespace UpdateManager.Forms
         private System.Windows.Forms.Label lblMainExe;
         private System.Windows.Forms.Button btnCreatePatch;
         private System.Windows.Forms.Label lblOutput;
+        private System.Windows.Forms.Button btnFtpServer;
         private System.Windows.Forms.Button btnDeliver;
         private System.Windows.Forms.Button btnVerify;
         private System.Windows.Forms.Button btnOpenInExplorer;

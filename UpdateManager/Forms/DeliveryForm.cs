@@ -24,9 +24,30 @@ namespace UpdateManager.Forms
             cmbMethod.SelectedItem = methods.FirstOrDefault(m => m.Id == current.Method) ?? methods[0];
             txtPath.Text = current.Path;
 
+            cmbMethod.SelectedIndexChanged += (s, e) => UpdatePathState();
+            UpdatePathState();
+
             btnBrowse.Click += OnBrowse;
             btnOk.Click += OnOk;
             btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
+        }
+
+        private bool IsFtpSelected()
+        {
+            var method = (DeliveryMethods.Info)cmbMethod.SelectedItem;
+            return method != null && method.Id == DeliveryMethods.Ftp;
+        }
+
+        // У FTP путь/реквизиты задаются отдельной кнопкой «FTP-сервер…», поле пути ни к чему.
+        private void UpdatePathState()
+        {
+            bool ftp = IsFtpSelected();
+            lblPath.Text = ftp ? "Сервер:" : "Путь доставки:";
+            txtPath.Enabled = !ftp;
+            btnBrowse.Enabled = !ftp;
+            txtPath.Text = ftp
+                ? "Параметры подключения — кнопка «FTP-сервер…» в главном окне"
+                : (txtPath.Text.StartsWith("Параметры подключения") ? "" : txtPath.Text);
         }
 
         private void OnBrowse(object sender, EventArgs e)
@@ -43,6 +64,16 @@ namespace UpdateManager.Forms
         private void OnOk(object sender, EventArgs e)
         {
             var method = (DeliveryMethods.Info)cmbMethod.SelectedItem;
+
+            // Для FTP путь хранится не здесь (реквизиты — в профиле пользователя), путь не требуется.
+            if (method.Id == DeliveryMethods.Ftp)
+            {
+                Result = new DeliveryConfig { Method = method.Id, Path = "" };
+                DialogResult = DialogResult.OK;
+                Close();
+                return;
+            }
+
             var path = txtPath.Text.Trim();
             if (path.Length == 0)
             {

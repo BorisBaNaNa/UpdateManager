@@ -7,10 +7,11 @@ namespace UpdateManager.Core.Delivery
         public string Path { get; set; } = "";
     }
 
-    /// <summary>Доступные методы доставки. Пока только папка; FTP добавим позже.</summary>
+    /// <summary>Доступные методы доставки: локальная папка и FTP.</summary>
     public static class DeliveryMethods
     {
         public const string Folder = "Folder";
+        public const string Ftp = "Ftp";
 
         /// <summary>Описание метода для выпадающего списка (ToString = отображаемое имя).</summary>
         public sealed class Info
@@ -34,7 +35,8 @@ namespace UpdateManager.Core.Delivery
         {
             return new[]
             {
-                new Info(Folder, "Папка (локальный путь)")
+                new Info(Folder, "Папка (локальный путь)"),
+                new Info(Ftp, "FTP (сервер)")
             };
         }
     }

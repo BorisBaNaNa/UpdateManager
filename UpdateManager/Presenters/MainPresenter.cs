@@ -18,15 +18,18 @@ namespace UpdateManager.Presenters
         private readonly ProjectService _service;
         private readonly RecentProjectsStore _recent;
         private readonly VersionDetector _detector;
+        private readonly FtpConnectionStore _ftpStore;
 
         private UpdateProject _project; // текущий открытый проект (null = не открыт)
 
-        public MainPresenter(IMainView view, ProjectService service, RecentProjectsStore recent, VersionDetector detector)
+        public MainPresenter(IMainView view, ProjectService service, RecentProjectsStore recent,
+            VersionDetector detector, FtpConnectionStore ftpStore)
         {
             _view = view;
             _service = service;
             _recent = recent;
             _detector = detector;
+            _ftpStore = ftpStore;
 
             _view.CreateProjectRequested += OnCreateProject;
             _view.OpenProjectRequested += OnOpenProject;
@@ -38,6 +41,7 @@ namespace UpdateManager.Presenters
             _view.EditSettingsRequested += OnEditSettings;
             _view.DeliverPatchRequested += OnDeliverPatch;
             _view.VerifyRequested += OnVerify;
+            _view.ConfigureFtpRequested += OnConfigureFtp;
 
             _view.RenderNoProject(); // стартовое состояние — проект не открыт
             RefreshRecent();
@@ -129,22 +133,69 @@ namespace UpdateManager.Presenters
             _project.Meta.Delivery = config;
             _project.Meta.Save(_project.RootPath);
 
-            // Доставляем через выбранный обработчик.
+            // FTP идёт отдельной веткой — как фоновая операция с прогрессом.
+            if (config.Method == DeliveryMethods.Ftp)
+            {
+                DeliverViaFtp(outputDir);
+                return;
+            }
+
+            // Доставляем через выбранный обработчик (папка).
             try
             {
                 DeliveryFactory.Create(config).Deliver(outputDir);
-
-                // Отмечаем факт доставки — отсюда считается «Доставлено» по версиям.
-                _project.Meta.LastDeliveredAt = DateTime.Now;
-                _project.Meta.Save(_project.RootPath);
-                ShowProject();
-
+                MarkDelivered();
                 _view.ShowInfo("Патч доставлен в:\n" + config.Path);
             }
             catch (Exception ex)
             {
                 _view.ShowError("Доставка не удалась:\n" + ex.Message);
             }
+        }
+
+        // Заливка на FTP: реквизиты берём из профиля пользователя; если их нет — просим сейчас.
+        private void DeliverViaFtp(string outputDir)
+        {
+            var conn = _ftpStore.Load(_project.RootPath);
+            if (conn == null || !conn.IsComplete())
+            {
+                conn = _view.ConfigureFtp(conn ?? new FtpConnection());
+                if (conn == null)
+                    return; // отмена
+                _ftpStore.Save(_project.RootPath, conn);
+            }
+
+            // Окно операции модальное: после его закрытия op.Succeeded уже валиден.
+            var op = new FtpUploadOperation(conn, outputDir);
+            _view.ShowOperation(op);
+
+            if (op.Succeeded)
+            {
+                MarkDelivered();
+                _view.ShowInfo("Патч залит на FTP: " + conn.Host);
+            }
+        }
+
+        // Отмечаем факт доставки — отсюда считается «Доставлено» по версиям.
+        private void MarkDelivered()
+        {
+            _project.Meta.LastDeliveredAt = DateTime.Now;
+            _project.Meta.Save(_project.RootPath);
+            ShowProject();
+        }
+
+        private void OnConfigureFtp(object sender, EventArgs e)
+        {
+            if (_project == null)
+                return;
+
+            var current = _ftpStore.Load(_project.RootPath) ?? new FtpConnection();
+            var updated = _view.ConfigureFtp(current);
+            if (updated == null)
+                return; // отмена
+
+            _ftpStore.Save(_project.RootPath, updated);
+            _view.ShowInfo("Реквизиты FTP сохранены.");
         }
 
         private void OnVerify(object sender, EventArgs e)

@@ -32,13 +32,17 @@
   `Versions/ Output/ SelfPatcher/ Other/`) + наш `updatemanager.project.xml` (мета: главный exe,
   последний источник билда, конфиг доставки, `LastDeliveredAt`).
 - **Настройки проекта** — окно правки `Settings.xml` (Name, `BaseDownloadURL`, `MaintenanceCheckURL`,
-  `IsSelfPatchingApp`, типы патчей, `IgnoredPaths`, `CreateAllIncrementalPatches`); продвинутые поля
-  (компрессия и т.п.) сохраняются как есть.
+  `IsSelfPatchingApp`, типы патчей, `IgnoredPaths`, `CreateAllIncrementalPatches`) + раздел
+  «Дополнительно» (форматы сжатия Repair/Installer/Incremental, `BinaryDiffQuality`,
+  `DontCreatePatchFilesForUnchangedFiles`); прочие продвинутые поля движка сохраняются как есть.
 - **Создать патч** — папка билда → версия из `FileVersion` главного exe (валидация через `VersionCode`)
   → копия в `Versions/<версия>` → `ProjectManager.GeneratePatch()` (окно лога). Инкрементальные патчи
   движок делает сам из накопленных версий.
-- **Доставить патч** — стратегия `IDeliveryTarget`; реализована доставка в папку (копия `Output/`),
-  конфиг запоминается.
+- **Доставить патч** — два метода: **папка** (стратегия `IDeliveryTarget`, копия `Output/`) и **FTP**
+  (`FtpUploadOperation` на FluentFTP, Binary-режим, прогресс через `IEngineOperation`). Реквизиты FTP
+  (host/port/user/path + пароль) хранятся в профиле пользователя (`%AppData%\UpdateManager\ftp.xml`),
+  а НЕ в файле проекта; пароль шифруется через DPAPI (`SecretProtector`, `CurrentUser`). Отдельная
+  кнопка «FTP-сервер…» правит реквизиты; при доставке без реквизитов окно открывается само.
 - **Проверить** — клиентский `SimplePatchTool.Run()` реально качает патч во временную папку; ловит
   неверный/пустой `BaseDownloadURL`.
 - Защиты `BaseDownloadURL`: блок сборки при пустом; авто-добавление `/` при сохранении (движок клеит
@@ -59,15 +63,15 @@ MVP + доменный слой, инверсия зависимостей (до
 
 ## Осталось
 
-- FTP-доставка (`FtpDeliveryTarget` + FluentFTP) — архитектура доставки уже готова.
-- Override главного exe в настройках; «Дополнительно» (компрессия, `BinaryDiffQuality`).
 - Подпись манифеста (RSA, `SimplePatchToolSecurity`) — на потом.
+- FTPS/TLS для FTP-доставки (сейчас только обычный FTP) — при необходимости.
 
 ## Стек
 
 - C# / WinForms / .NET Framework 4.8 (классический `.csproj`, не SDK-style).
 - Движок патчей: SimplePatchTool (`SimplePatchToolCore`, `SimplePatchToolSecurity`).
-- FTP: планируется **FluentFTP** (через NuGet).
+- FTP: **FluentFTP** (вендорится в `lib/FluentFTP.dll`, ссылка по HintPath — как DLL движка;
+  под net48 без доп. зависимостей). Шифрование секретов: DPAPI (`System.Security`).
 
 ## Документация
 

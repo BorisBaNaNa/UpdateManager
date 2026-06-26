@@ -39,6 +39,9 @@
     <Reference Include="SimplePatchToolSecurity">
       <HintPath>..\lib\SimplePatchToolSecurity.dll</HintPath>
     </Reference>
+    <Reference Include="FluentFTP">
+      <HintPath>..\lib\FluentFTP.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -49,14 +52,20 @@
     <Reference Include="System.Deployment" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Net.Http" />
+    <Reference Include="System.Security" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Core\Common\FileUtils.cs" />
+    <Compile Include="Core\Common\SecretProtector.cs" />
     <Compile Include="Core\Delivery\DeliveryConfig.cs" />
     <Compile Include="Core\Delivery\DeliveryFactory.cs" />
     <Compile Include="Core\Delivery\FolderDeliveryTarget.cs" />
+    <Compile Include="Core\Delivery\FtpConnection.cs" />
+    <Compile Include="Core\Delivery\FtpConnectionStore.cs" />
+    <Compile Include="Core\Delivery\FtpConnectionTester.cs" />
+    <Compile Include="Core\Delivery\FtpUploadOperation.cs" />
     <Compile Include="Core\Delivery\IDeliveryTarget.cs" />
     <Compile Include="Core\Operations\IEngineOperation.cs" />
     <Compile Include="Core\Operations\PatchBuilder.cs" />
@@ -74,6 +83,12 @@
     </Compile>
     <Compile Include="Forms\DeliveryForm.Designer.cs">
       <DependentUpon>DeliveryForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\FtpConnectionForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FtpConnectionForm.Designer.cs">
+      <DependentUpon>FtpConnectionForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Forms\MainForm.cs">
       <SubType>Form</SubType>

@@ -31,6 +31,7 @@ namespace UpdateManager.Forms
             btnSettings.Click += (s, e) => EditSettingsRequested?.Invoke(this, EventArgs.Empty);
             btnDeliver.Click += (s, e) => DeliverPatchRequested?.Invoke(this, EventArgs.Empty);
             btnVerify.Click += (s, e) => VerifyRequested?.Invoke(this, EventArgs.Empty);
+            btnFtpServer.Click += (s, e) => ConfigureFtpRequested?.Invoke(this, EventArgs.Empty);
         }
 
         // --- IMainView: события ---
@@ -45,6 +46,7 @@ namespace UpdateManager.Forms
         public event EventHandler EditSettingsRequested;
         public event EventHandler DeliverPatchRequested;
         public event EventHandler VerifyRequested;
+        public event EventHandler ConfigureFtpRequested;
 
         // --- IMainView: отрисовка ---
 
@@ -61,6 +63,7 @@ namespace UpdateManager.Forms
             btnSettings.Enabled = true;
             btnDeliver.Enabled = true;
             btnVerify.Enabled = true;
+            btnFtpServer.Enabled = true;
             btnCreatePatch.Enabled = !string.IsNullOrEmpty(project.Meta.LastBuildSource);
             btnPickExe.Enabled = !string.IsNullOrEmpty(project.Meta.LastBuildSource);
 
@@ -98,6 +101,7 @@ namespace UpdateManager.Forms
             btnSettings.Enabled = false;
             btnDeliver.Enabled = false;
             btnVerify.Enabled = false;
+            btnFtpServer.Enabled = false;
             btnCreatePatch.Enabled = false;
             btnPickExe.Enabled = false;
         }
@@ -206,6 +210,12 @@ namespace UpdateManager.Forms
         public DeliveryConfig ConfigureDelivery(DeliveryConfig current)
         {
             using (var dialog = new DeliveryForm(current))
+                return dialog.ShowDialog(this) == DialogResult.OK ? dialog.Result : null;
+        }
+
+        public FtpConnection ConfigureFtp(FtpConnection current)
+        {
+            using (var dialog = new FtpConnectionForm(current))
                 return dialog.ShowDialog(this) == DialogResult.OK ? dialog.Result : null;
         }
 

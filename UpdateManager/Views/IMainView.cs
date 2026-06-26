@@ -23,6 +23,7 @@ namespace UpdateManager.Views
         event EventHandler EditSettingsRequested;       // "Настройки"
         event EventHandler DeliverPatchRequested;       // "Доставить патч"
         event EventHandler VerifyRequested;             // "Проверить"
+        event EventHandler ConfigureFtpRequested;       // "FTP-сервер…"
 
         // Команды презентера к вью — обновить отображение.
         void RenderProject(UpdateProject project);
@@ -41,6 +42,7 @@ namespace UpdateManager.Views
         void ShowOperation(IEngineOperation operation);   // модальное окно операции (сборка/проверка)
         ProjectSettings EditSettings(ProjectSettings current); // окно настроек; null = отмена
         DeliveryConfig ConfigureDelivery(DeliveryConfig current); // окно доставки; null = отмена
+        FtpConnection ConfigureFtp(FtpConnection current); // окно реквизитов FTP; null = отмена
         void OpenInExplorer(string path);                 // открыть папку в проводнике
     }
 }

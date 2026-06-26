@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Windows.Forms;
+using UpdateManager.Core.Delivery;
 using UpdateManager.Core.Project;
 using UpdateManager.Core.Versioning;
 using UpdateManager.Forms;
@@ -22,7 +23,8 @@ namespace UpdateManager
 
             // Презентер в конструкторе подписывается на события формы и дальше живёт,
             // пока жива форма (она держит его через эти подписки) — отдельная ссылка не нужна.
-            new MainPresenter(view, new ProjectService(), new RecentProjectsStore(), new VersionDetector());
+            new MainPresenter(view, new ProjectService(), new RecentProjectsStore(),
+                new VersionDetector(), new FtpConnectionStore());
 
             Application.Run(view);
         }
