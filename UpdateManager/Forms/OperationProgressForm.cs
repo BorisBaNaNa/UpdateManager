@@ -15,6 +15,7 @@ namespace UpdateManager.Forms
         public OperationProgressForm(IEngineOperation operation)
         {
             InitializeComponent();
+            Theming.ThemeManager.Register(this);
             _operation = operation;
             Text = operation.Title;
             btnClose.Click += (s, e) => Close();

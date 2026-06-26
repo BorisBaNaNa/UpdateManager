@@ -17,6 +17,7 @@ namespace UpdateManager.Forms
         public FtpConnectionForm(FtpConnection current)
         {
             InitializeComponent();
+            Theming.ThemeManager.Register(this);
 
             txtHost.Text = current.Host;
             numPort.Value = Math.Max(numPort.Minimum, Math.Min(numPort.Maximum, current.Port));

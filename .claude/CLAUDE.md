@@ -48,6 +48,9 @@
 - Защиты `BaseDownloadURL`: блок сборки при пустом; авто-добавление `/` при сохранении (движок клеит
   ссылки без слеша). Встроенный self-patcher (`UpdateManager/SelfPatcher/`, Content → bin) кладётся в
   каждый новый проект.
+- **Темы** (`Forms/Theming/`) — светлая/тёмная/«как в Windows» (через реестр). Ручная темизация
+  WinForms: `ThemeManager.Apply` рекурсивно по контролам, меню через `ThemedToolStripRenderer`,
+  тёмная рамка окна через DWM, disabled-текст кнопок дорисовывается. Режим в `%AppData%\...\theme.txt`.
 
 Git инициализирован, история ведётся по шагам.
 

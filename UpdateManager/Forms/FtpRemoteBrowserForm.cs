@@ -30,6 +30,7 @@ namespace UpdateManager.Forms
         public FtpRemoteBrowserForm(FtpConnection conn)
         {
             InitializeComponent();
+            Theming.ThemeManager.Register(this);
             _conn = conn;
 
             treeView.BeforeExpand += OnBeforeExpand;

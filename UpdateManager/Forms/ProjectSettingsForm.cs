@@ -18,6 +18,7 @@ namespace UpdateManager.Forms
         public ProjectSettingsForm(ProjectSettings settings)
         {
             InitializeComponent();
+            Theming.ThemeManager.Register(this);
 
             // Списки форматов сжатия — из движкового enum (LZMA/GZIP/NONE).
             var formats = Enum.GetValues(typeof(CompressionFormat)).Cast<object>().ToArray();

@@ -36,6 +36,10 @@ namespace UpdateManager.Forms
             this.recentProjectsMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.projectSeparator2 = new System.Windows.Forms.ToolStripSeparator();
             this.exitMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.viewMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.themeLightItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.themeDarkItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.themeSystemItem = new System.Windows.Forms.ToolStripMenuItem();
             this.lblProjectTitle = new System.Windows.Forms.Label();
             this.grpVersions = new System.Windows.Forms.GroupBox();
             this.listViewVersions = new System.Windows.Forms.ListView();
@@ -61,7 +65,8 @@ namespace UpdateManager.Forms
             // menuStrip
             // 
             this.menuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.projectMenuItem});
+            this.projectMenuItem,
+            this.viewMenuItem});
             this.menuStrip.Location = new System.Drawing.Point(0, 0);
             this.menuStrip.Name = "menuStrip";
             this.menuStrip.Size = new System.Drawing.Size(724, 24);
@@ -114,9 +119,37 @@ namespace UpdateManager.Forms
             this.exitMenuItem.Name = "exitMenuItem";
             this.exitMenuItem.Size = new System.Drawing.Size(171, 22);
             this.exitMenuItem.Text = "Выход";
-            // 
+            //
+            // viewMenuItem
+            //
+            this.viewMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.themeLightItem,
+            this.themeDarkItem,
+            this.themeSystemItem});
+            this.viewMenuItem.Name = "viewMenuItem";
+            this.viewMenuItem.Size = new System.Drawing.Size(48, 20);
+            this.viewMenuItem.Text = "Вид";
+            //
+            // themeLightItem
+            //
+            this.themeLightItem.Name = "themeLightItem";
+            this.themeLightItem.Size = new System.Drawing.Size(180, 22);
+            this.themeLightItem.Text = "Светлая тема";
+            //
+            // themeDarkItem
+            //
+            this.themeDarkItem.Name = "themeDarkItem";
+            this.themeDarkItem.Size = new System.Drawing.Size(180, 22);
+            this.themeDarkItem.Text = "Тёмная тема";
+            //
+            // themeSystemItem
+            //
+            this.themeSystemItem.Name = "themeSystemItem";
+            this.themeSystemItem.Size = new System.Drawing.Size(180, 22);
+            this.themeSystemItem.Text = "Как в Windows";
+            //
             // lblProjectTitle
-            // 
+            //
             this.lblProjectTitle.AutoSize = true;
             this.lblProjectTitle.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Bold);
             this.lblProjectTitle.Location = new System.Drawing.Point(12, 32);
@@ -338,6 +371,10 @@ namespace UpdateManager.Forms
         private System.Windows.Forms.ToolStripMenuItem recentProjectsMenuItem;
         private System.Windows.Forms.ToolStripSeparator projectSeparator2;
         private System.Windows.Forms.ToolStripMenuItem exitMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem viewMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem themeLightItem;
+        private System.Windows.Forms.ToolStripMenuItem themeDarkItem;
+        private System.Windows.Forms.ToolStripMenuItem themeSystemItem;
         private System.Windows.Forms.Label lblProjectTitle;
         private System.Windows.Forms.GroupBox grpVersions;
         private System.Windows.Forms.ListView listViewVersions;

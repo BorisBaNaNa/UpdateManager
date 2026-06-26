@@ -4,6 +4,7 @@ using UpdateManager.Core.Delivery;
 using UpdateManager.Core.Project;
 using UpdateManager.Core.Versioning;
 using UpdateManager.Forms;
+using UpdateManager.Forms.Theming;
 using UpdateManager.Presenters;
 
 namespace UpdateManager
@@ -18,6 +19,8 @@ namespace UpdateManager
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+
+            ThemeManager.Init(); // загрузить сохранённый режим темы и поставить рендерер меню
 
             var view = new MainForm();
 

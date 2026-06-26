@@ -5,6 +5,7 @@ using System.Windows.Forms;
 using UpdateManager.Core.Delivery;
 using UpdateManager.Core.Operations;
 using UpdateManager.Core.Project;
+using UpdateManager.Forms.Theming;
 using UpdateManager.Views;
 
 namespace UpdateManager.Forms
@@ -32,6 +33,25 @@ namespace UpdateManager.Forms
             btnDeliver.Click += (s, e) => DeliverPatchRequested?.Invoke(this, EventArgs.Empty);
             btnVerify.Click += (s, e) => VerifyRequested?.Invoke(this, EventArgs.Empty);
             btnFtpServer.Click += (s, e) => ConfigureFtpRequested?.Invoke(this, EventArgs.Empty);
+
+            ThemeManager.Register(this);
+            themeLightItem.Click += (s, e) => SetTheme(AppTheme.Light);
+            themeDarkItem.Click += (s, e) => SetTheme(AppTheme.Dark);
+            themeSystemItem.Click += (s, e) => SetTheme(AppTheme.System);
+            UpdateThemeChecks();
+        }
+
+        private void SetTheme(AppTheme mode)
+        {
+            ThemeManager.SetMode(mode);
+            UpdateThemeChecks();
+        }
+
+        private void UpdateThemeChecks()
+        {
+            themeLightItem.Checked = ThemeManager.Mode == AppTheme.Light;
+            themeDarkItem.Checked = ThemeManager.Mode == AppTheme.Dark;
+            themeSystemItem.Checked = ThemeManager.Mode == AppTheme.System;
         }
 
         // --- IMainView: события ---

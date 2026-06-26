@@ -16,6 +16,7 @@ namespace UpdateManager.Forms
         public DeliveryForm(DeliveryConfig current)
         {
             InitializeComponent();
+            Theming.ThemeManager.Register(this);
 
             var methods = DeliveryMethods.Available();
             cmbMethod.Items.AddRange(methods);
