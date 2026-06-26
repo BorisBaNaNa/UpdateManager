@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using UpdateManager.Core.Common;
 
 namespace UpdateManager.Core.Project
@@ -113,6 +115,39 @@ namespace UpdateManager.Core.Project
         {
             maxVersion = GetMaxVersion(projectRoot);
             return maxVersion != null && new VersionCode(version).CompareTo(new VersionCode(maxVersion)) < 0;
+        }
+
+        /// <summary>
+        /// Отпечаток настроек, влияющих на содержимое Output (BaseDownloadURL, типы патчей, сжатие и т.п.).
+        /// Пишем его в мету при сборке; при доставке сравниваем с текущим, чтобы поймать «собрал →
+        /// поменял настройки → доставил старый Output». Сравнение по значениям, поэтому повторное
+        /// сохранение тех же настроек не даёт ложного срабатывания.
+        /// </summary>
+        public string BuildSettingsFingerprint(string projectRoot)
+        {
+            var s = LoadSettings(projectRoot);
+            var parts = string.Join("", new[]
+            {
+                s.BaseDownloadURL, s.MaintenanceCheckURL,
+                s.IsSelfPatchingApp.ToString(),
+                s.CreateRepairPatch.ToString(), s.CreateInstallerPatch.ToString(),
+                s.CreateIncrementalPatch.ToString(), s.CreateAllIncrementalPatches.ToString(),
+                string.Join("", s.IgnoredPaths),
+                s.CompressionFormatRepairPatch.ToString(), s.CompressionFormatInstallerPatch.ToString(),
+                s.CompressionFormatIncrementalPatch.ToString(),
+                s.BinaryDiffQuality.ToString(),
+                s.DontCreatePatchFilesForUnchangedFiles.ToString()
+            });
+
+            // Хэшируем: служебные разделители — недопустимые в XML символы, в файл проекта их класть нельзя.
+            using (var sha = SHA256.Create())
+            {
+                var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(parts));
+                var sb = new StringBuilder(bytes.Length * 2);
+                foreach (var b in bytes)
+                    sb.Append(b.ToString("x2"));
+                return sb.ToString();
+            }
         }
 
         /// <summary>

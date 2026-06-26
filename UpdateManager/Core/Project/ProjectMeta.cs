@@ -27,6 +27,7 @@ namespace UpdateManager.Core.Project
         private const string DeliveryMethodAttribute = "method";
         private const string DeliveryPathElement = "Path";
         private const string LastDeliveredAtElement = "LastDeliveredAt";
+        private const string LastBuiltSettingsElement = "LastBuiltSettings";
 
         /// <summary>Версия схемы этого файла — чтобы в будущем безболезненно менять формат.</summary>
         public int SchemaVersion { get; set; } = CurrentSchemaVersion;
@@ -43,6 +44,12 @@ namespace UpdateManager.Core.Project
         /// <summary>Когда патч последний раз доставляли (null = ещё не доставляли).</summary>
         public DateTime? LastDeliveredAt { get; set; }
 
+        /// <summary>
+        /// Отпечаток настроек на момент последней успешной сборки патча (пусто = ещё не собирали).
+        /// При доставке сравниваем с текущим, чтобы поймать устаревший Output после смены настроек.
+        /// </summary>
+        public string LastBuiltSettings { get; set; } = "";
+
         /// <summary>Прочитать наш файл из корня проекта. Если его нет — вернуть значения по умолчанию.</summary>
         public static ProjectMeta Load(string projectRoot)
         {
@@ -55,7 +62,8 @@ namespace UpdateManager.Core.Project
             {
                 SchemaVersion = (int?)root.Attribute(SchemaVersionAttribute) ?? CurrentSchemaVersion,
                 MainExecutable = (string)root.Element(MainExecutableElement) ?? "",
-                LastBuildSource = (string)root.Element(LastBuildSourceElement) ?? ""
+                LastBuildSource = (string)root.Element(LastBuildSourceElement) ?? "",
+                LastBuiltSettings = (string)root.Element(LastBuiltSettingsElement) ?? ""
             };
 
             var delivery = root.Element(DeliveryElement);
@@ -87,7 +95,8 @@ namespace UpdateManager.Core.Project
                         new XElement(DeliveryPathElement, Delivery.Path ?? "")),
                     LastDeliveredAt.HasValue
                         ? new XElement(LastDeliveredAtElement, LastDeliveredAt.Value.ToString("o", CultureInfo.InvariantCulture))
-                        : null
+                        : null,
+                    new XElement(LastBuiltSettingsElement, LastBuiltSettings ?? "")
                 ));
             doc.Save(Path.Combine(projectRoot, FileName));
         }

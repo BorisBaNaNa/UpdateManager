@@ -162,6 +162,20 @@ namespace UpdateManager.Presenters
                 return;
             }
 
+            // Настройки менялись после сборки → в Output запечены старые (например, BaseDownloadURL).
+            // Доставка выложит устаревший патч — предупреждаем (отпечаток сравнивается по значениям).
+            if (_project.Meta.LastBuiltSettings.Length > 0 &&
+                _project.Meta.LastBuiltSettings != _service.BuildSettingsFingerprint(_project.RootPath))
+            {
+                if (!_view.Confirm(
+                    "Настройки проекта менялись после последней сборки патча.\n" +
+                    "В Output запечены прежние настройки (например, BaseDownloadURL) — " +
+                    "доставка выложит устаревший патч.\n\n" +
+                    "Рекомендуется пересобрать патч.\n" +
+                    "Всё равно доставить текущий Output?"))
+                    return;
+            }
+
             // Окно доставки: метод (преселект сохранённого) + путь.
             var config = _view.ConfigureDelivery(_project.Meta.Delivery);
             if (config == null)
@@ -418,7 +432,15 @@ namespace UpdateManager.Presenters
             }
 
             // E — сборка патча в модальном окне с логом.
-            _view.ShowOperation(new PatchBuilder(_project.RootPath));
+            var builder = new PatchBuilder(_project.RootPath);
+            _view.ShowOperation(builder);
+
+            // Запоминаем отпечаток настроек, с которыми собран Output, — для проверки при доставке.
+            if (builder.Succeeded)
+            {
+                _project.Meta.LastBuiltSettings = _service.BuildSettingsFingerprint(_project.RootPath);
+                _project.Meta.Save(_project.RootPath);
+            }
 
             // Обновляем проект (в Versions/ появилась новая версия) и показываем заново.
             _project = _service.Open(_project.RootPath);
