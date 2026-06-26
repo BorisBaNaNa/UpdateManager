@@ -80,6 +80,18 @@ namespace UpdateManager.Core.Project
             };
         }
 
+        /// <summary>В папке уже лежит проект обновления (есть Settings.xml движка).</summary>
+        public bool IsProjectFolder(string folder)
+        {
+            return File.Exists(Path.Combine(folder, EngineSettingsFile));
+        }
+
+        /// <summary>В папке есть хоть что-то (файлы/подпапки).</summary>
+        public bool IsFolderNonEmpty(string folder)
+        {
+            return Directory.Exists(folder) && Directory.GetFileSystemEntries(folder).Length > 0;
+        }
+
         /// <summary>Есть ли уже папка такой версии в Versions/.</summary>
         public bool VersionExists(string projectRoot, string version)
         {

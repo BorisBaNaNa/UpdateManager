@@ -23,6 +23,12 @@ namespace UpdateManager.Presenters
 
         private UpdateProject _project; // текущий открытый проект (null = не открыт)
 
+        private const string BuildSourceOverlapMessage =
+            "Папка билда совпадает с папкой проекта или вложена в неё.\n" +
+            "Сборка скопировала бы служебные файлы проекта (Versions/Output/…) внутрь себя — " +
+            "рекурсивно и без смысла.\n" +
+            "Выберите отдельную папку с билдом приложения.";
+
         public MainPresenter(IMainView view, ProjectService service, RecentProjectsStore recent,
             VersionDetector detector, FtpConnectionStore ftpStore)
         {
@@ -53,6 +59,37 @@ namespace UpdateManager.Presenters
             var folder = _view.BrowseForFolder("Выберите папку для нового проекта обновления");
             if (folder == null)
                 return;
+
+            // Папка уже содержит проект → создание перезапишет его настройки. Лучше открыть.
+            if (_service.IsProjectFolder(folder))
+            {
+                if (!_view.Confirm(
+                    "В этой папке уже есть проект обновления (" + ProjectService.EngineSettingsFile + ").\n" +
+                    "Создание перезапишет все файлы в папке.\n\n" +
+                    "Чтобы просто открыть его — отмените и выберите «Открыть проект».\n" +
+                    "Всё равно создавать заново?"))
+                    return;
+
+                // Чистим папку под новый проект. Может упасть на занятом файле/правах — ловим, чтобы не крашить.
+                try
+                {
+                    Directory.Delete(folder, true);
+                }
+                catch (Exception ex)
+                {
+                    _view.ShowError("Не удалось очистить папку:\n" + ex.Message);
+                    return;
+                }
+            }
+            // Папка не пуста (но не проект) → движок подмешает Settings.xml/Versions/Output к чужим файлам.
+            else if (_service.IsFolderNonEmpty(folder))
+            {
+                if (!_view.Confirm(
+                    "Папка не пуста. В неё будут добавлены файлы проекта обновления " +
+                    "(Settings.xml, Versions/Output/SelfPatcher/Other).\n" +
+                    "Продолжить?"))
+                    return;
+            }
 
             var suggestedName = Path.GetFileName(folder.TrimEnd(Path.DirectorySeparatorChar));
             var name = _view.PromptProjectName(suggestedName);
@@ -282,6 +319,14 @@ namespace UpdateManager.Presenters
             if (folder == null)
                 return;
 
+            // Папка билда не должна совпадать с проектом или быть вложенной в него (Versions/Output/…):
+            // иначе сборка скопирует служебное дерево проекта внутрь самого себя — рекурсивно.
+            if (FileUtils.PathsOverlap(folder, _project.RootPath))
+            {
+                _view.ShowError(BuildSourceOverlapMessage);
+                return;
+            }
+
             // Сменили папку — старый ручной exe в новом пути не нужен, возвращаемся к авто.
             if (!string.Equals(folder, _project.Meta.LastBuildSource, StringComparison.OrdinalIgnoreCase))
                 _project.Meta.MainExecutable = "";
@@ -298,6 +343,13 @@ namespace UpdateManager.Presenters
             if (string.IsNullOrEmpty(source) || !Directory.Exists(source))
             {
                 _view.ShowError("Папка билда не выбрана или не существует.");
+                return;
+            }
+
+            // Источник мог быть сохранён в файле проекта раньше (или папки переехали) — проверяем снова.
+            if (FileUtils.PathsOverlap(source, _project.RootPath))
+            {
+                _view.ShowError(BuildSourceOverlapMessage);
                 return;
             }
 
