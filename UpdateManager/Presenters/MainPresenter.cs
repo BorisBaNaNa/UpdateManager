@@ -353,13 +353,24 @@ namespace UpdateManager.Presenters
                 return;
             }
 
+            var settings = _service.LoadSettings(_project.RootPath);
+
             // Защита: BaseDownloadURL запекается в патч при сборке. Пустой — соберётся молча,
             // но клиент не сможет скачать файлы (битые ссылки). Блокируем заранее.
-            if ((_service.LoadSettings(_project.RootPath).BaseDownloadURL ?? "").Trim().Length == 0)
+            if ((settings.BaseDownloadURL ?? "").Trim().Length == 0)
             {
                 _view.ShowError("Не задан BaseDownloadURL.\n" +
                     "Он запекается в патч при сборке — без него клиент не скачает файлы.\n" +
                     "Укажите его в настройках проекта и соберите снова.");
+                return;
+            }
+
+            // Защита: снят каждый тип патча — собирать нечего, патч бесполезен (клиент не обновится).
+            if (!settings.CreateRepairPatch && !settings.CreateInstallerPatch && !settings.CreateIncrementalPatch)
+            {
+                _view.ShowError("Не выбран ни один тип патча (Repair / Installer / Incremental).\n" +
+                    "Такой патч бесполезен — клиенту нечего применять.\n" +
+                    "Включите хотя бы один тип в настройках проекта.");
                 return;
             }
 
