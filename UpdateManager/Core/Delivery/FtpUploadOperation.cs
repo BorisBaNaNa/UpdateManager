@@ -52,17 +52,21 @@ namespace UpdateManager.Core.Delivery
         {
             try
             {
-                var remote = string.IsNullOrWhiteSpace(_remotePath) ? "/" : _remotePath;
+                var target = (_remotePath ?? "").Trim().TrimEnd('/');
                 AppendLog("Подключение к " + _conn.Host + ":" + _conn.Port + " (" + _conn.Username + ")…");
 
                 using (var client = new FtpClient(_conn.Host, _conn.Username, _conn.Password, _conn.Port))
                 {
                     client.Config.UploadDataType = FtpDataType.Binary;
                     client.Connect();
-                    AppendLog("Подключено. Заливка в " + remote + " …");
+                    AppendLog("Подключено.");
 
-                    client.UploadDirectory(_localDir, remote, FtpFolderSyncMode.Update,
-                        FtpRemoteExists.Overwrite, FtpVerify.None, null, OnProgress);
+                    // target="" — заливка в корень FTP. Атомарный обмен там невозможен (нельзя
+                    // переименовать корень), поэтому льём напрямую как раньше.
+                    if (target.Length == 0)
+                        UploadInto(client, "/");
+                    else
+                        PublishAtomically(client, target);
                 }
 
                 _percent = 100;
@@ -78,6 +82,71 @@ namespace UpdateManager.Core.Delivery
             finally
             {
                 _running = false;
+            }
+        }
+
+        /// <summary>
+        /// Атомарная публикация: льём в target_new, и только после успешной заливки подменяем
+        /// боевую папку одним переименованием. Старый патч остаётся целым, если заливка оборвётся,
+        /// а сама подмена не оставляет «полупатча» на сервере (пункт «оборванная заливка»).
+        /// </summary>
+        private void PublishAtomically(FtpClient client, string target)
+        {
+            var staging = target + "_new";
+            var backup = target + "_old";
+
+            // Хвосты прошлого оборванного запуска мешают — убираем.
+            if (client.DirectoryExists(staging))
+            {
+                AppendLog("Удаляю остатки прошлой заливки: " + staging);
+                client.DeleteDirectory(staging);
+            }
+
+            AppendLog("Заливка во временную папку " + staging + " …");
+            UploadInto(client, staging);
+
+            // Подмена. Сначала уводим боевую папку в backup, затем staging → боевая.
+            bool hadOld = client.DirectoryExists(target);
+            if (hadOld)
+            {
+                if (client.DirectoryExists(backup))
+                    client.DeleteDirectory(backup);
+                AppendLog("Замена: " + target + " → " + backup);
+                client.MoveDirectory(target, backup, FtpRemoteExists.Overwrite);
+            }
+
+            AppendLog("Публикация: " + staging + " → " + target);
+            if (!client.MoveDirectory(staging, target, FtpRemoteExists.Overwrite))
+            {
+                // Не удалось опубликовать новый патч — возвращаем старый на место.
+                if (hadOld && !client.DirectoryExists(target) && client.DirectoryExists(backup))
+                    client.MoveDirectory(backup, target, FtpRemoteExists.Overwrite);
+                throw new Exception("Не удалось переименовать " + staging + " в " + target + ".");
+            }
+
+            // Новый патч на месте — удаляем старую копию.
+            if (hadOld && client.DirectoryExists(backup))
+            {
+                AppendLog("Удаляю старый патч: " + backup);
+                client.DeleteDirectory(backup);
+            }
+        }
+
+        // Залить Output/ в указанную папку и убедиться, что все файлы дошли (иначе подменять нечем).
+        private void UploadInto(FtpClient client, string remoteFolder)
+        {
+            var results = client.UploadDirectory(_localDir, remoteFolder, FtpFolderSyncMode.Update,
+                FtpRemoteExists.Overwrite, FtpVerify.None, null, OnProgress);
+
+            if (results == null)
+                return;
+
+            foreach (var r in results)
+            {
+                if (!r.IsFailed)
+                    continue;
+                var reason = r.Exception != null ? ": " + r.Exception.Message : "";
+                throw new Exception("Не удалось залить файл " + r.Name + reason);
             }
         }
 
