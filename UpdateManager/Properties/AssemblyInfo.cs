@@ -5,9 +5,9 @@ using System.Runtime.InteropServices;
 // набора атрибутов. Измените значения этих атрибутов для изменения сведений,
 // связанных со сборкой.
 [assembly: AssemblyTitle("UpdateManager")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("ПО для создания патчей")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
+[assembly: AssemblyCompany("BorealisSoft")]
 [assembly: AssemblyProduct("UpdateManager")]
 [assembly: AssemblyCopyright("Copyright ©  2026")]
 [assembly: AssemblyTrademark("")]

@@ -178,8 +178,6 @@
     </Content>
     <Content Include="UpdateManagerIcon.ico" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Assets\Icons\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
