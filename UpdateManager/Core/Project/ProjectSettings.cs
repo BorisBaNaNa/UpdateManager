@@ -1,11 +1,12 @@
 using System.Collections.Generic;
+using SimplePatchToolCore;
 
 namespace UpdateManager.Core.Project
 {
     /// <summary>
     /// Основные настройки проекта для редактирования в UI — наш DTO поверх движкового ProjectInfo.
-    /// Показываем то, что реально настраивают руками; продвинутые поля (компрессия, BinaryDiffQuality
-    /// и т.п.) при сохранении сохраняются как есть и здесь не отражены.
+    /// Показываем основные поля + раздел «Дополнительно» (компрессия, BinaryDiffQuality);
+    /// остальные продвинутые поля движка при сохранении сохраняются как есть.
     /// </summary>
     public class ProjectSettings
     {
@@ -29,5 +30,22 @@ namespace UpdateManager.Core.Project
 
         /// <summary>Игнорируемые пути/маски (по одному на элемент).</summary>
         public List<string> IgnoredPaths { get; set; } = new List<string>();
+
+        // --- Дополнительно (продвинутые поля движка) ---
+
+        /// <summary>Формат сжатия repair-патча (LZMA/GZIP/NONE).</summary>
+        public CompressionFormat CompressionFormatRepairPatch { get; set; } = CompressionFormat.LZMA;
+
+        /// <summary>Формат сжатия installer-патча (LZMA/GZIP/NONE).</summary>
+        public CompressionFormat CompressionFormatInstallerPatch { get; set; } = CompressionFormat.LZMA;
+
+        /// <summary>Формат сжатия инкрементального патча (LZMA/GZIP/NONE).</summary>
+        public CompressionFormat CompressionFormatIncrementalPatch { get; set; } = CompressionFormat.LZMA;
+
+        /// <summary>Качество бинарного диффа инкрементальных патчей (по умолчанию 3).</summary>
+        public int BinaryDiffQuality { get; set; } = 3;
+
+        /// <summary>Не создавать патч-файлы для неизменённых файлов.</summary>
+        public bool DontCreatePatchFilesForUnchangedFiles { get; set; }
     }
 }

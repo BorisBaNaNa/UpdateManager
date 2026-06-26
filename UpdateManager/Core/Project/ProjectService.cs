@@ -145,7 +145,12 @@ namespace UpdateManager.Core.Project
                 CreateInstallerPatch = info.CreateInstallerPatch,
                 CreateIncrementalPatch = info.CreateIncrementalPatch,
                 CreateAllIncrementalPatches = info.CreateAllIncrementalPatches,
-                IgnoredPaths = new List<string>(info.IgnoredPaths)
+                IgnoredPaths = new List<string>(info.IgnoredPaths),
+                CompressionFormatRepairPatch = info.CompressionFormatRepairPatch,
+                CompressionFormatInstallerPatch = info.CompressionFormatInstallerPatch,
+                CompressionFormatIncrementalPatch = info.CompressionFormatIncrementalPatch,
+                BinaryDiffQuality = info.BinaryDiffQuality,
+                DontCreatePatchFilesForUnchangedFiles = info.DontCreatePatchFilesForUnchangedFiles
             };
         }
 
@@ -168,6 +173,11 @@ namespace UpdateManager.Core.Project
             info.CreateAllIncrementalPatches = settings.CreateAllIncrementalPatches;
             info.IgnoredPaths.Clear();
             info.IgnoredPaths.AddRange(settings.IgnoredPaths);
+            info.CompressionFormatRepairPatch = settings.CompressionFormatRepairPatch;
+            info.CompressionFormatInstallerPatch = settings.CompressionFormatInstallerPatch;
+            info.CompressionFormatIncrementalPatch = settings.CompressionFormatIncrementalPatch;
+            info.BinaryDiffQuality = settings.BinaryDiffQuality;
+            info.DontCreatePatchFilesForUnchangedFiles = settings.DontCreatePatchFilesForUnchangedFiles;
 
             manager.SaveProjectInfo(info);
         }

@@ -1,3 +1,4 @@
+using SimplePatchToolCore;
 using System;
 using System.Linq;
 using System.Windows.Forms;
@@ -18,6 +19,12 @@ namespace UpdateManager.Forms
         {
             InitializeComponent();
 
+            // Списки форматов сжатия — из движкового enum (LZMA/GZIP/NONE).
+            var formats = Enum.GetValues(typeof(CompressionFormat)).Cast<object>().ToArray();
+            cmbCompRepair.Items.AddRange(formats);
+            cmbCompInstaller.Items.AddRange(formats);
+            cmbCompIncremental.Items.AddRange(formats);
+
             txtName.Text = settings.Name;
             txtBaseUrl.Text = settings.BaseDownloadURL;
             txtMaintUrl.Text = settings.MaintenanceCheckURL;
@@ -27,6 +34,13 @@ namespace UpdateManager.Forms
             chkIncremental.Checked = settings.CreateIncrementalPatch;
             chkAllIncremental.Checked = settings.CreateAllIncrementalPatches;
             txtIgnored.Lines = settings.IgnoredPaths.ToArray();
+
+            cmbCompRepair.SelectedItem = settings.CompressionFormatRepairPatch;
+            cmbCompInstaller.SelectedItem = settings.CompressionFormatInstallerPatch;
+            cmbCompIncremental.SelectedItem = settings.CompressionFormatIncrementalPatch;
+            numBinaryDiff.Value = Math.Max(numBinaryDiff.Minimum,
+                Math.Min(numBinaryDiff.Maximum, settings.BinaryDiffQuality));
+            chkDontPatchUnchanged.Checked = settings.DontCreatePatchFilesForUnchangedFiles;
 
             btnOk.Click += OnOk;
             btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
@@ -47,7 +61,12 @@ namespace UpdateManager.Forms
                 IgnoredPaths = txtIgnored.Lines
                     .Select(line => line.Trim())
                     .Where(line => line.Length > 0)
-                    .ToList()
+                    .ToList(),
+                CompressionFormatRepairPatch = (CompressionFormat)cmbCompRepair.SelectedItem,
+                CompressionFormatInstallerPatch = (CompressionFormat)cmbCompInstaller.SelectedItem,
+                CompressionFormatIncrementalPatch = (CompressionFormat)cmbCompIncremental.SelectedItem,
+                BinaryDiffQuality = (int)numBinaryDiff.Value,
+                DontCreatePatchFilesForUnchangedFiles = chkDontPatchUnchanged.Checked
             };
 
             DialogResult = DialogResult.OK;
