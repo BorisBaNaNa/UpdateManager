@@ -378,6 +378,18 @@ namespace UpdateManager.Presenters
                 return;
             }
 
+            // Версия ниже максимальной собранной рвёт инкрементальную цепочку (движок идёт по возрастанию).
+            // Равную перезаписать можно (ниже — отдельный вопрос про перезапись), меньшую — нет.
+            string maxVersion;
+            if (_service.IsBelowMaxVersion(_project.RootPath, version, out maxVersion))
+            {
+                _view.ShowError("Версия " + version + " ниже максимальной собранной (" + maxVersion + ").\n" +
+                    "Движок строит инкрементальные патчи по возрастанию версий — более низкая версия " +
+                    "сломает цепочку обновлений.\n" +
+                    "Соберите версию не ниже " + maxVersion + " (ровно " + maxVersion + " — пересборка той же версии).");
+                return;
+            }
+
             // Версия уже есть? Спросить про перезапись.
             if (_service.VersionExists(_project.RootPath, version) &&
                 !_view.Confirm("Версия " + version + " уже есть в Versions/. Перезаписать её?"))

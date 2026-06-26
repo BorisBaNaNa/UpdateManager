@@ -98,6 +98,23 @@ namespace UpdateManager.Core.Project
             return Directory.Exists(Path.Combine(projectRoot, VersionsFolder, version));
         }
 
+        /// <summary>Максимальная (числовая) версия в Versions/ или null, если версий ещё нет.</summary>
+        public string GetMaxVersion(string projectRoot)
+        {
+            var versions = ReadVersions(projectRoot); // отсортированы по возрастанию через VersionCode
+            return versions.Count > 0 ? versions[versions.Count - 1].Version : null;
+        }
+
+        /// <summary>
+        /// Версия ниже максимальной собранной (равная — нет). Движок строит инкрементальные патчи
+        /// по возрастанию версий, поэтому более низкая версия рвёт цепочку.
+        /// </summary>
+        public bool IsBelowMaxVersion(string projectRoot, string version, out string maxVersion)
+        {
+            maxVersion = GetMaxVersion(projectRoot);
+            return maxVersion != null && new VersionCode(version).CompareTo(new VersionCode(maxVersion)) < 0;
+        }
+
         /// <summary>
         /// Поставить билд как версию: копирует папку-источник в Versions/&lt;версия&gt;.
         /// Если такая версия уже есть — сначала удаляет её (чистая перезапись).
