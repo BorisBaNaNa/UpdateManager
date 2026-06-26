@@ -24,6 +24,7 @@ namespace UpdateManager.Forms
             txtPass.Text = current.Password;
             txtRemote.Text = current.RemotePath;
 
+            btnBrowseRemote.Click += OnBrowseRemote;
             btnTest.Click += OnTest;
             btnOk.Click += OnOk;
             btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
@@ -59,6 +60,20 @@ namespace UpdateManager.Forms
             Result = conn;
             DialogResult = DialogResult.OK;
             Close();
+        }
+
+        // Выбор папки на сервере через TreeView-браузер (по текущим реквизитам формы).
+        private void OnBrowseRemote(object sender, EventArgs e)
+        {
+            var conn = ReadConnection();
+            if (conn == null)
+                return;
+
+            using (var dialog = new FtpRemoteBrowserForm(conn))
+            {
+                if (dialog.ShowDialog(this) == DialogResult.OK)
+                    txtRemote.Text = dialog.SelectedPath;
+            }
         }
 
         // Проверка соединения на фоновом потоке, чтобы не вешать UI на недоступном сервере.

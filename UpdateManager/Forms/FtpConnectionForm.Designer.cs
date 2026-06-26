@@ -27,6 +27,7 @@ namespace UpdateManager.Forms
             this.txtPass = new System.Windows.Forms.TextBox();
             this.lblRemote = new System.Windows.Forms.Label();
             this.txtRemote = new System.Windows.Forms.TextBox();
+            this.btnBrowseRemote = new System.Windows.Forms.Button();
             this.lblHint = new System.Windows.Forms.Label();
             this.btnTest = new System.Windows.Forms.Button();
             this.btnOk = new System.Windows.Forms.Button();
@@ -110,8 +111,17 @@ namespace UpdateManager.Forms
             //
             this.txtRemote.Location = new System.Drawing.Point(130, 111);
             this.txtRemote.Name = "txtRemote";
-            this.txtRemote.Size = new System.Drawing.Size(302, 20);
+            this.txtRemote.Size = new System.Drawing.Size(266, 20);
             this.txtRemote.TabIndex = 4;
+            //
+            // btnBrowseRemote
+            //
+            this.btnBrowseRemote.Location = new System.Drawing.Point(402, 110);
+            this.btnBrowseRemote.Name = "btnBrowseRemote";
+            this.btnBrowseRemote.Size = new System.Drawing.Size(30, 22);
+            this.btnBrowseRemote.TabIndex = 5;
+            this.btnBrowseRemote.Text = "…";
+            this.btnBrowseRemote.UseVisualStyleBackColor = true;
             //
             // lblHint
             //
@@ -127,7 +137,7 @@ namespace UpdateManager.Forms
             this.btnTest.Location = new System.Drawing.Point(12, 172);
             this.btnTest.Name = "btnTest";
             this.btnTest.Size = new System.Drawing.Size(160, 28);
-            this.btnTest.TabIndex = 7;
+            this.btnTest.TabIndex = 8;
             this.btnTest.Text = "Проверить соединение";
             this.btnTest.UseVisualStyleBackColor = true;
             //
@@ -136,7 +146,7 @@ namespace UpdateManager.Forms
             this.btnOk.Location = new System.Drawing.Point(246, 172);
             this.btnOk.Name = "btnOk";
             this.btnOk.Size = new System.Drawing.Size(90, 28);
-            this.btnOk.TabIndex = 5;
+            this.btnOk.TabIndex = 6;
             this.btnOk.Text = "Сохранить";
             this.btnOk.UseVisualStyleBackColor = true;
             //
@@ -145,7 +155,7 @@ namespace UpdateManager.Forms
             this.btnCancel.Location = new System.Drawing.Point(342, 172);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(90, 28);
-            this.btnCancel.TabIndex = 6;
+            this.btnCancel.TabIndex = 7;
             this.btnCancel.Text = "Отмена";
             this.btnCancel.UseVisualStyleBackColor = true;
             //
@@ -160,6 +170,7 @@ namespace UpdateManager.Forms
             this.Controls.Add(this.btnOk);
             this.Controls.Add(this.btnTest);
             this.Controls.Add(this.lblHint);
+            this.Controls.Add(this.btnBrowseRemote);
             this.Controls.Add(this.txtRemote);
             this.Controls.Add(this.lblRemote);
             this.Controls.Add(this.txtPass);
@@ -193,6 +204,7 @@ namespace UpdateManager.Forms
         private System.Windows.Forms.TextBox txtPass;
         private System.Windows.Forms.Label lblRemote;
         private System.Windows.Forms.TextBox txtRemote;
+        private System.Windows.Forms.Button btnBrowseRemote;
         private System.Windows.Forms.Label lblHint;
         private System.Windows.Forms.Button btnTest;
         private System.Windows.Forms.Button btnOk;
