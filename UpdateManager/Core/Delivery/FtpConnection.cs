@@ -17,6 +17,12 @@ namespace UpdateManager.Core.Delivery
         /// <summary>Папка на сервере, в которую заливается содержимое Output/ (пусто = корень).</summary>
         public string RemotePath { get; set; } = "";
 
+        /// <summary>
+        /// Пароль был сохранён, но его не удалось расшифровать (другая машина/учётка Windows — DPAPI).
+        /// Только в памяти, на диск не пишется. Сигнал вызывающему коду: попросить пароль заново.
+        /// </summary>
+        public bool PasswordDecryptFailed { get; set; }
+
         /// <summary>Минимально заполнены ли поля для попытки подключения.</summary>
         public bool IsComplete()
         {

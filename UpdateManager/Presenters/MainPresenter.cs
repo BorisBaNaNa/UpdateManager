@@ -226,7 +226,11 @@ namespace UpdateManager.Presenters
             var uploadDir = GetUploadDirectory();
 
             var conn = _ftpStore.Load(_project.RootPath);
-            if (conn == null || !conn.IsComplete())
+            WarnIfPasswordUndecryptable(conn);
+
+            // Просим реквизиты, если их нет, они неполны или пароль не расшифровался (иначе залив
+            // пойдёт с пустым паролем и упадёт невнятной ошибкой авторизации).
+            if (conn == null || !conn.IsComplete() || conn.PasswordDecryptFailed)
             {
                 conn = _view.ConfigureFtp(conn ?? new FtpConnection(), uploadDir);
                 if (conn == null)
@@ -269,12 +273,25 @@ namespace UpdateManager.Presenters
                 return;
 
             var current = _ftpStore.Load(_project.RootPath) ?? new FtpConnection();
+            WarnIfPasswordUndecryptable(current);
             var updated = _view.ConfigureFtp(current, GetUploadDirectory());
             if (updated == null)
                 return; // отмена
 
             _ftpStore.Save(_project.RootPath, updated);
             _view.ShowInfo("Реквизиты FTP сохранены.");
+        }
+
+        // DPAPI привязан к учётке Windows: на другой машине/учётке сохранённый пароль не расшифруется.
+        // Не оставляем поле молча пустым — поясняем, почему пароль надо ввести заново.
+        private void WarnIfPasswordUndecryptable(FtpConnection conn)
+        {
+            if (conn != null && conn.PasswordDecryptFailed)
+                _view.ShowInfo(
+                    "Сохранённый пароль FTP не удалось расшифровать.\n" +
+                    "Вероятно, проект открыт на другой машине или под другой учётной записью Windows " +
+                    "(пароль шифруется через DPAPI и привязан к учётке).\n" +
+                    "Введите пароль заново.");
         }
 
         private void OnVerify(object sender, EventArgs e)

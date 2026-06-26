@@ -51,12 +51,16 @@ namespace UpdateManager.Core.Delivery
             if (!int.TryParse((string)item.Element("Port"), out port))
                 port = FtpConnection.DefaultPort;
 
+            // Unprotect: "" — пароля не было, null — был, но не расшифровался (другая машина/учётка).
+            var password = SecretProtector.Unprotect((string)item.Element("Password"));
+
             return new FtpConnection
             {
                 Host = (string)item.Element("Host") ?? "",
                 Port = port,
                 Username = (string)item.Element("Username") ?? "",
-                Password = SecretProtector.Unprotect((string)item.Element("Password")) ?? "",
+                Password = password ?? "",
+                PasswordDecryptFailed = password == null,
                 RemotePath = (string)item.Element("RemotePath") ?? ""
             };
         }
