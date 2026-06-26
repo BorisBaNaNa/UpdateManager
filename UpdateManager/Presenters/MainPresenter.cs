@@ -118,6 +118,20 @@ namespace UpdateManager.Presenters
 
         private void OnOpenRecent(object sender, string path)
         {
+            // Папку проекта удалили/перенесли → запись мёртвая. Как с ярлыком Windows:
+            // предупреждаем и предлагаем убрать её из списка.
+            if (!_service.IsProjectFolder(path))
+            {
+                if (_view.Confirm(
+                    "Проект не найден:\n" + path + "\n\n" +
+                    "Папку удалили или перенесли. Убрать запись из списка недавних?"))
+                {
+                    _recent.Remove(path);
+                    RefreshRecent();
+                }
+                return;
+            }
+
             OpenPath(path);
         }
 

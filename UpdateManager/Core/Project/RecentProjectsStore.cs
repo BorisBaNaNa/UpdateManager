@@ -58,6 +58,14 @@ namespace UpdateManager.Core.Project
             Save(list);
         }
 
+        /// <summary>Убрать проект из списка (например, мёртвую запись на удалённую/перенесённую папку).</summary>
+        public void Remove(string projectPath)
+        {
+            var list = Load();
+            if (list.RemoveAll(p => string.Equals(p, projectPath, StringComparison.OrdinalIgnoreCase)) > 0)
+                Save(list);
+        }
+
         private void Save(List<string> list)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(_filePath));
