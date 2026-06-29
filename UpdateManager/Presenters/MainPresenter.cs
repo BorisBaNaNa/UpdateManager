@@ -419,6 +419,32 @@ namespace UpdateManager.Presenters
                 return;
             }
 
+            // Защита: installer-патч пакует всё в один TAR, а вшитый в движок SharpZipLib читает
+            // имена записей не в UTF-8 — файлы с не-ASCII (напр. кириллицей) именами рвут ПРИМЕНЕНИЕ
+            // installer-патча на клиенте ("Illegal characters in path"). Repair/incremental целы.
+            if (settings.CreateInstallerPatch)
+            {
+                var nonAscii = FileUtils.FindNonAsciiNames(source, 6);
+                if (nonAscii.Count > 0)
+                {
+                    var sample = "";
+                    for (int i = 0; i < nonAscii.Count && i < 5; i++)
+                        sample += "  • " + nonAscii[i] + "\n";
+                    if (nonAscii.Count > 5)
+                        sample += "  • …и другие\n";
+
+                    if (!_view.Confirm(
+                        "В билде есть файлы или папки с не-ASCII именами (например, кириллицей):\n" +
+                        sample + "\n" +
+                        "Installer-патч пакует всё в один TAR-архив, и при установке на клиенте такие " +
+                        "имена вызовут ошибку \"Illegal characters in path\" — installer-патч НЕ " +
+                        "применится (repair и incremental работают как обычно).\n\n" +
+                        "Переименуйте файлы в латиницу или отключите Installer-патч в настройках.\n\n" +
+                        "Всё равно собрать?"))
+                        return;
+                }
+            }
+
             // C — подтверждение версии (всегда, даже если определили сами).
             var detected = _detector.Detect(source, _project.Name, _project.Meta.MainExecutable);
             var version = _view.ConfirmVersion(detected.Version);
