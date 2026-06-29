@@ -9,17 +9,19 @@ namespace UpdateManager.Core.Versioning
         /// <summary>Имя найденного главного exe, либо null если не нашли.</summary>
         public string ExecutableName { get; set; }
 
-        /// <summary>FileVersion главного exe, либо null если нет.</summary>
+        /// <summary>FileVersion приложения, либо null если нет.</summary>
         public string Version { get; set; }
     }
 
     /// <summary>
-    /// Определяет версию билда по главному exe (его FileVersion).
+    /// Определяет версию билда сначала по *_vers.sptv, потом по главному exe (его FileVersion).
     /// Главный exe = заданный в проекте MainExecutable, иначе "&lt;ИмяПроекта&gt;.exe".
     /// Наше ПО версию не назначает — только пытается прочитать, решение за разработчиком.
     /// </summary>
     public class VersionDetector
     {
+        private const string VERSION_FILE_POSTFIX = "_vers.sptv";
+
         public DetectedBuild Detect(string buildFolder, string projectName, string mainExecutableOverride)
         {
             var result = new DetectedBuild();
@@ -37,8 +39,18 @@ namespace UpdateManager.Core.Versioning
 
             result.ExecutableName = exeName;
 
-            var info = FileVersionInfo.GetVersionInfo(exePath);
-            result.Version = string.IsNullOrEmpty(info.FileVersion) ? null : info.FileVersion;
+            string versionFilePath = Path.Combine(buildFolder, $"{projectName}{VERSION_FILE_POSTFIX}");
+
+            if (File.Exists(versionFilePath))
+            {
+                result.Version = File.ReadAllText(versionFilePath).Trim();
+            }
+            else
+            {
+                var info = FileVersionInfo.GetVersionInfo(exePath);
+                result.Version = string.IsNullOrEmpty(info.FileVersion) ? null : info.FileVersion;
+            }
+
             return result;
         }
     }
