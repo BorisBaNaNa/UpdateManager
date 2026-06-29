@@ -23,6 +23,7 @@ namespace UpdateManager.Core.Delivery
 
         private Thread _thread;
         private volatile bool _running;
+        private volatile bool _cancelRequested;
         private volatile bool _succeeded;
         private volatile int _percent = -1;
         private string _details = "";
@@ -46,6 +47,13 @@ namespace UpdateManager.Core.Delivery
             _thread = new Thread(Run) { IsBackground = true };
             _thread.Start();
             return true;
+        }
+
+        // FluentFTP синхронные методы токен отмены не принимают, поэтому прерываем кооперативно:
+        // ставим флаг, а OnProgress (зовётся движком по ходу заливки) бросает исключение.
+        public void Cancel()
+        {
+            _cancelRequested = true;
         }
 
         private void Run()
@@ -72,6 +80,12 @@ namespace UpdateManager.Core.Delivery
                 _percent = 100;
                 _succeeded = true;
                 AppendLog("Заливка завершена.");
+            }
+            catch (OperationCanceledException)
+            {
+                _succeeded = false;
+                _details = "Прервано пользователем.";
+                AppendLog("Заливка прервана.");
             }
             catch (Exception ex)
             {
@@ -152,6 +166,9 @@ namespace UpdateManager.Core.Delivery
 
         private void OnProgress(FtpProgress p)
         {
+            if (_cancelRequested)
+                throw new OperationCanceledException();
+
             // Новый файл — логируем его имя один раз.
             if (p.LocalPath != null && p.LocalPath != _lastLoggedFile)
             {

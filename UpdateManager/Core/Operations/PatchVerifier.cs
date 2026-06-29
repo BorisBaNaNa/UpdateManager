@@ -29,6 +29,11 @@ namespace UpdateManager.Core.Operations
             return _patcher.Run(false); // false = не self-patching, обычное скачивание/применение
         }
 
+        public void Cancel()
+        {
+            _patcher.Cancel();
+        }
+
         public string FetchLog()
         {
             return _patcher.FetchLog();

@@ -22,6 +22,11 @@ namespace UpdateManager.Core.Operations
             return _project.GeneratePatch();
         }
 
+        public void Cancel()
+        {
+            _project.Cancel();
+        }
+
         public string FetchLog()
         {
             return _project.FetchLog();

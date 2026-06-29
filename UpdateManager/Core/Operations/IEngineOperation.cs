@@ -13,6 +13,12 @@ namespace UpdateManager.Core.Operations
         /// <summary>Запустить. true = запущено, false = не удалось (например, уже идёт).</summary>
         bool Start();
 
+        /// <summary>
+        /// Запросить прерывание. Кооперативно: операция останавливается не мгновенно —
+        /// дождитесь IsRunning == false. Вызов на не запущенной/уже завершённой операции — no-op.
+        /// </summary>
+        void Cancel();
+
         /// <summary>Очередная строка лога, либо null если логов в очереди нет.</summary>
         string FetchLog();
 

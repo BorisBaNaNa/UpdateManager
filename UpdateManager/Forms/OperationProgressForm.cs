@@ -12,6 +12,10 @@ namespace UpdateManager.Forms
     {
         private readonly IEngineOperation _operation;
 
+        // Пользователь запросил прерывание (через кнопку/крестик); ждём остановки операции,
+        // затем окно закрывается само.
+        private bool _cancelRequested;
+
         public OperationProgressForm(IEngineOperation operation)
         {
             InitializeComponent();
@@ -33,6 +37,9 @@ namespace UpdateManager.Forms
             }
 
             AppendLog(_operation.Title + " — запущено…");
+            // Пока операция идёт, кнопка прерывает её; по завершении станет «Закрыть».
+            btnClose.Text = "Прервать";
+            btnClose.Enabled = true;
             pollTimer.Start();
         }
 
@@ -71,12 +78,21 @@ namespace UpdateManager.Forms
             progressBar.Style = ProgressBarStyle.Blocks;
             progressBar.Value = success ? progressBar.Maximum : progressBar.Minimum;
 
+            // Прерывание было запрошено — окно закрывается само (таймер уже остановлен).
+            if (_cancelRequested)
+            {
+                AppendLog("Операция прервана.");
+                Close();
+                return;
+            }
+
             AppendLog(success ? "Готово: успешно." : "Операция завершилась с ошибкой.");
 
             var details = _operation.ResultDetails;
             if (!success && !string.IsNullOrEmpty(details))
                 AppendLog(details);
 
+            btnClose.Text = "Закрыть";
             btnClose.Enabled = true;
         }
 
@@ -85,12 +101,20 @@ namespace UpdateManager.Forms
             txtLog.AppendText(line + Environment.NewLine);
         }
 
-        // Пока операция идёт (таймер активен) — не даём закрыть окно.
+        // Пока операция идёт (таймер активен) — закрытие не закрывает окно сразу, а прерывает
+        // операцию; окно закроется само, когда операция остановится (см. Finish).
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             if (pollTimer.Enabled)
             {
                 e.Cancel = true;
+                if (!_cancelRequested)
+                {
+                    _cancelRequested = true;
+                    AppendLog("Прерывание операции…");
+                    btnClose.Enabled = false; // защита от повторных нажатий, пока операция тормозит
+                    _operation.Cancel();
+                }
                 return;
             }
             base.OnFormClosing(e);
