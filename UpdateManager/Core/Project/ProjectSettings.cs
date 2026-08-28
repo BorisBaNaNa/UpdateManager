@@ -47,5 +47,12 @@ namespace UpdateManager.Core.Project
 
         /// <summary>Не создавать патч-файлы для неизменённых файлов.</summary>
         public bool DontCreatePatchFilesForUnchangedFiles { get; set; }
+
+        /// <summary>
+        /// Подписывать патч RSA-ключом при сборке (нужен private.key в папке проекта).
+        /// Хранится не в движковом Settings.xml (у движка нет такого поля), а в нашей мете
+        /// updatemanager.project.xml — но для UI прокидывается через этот же DTO.
+        /// </summary>
+        public bool SignPatch { get; set; }
     }
 }

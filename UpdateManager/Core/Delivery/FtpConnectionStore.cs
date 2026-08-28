@@ -61,7 +61,8 @@ namespace UpdateManager.Core.Delivery
                 Username = (string)item.Element("Username") ?? "",
                 Password = password ?? "",
                 PasswordDecryptFailed = password == null,
-                RemotePath = (string)item.Element("RemotePath") ?? ""
+                RemotePath = (string)item.Element("RemotePath") ?? "",
+                PrivateKeyRemotePath = (string)item.Element("PrivateKeyRemotePath") ?? ""
             };
         }
 
@@ -83,7 +84,8 @@ namespace UpdateManager.Core.Delivery
                 new XElement("Port", conn.Port),
                 new XElement("Username", conn.Username ?? ""),
                 new XElement("Password", SecretProtector.Protect(conn.Password)),
-                new XElement("RemotePath", conn.RemotePath ?? "")));
+                new XElement("RemotePath", conn.RemotePath ?? ""),
+                new XElement("PrivateKeyRemotePath", conn.PrivateKeyRemotePath ?? "")));
 
             Directory.CreateDirectory(Path.GetDirectoryName(_filePath));
             new XDocument(root).Save(_filePath);

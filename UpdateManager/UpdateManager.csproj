@@ -68,6 +68,7 @@
     <Compile Include="Core\Delivery\FolderDeliveryTarget.cs" />
     <Compile Include="Core\Delivery\FtpConnection.cs" />
     <Compile Include="Core\Delivery\FtpConnectionStore.cs" />
+    <Compile Include="Core\Delivery\FtpKeyUploader.cs" />
     <Compile Include="Core\Delivery\FtpConnectionTester.cs" />
     <Compile Include="Core\Delivery\FtpUploadOperation.cs" />
     <Compile Include="Core\Delivery\IDeliveryTarget.cs" />
@@ -80,6 +81,8 @@
     <Compile Include="Core\Project\ProjectVersion.cs" />
     <Compile Include="Core\Project\RecentProjectsStore.cs" />
     <Compile Include="Core\Project\UpdateProject.cs" />
+    <Compile Include="Core\Security\PatchSigner.cs" />
+    <Compile Include="Core\Security\RsaKeyManager.cs" />
     <Compile Include="Core\Versioning\VersionDetector.cs" />
     <Compile Include="Core\Versioning\VersionRules.cs" />
     <Compile Include="Forms\DeliveryForm.cs">

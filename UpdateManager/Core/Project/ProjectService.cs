@@ -136,7 +136,8 @@ namespace UpdateManager.Core.Project
                 s.CompressionFormatRepairPatch.ToString(), s.CompressionFormatInstallerPatch.ToString(),
                 s.CompressionFormatIncrementalPatch.ToString(),
                 s.BinaryDiffQuality.ToString(),
-                s.DontCreatePatchFilesForUnchangedFiles.ToString()
+                s.DontCreatePatchFilesForUnchangedFiles.ToString(),
+                s.SignPatch.ToString()
             });
 
             // Хэшируем: служебные разделители — недопустимые в XML символы, в файл проекта их класть нельзя.
@@ -199,6 +200,8 @@ namespace UpdateManager.Core.Project
         public ProjectSettings LoadSettings(string projectRoot)
         {
             var info = new ProjectManager(projectRoot).LoadProjectInfo();
+            // SignPatch у движка нет — берём из нашей меты.
+            var signPatch = ProjectMeta.Load(projectRoot).SignPatch;
             return new ProjectSettings
             {
                 Name = info.Name ?? "",
@@ -214,7 +217,8 @@ namespace UpdateManager.Core.Project
                 CompressionFormatInstallerPatch = info.CompressionFormatInstallerPatch,
                 CompressionFormatIncrementalPatch = info.CompressionFormatIncrementalPatch,
                 BinaryDiffQuality = info.BinaryDiffQuality,
-                DontCreatePatchFilesForUnchangedFiles = info.DontCreatePatchFilesForUnchangedFiles
+                DontCreatePatchFilesForUnchangedFiles = info.DontCreatePatchFilesForUnchangedFiles,
+                SignPatch = signPatch
             };
         }
 
@@ -244,6 +248,11 @@ namespace UpdateManager.Core.Project
             info.DontCreatePatchFilesForUnchangedFiles = settings.DontCreatePatchFilesForUnchangedFiles;
 
             manager.SaveProjectInfo(info);
+
+            // SignPatch движок не хранит — пишем в нашу мету (остальные поля меты не трогаем).
+            var meta = ProjectMeta.Load(projectRoot);
+            meta.SignPatch = settings.SignPatch;
+            meta.Save(projectRoot);
         }
 
         // --- self-patcher ---

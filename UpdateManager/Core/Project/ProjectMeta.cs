@@ -28,6 +28,7 @@ namespace UpdateManager.Core.Project
         private const string DeliveryPathElement = "Path";
         private const string LastDeliveredAtElement = "LastDeliveredAt";
         private const string LastBuiltSettingsElement = "LastBuiltSettings";
+        private const string SignPatchElement = "SignPatch";
 
         /// <summary>Версия схемы этого файла — чтобы в будущем безболезненно менять формат.</summary>
         public int SchemaVersion { get; set; } = CurrentSchemaVersion;
@@ -50,6 +51,12 @@ namespace UpdateManager.Core.Project
         /// </summary>
         public string LastBuiltSettings { get; set; } = "";
 
+        /// <summary>
+        /// Подписывать патч RSA-ключом при сборке. Живёт здесь, а не в движковом Settings.xml
+        /// (у движка нет такого поля); в UI прокидывается через ProjectSettings.
+        /// </summary>
+        public bool SignPatch { get; set; }
+
         /// <summary>Прочитать наш файл из корня проекта. Если его нет — вернуть значения по умолчанию.</summary>
         public static ProjectMeta Load(string projectRoot)
         {
@@ -63,7 +70,8 @@ namespace UpdateManager.Core.Project
                 SchemaVersion = (int?)root.Attribute(SchemaVersionAttribute) ?? CurrentSchemaVersion,
                 MainExecutable = (string)root.Element(MainExecutableElement) ?? "",
                 LastBuildSource = (string)root.Element(LastBuildSourceElement) ?? "",
-                LastBuiltSettings = (string)root.Element(LastBuiltSettingsElement) ?? ""
+                LastBuiltSettings = (string)root.Element(LastBuiltSettingsElement) ?? "",
+                SignPatch = (bool?)root.Element(SignPatchElement) ?? false
             };
 
             var delivery = root.Element(DeliveryElement);
@@ -96,7 +104,8 @@ namespace UpdateManager.Core.Project
                     LastDeliveredAt.HasValue
                         ? new XElement(LastDeliveredAtElement, LastDeliveredAt.Value.ToString("o", CultureInfo.InvariantCulture))
                         : null,
-                    new XElement(LastBuiltSettingsElement, LastBuiltSettings ?? "")
+                    new XElement(LastBuiltSettingsElement, LastBuiltSettings ?? ""),
+                    new XElement(SignPatchElement, SignPatch)
                 ));
             doc.Save(Path.Combine(projectRoot, FileName));
         }
