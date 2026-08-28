@@ -36,6 +36,7 @@ namespace UpdateManager.Forms
             UpdateComputedPath();
 
             btnBrowseRemote.Click += OnBrowseRemote;
+            btnBrowsePrivKey.Click += OnBrowsePrivKey;
             btnTest.Click += OnTest;
             btnOk.Click += OnOk;
             btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
@@ -92,6 +93,20 @@ namespace UpdateManager.Forms
             {
                 if (dialog.ShowDialog(this) == DialogResult.OK)
                     txtRemote.Text = dialog.SelectedPath;
+            }
+        }
+
+        // Выбор ОТДЕЛЬНОЙ папки ключа тем же серверным браузером, что и для папки патчей.
+        private void OnBrowsePrivKey(object sender, EventArgs e)
+        {
+            var conn = ReadConnection();
+            if (conn == null)
+                return;
+
+            using (var dialog = new FtpRemoteBrowserForm(conn))
+            {
+                if (dialog.ShowDialog(this) == DialogResult.OK)
+                    txtPrivKeyRemote.Text = dialog.SelectedPath;
             }
         }
 

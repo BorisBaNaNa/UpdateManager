@@ -33,6 +33,7 @@ namespace UpdateManager.Forms
             this.lblHint = new System.Windows.Forms.Label();
             this.lblPrivKeyRemote = new System.Windows.Forms.Label();
             this.txtPrivKeyRemote = new System.Windows.Forms.TextBox();
+            this.btnBrowsePrivKey = new System.Windows.Forms.Button();
             this.lblPrivKeyWarn = new System.Windows.Forms.Label();
             this.btnTest = new System.Windows.Forms.Button();
             this.btnOk = new System.Windows.Forms.Button();
@@ -178,8 +179,17 @@ namespace UpdateManager.Forms
             //
             this.txtPrivKeyRemote.Location = new System.Drawing.Point(130, 187);
             this.txtPrivKeyRemote.Name = "txtPrivKeyRemote";
-            this.txtPrivKeyRemote.Size = new System.Drawing.Size(302, 20);
+            this.txtPrivKeyRemote.Size = new System.Drawing.Size(266, 20);
             this.txtPrivKeyRemote.TabIndex = 6;
+            //
+            // btnBrowsePrivKey
+            //
+            this.btnBrowsePrivKey.Location = new System.Drawing.Point(402, 186);
+            this.btnBrowsePrivKey.Name = "btnBrowsePrivKey";
+            this.btnBrowsePrivKey.Size = new System.Drawing.Size(30, 22);
+            this.btnBrowsePrivKey.TabIndex = 7;
+            this.btnBrowsePrivKey.Text = "…";
+            this.btnBrowsePrivKey.UseVisualStyleBackColor = true;
             //
             // lblPrivKeyWarn
             //
@@ -197,7 +207,7 @@ namespace UpdateManager.Forms
             this.btnTest.Location = new System.Drawing.Point(12, 262);
             this.btnTest.Name = "btnTest";
             this.btnTest.Size = new System.Drawing.Size(160, 28);
-            this.btnTest.TabIndex = 9;
+            this.btnTest.TabIndex = 10;
             this.btnTest.Text = "Проверить соединение";
             this.btnTest.UseVisualStyleBackColor = true;
             //
@@ -206,7 +216,7 @@ namespace UpdateManager.Forms
             this.btnOk.Location = new System.Drawing.Point(246, 262);
             this.btnOk.Name = "btnOk";
             this.btnOk.Size = new System.Drawing.Size(90, 28);
-            this.btnOk.TabIndex = 7;
+            this.btnOk.TabIndex = 8;
             this.btnOk.Text = "Сохранить";
             this.btnOk.UseVisualStyleBackColor = true;
             //
@@ -216,7 +226,7 @@ namespace UpdateManager.Forms
             this.btnCancel.Location = new System.Drawing.Point(342, 262);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(90, 28);
-            this.btnCancel.TabIndex = 8;
+            this.btnCancel.TabIndex = 9;
             this.btnCancel.Text = "Отмена";
             this.btnCancel.UseVisualStyleBackColor = true;
             // 
@@ -231,6 +241,7 @@ namespace UpdateManager.Forms
             this.Controls.Add(this.btnOk);
             this.Controls.Add(this.btnTest);
             this.Controls.Add(this.lblPrivKeyWarn);
+            this.Controls.Add(this.btnBrowsePrivKey);
             this.Controls.Add(this.txtPrivKeyRemote);
             this.Controls.Add(this.lblPrivKeyRemote);
             this.Controls.Add(this.lblHint);
@@ -276,6 +287,7 @@ namespace UpdateManager.Forms
         private System.Windows.Forms.Label lblHint;
         private System.Windows.Forms.Label lblPrivKeyRemote;
         private System.Windows.Forms.TextBox txtPrivKeyRemote;
+        private System.Windows.Forms.Button btnBrowsePrivKey;
         private System.Windows.Forms.Label lblPrivKeyWarn;
         private System.Windows.Forms.Button btnTest;
         private System.Windows.Forms.Button btnOk;
