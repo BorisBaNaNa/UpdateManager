@@ -100,14 +100,24 @@ namespace UpdateManager.Core.Delivery
         }
 
         /// <summary>
-        /// Атомарная публикация: льём в target_new, и только после успешной заливки подменяем
-        /// боевую папку одним переименованием. Старый патч остаётся целым, если заливка оборвётся,
-        /// а сама подмена не оставляет «полупатча» на сервере (пункт «оборванная заливка»).
+        /// Атомарная публикация С СОХРАНЕНИЕМ неотслеживаемых файлов/папок. Льём патч в target_new и
+        /// только после успешной заливки подменяем боевую папку переименованием (старый патч цел, если
+        /// заливка оборвётся; на сервере не остаётся «полупатча»). При этом всё, что лежит в боевой папке,
+        /// но НЕ входит в новый патч (напр. вручную созданная AndroidPatch — apk + latest.json), переносится
+        /// в новую папку, а не удаляется вместе со старым патчем.
+        ///
+        /// Крах-безопасно: неотслеживаемое всегда либо в боевой папке, либо в резерве (target_old). В начале
+        /// <see cref="RecoverFromInterruptedRun"/> сверяет резерв прошлого оборванного запуска с боевой папкой
+        /// и возвращает недостающее — поэтому обрыв в момент подмены неотслеживаемое не теряет.
         /// </summary>
         private void PublishAtomically(FtpClient client, string target)
         {
             var staging = target + "_new";
             var backup = target + "_old";
+
+            // Сначала — восстановление после прошлого оборванного запуска (резерв мог остаться и хранить
+            // неотслеживаемое). Только ПОСЛЕ этого безопасно удалять staging.
+            RecoverFromInterruptedRun(client, target, backup);
 
             // Хвосты прошлого оборванного запуска мешают — убираем.
             if (client.DirectoryExists(staging))
@@ -119,31 +129,107 @@ namespace UpdateManager.Core.Delivery
             AppendLog("Заливка во временную папку " + staging + " …");
             UploadInto(client, staging);
 
-            // Подмена. Сначала уводим боевую папку в backup, затем staging → боевая.
             bool hadOld = client.DirectoryExists(target);
-            if (hadOld)
+            if (!hadOld)
             {
-                if (client.DirectoryExists(backup))
-                    client.DeleteDirectory(backup);
-                AppendLog("Замена: " + target + " → " + backup);
-                client.MoveDirectory(target, backup, FtpRemoteExists.Overwrite);
+                // Боевой папки ещё нет — просто публикуем.
+                AppendLog("Публикация: " + staging + " → " + target);
+                if (!client.MoveDirectory(staging, target, FtpRemoteExists.Overwrite))
+                    throw new Exception("Не удалось переименовать " + staging + " в " + target + ".");
+                return;
             }
+
+            // Что в боевой папке НЕ относится к новому патчу — сохраняем (перенесём после подмены из резерва).
+            var patchNames = TopLevelNames(client, staging);
+            var untracked = UntrackedEntries(client, target, patchNames);
+
+            // Подмена. Сначала уводим боевую папку в резерв (в нём цело и неотслеживаемое), затем staging → боевая.
+            if (client.DirectoryExists(backup))
+                client.DeleteDirectory(backup);
+            AppendLog("Замена: " + target + " → " + backup);
+            client.MoveDirectory(target, backup, FtpRemoteExists.Overwrite);
 
             AppendLog("Публикация: " + staging + " → " + target);
             if (!client.MoveDirectory(staging, target, FtpRemoteExists.Overwrite))
             {
-                // Не удалось опубликовать новый патч — возвращаем старый на место.
-                if (hadOld && !client.DirectoryExists(target) && client.DirectoryExists(backup))
+                // Не удалось опубликовать новый патч — возвращаем старую папку целиком (с неотслеживаемым) на место.
+                if (!client.DirectoryExists(target) && client.DirectoryExists(backup))
                     client.MoveDirectory(backup, target, FtpRemoteExists.Overwrite);
                 throw new Exception("Не удалось переименовать " + staging + " в " + target + ".");
             }
 
-            // Новый патч на месте — удаляем старую копию.
-            if (hadOld && client.DirectoryExists(backup))
+            // Возвращаем неотслеживаемое из резерва в новую боевую папку (переименованием — быстро, без пере-заливки).
+            foreach (var item in untracked)
+            {
+                AppendLog("Сохраняю: " + item.Name);
+                MoveEntry(client, item, backup + "/" + item.Name, target + "/" + item.Name);
+            }
+
+            // Остаток резерва — только старые файлы патча.
+            if (client.DirectoryExists(backup))
             {
                 AppendLog("Удаляю старый патч: " + backup);
                 client.DeleteDirectory(backup);
             }
+        }
+
+        /// <summary>
+        /// Восстановление после оборванного прошлого запуска: резерв (target_old) существует, только если
+        /// прошлый запуск ушёл в подмену, но не завершил её. Возвращаем в боевую папку то, чего в ней нет
+        /// (неотслеживаемое цело), затем убираем резерв — начинаем с чистого состояния.
+        /// </summary>
+        private void RecoverFromInterruptedRun(FtpClient client, string target, string backup)
+        {
+            if (!client.DirectoryExists(backup))
+                return;
+
+            AppendLog("Обнаружен резерв прошлого запуска — восстанавливаю: " + backup);
+            if (!client.DirectoryExists(target))
+            {
+                // Крах между «боевая → резерв» и «staging → боевая»: возвращаем всю папку целиком.
+                client.MoveDirectory(backup, target, FtpRemoteExists.Overwrite);
+                return;
+            }
+
+            // Боевая папка уже новая (крах после подмены, до возврата неотслеживаемого): вернём из резерва
+            // лишь то, чего в ней нет (напр. AndroidPatch). Совпавшие по имени — устаревшие файлы патча, их не трогаем.
+            var targetNames = TopLevelNames(client, target);
+            foreach (var item in client.GetListing(backup))
+            {
+                if (targetNames.Contains(item.Name))
+                    continue;
+                MoveEntry(client, item, backup + "/" + item.Name, target + "/" + item.Name);
+            }
+            client.DeleteDirectory(backup);
+        }
+
+        // Перенести запись (файл или папку) переименованием.
+        private static void MoveEntry(FtpClient client, FtpListItem item, string from, string to)
+        {
+            if (item.Type == FtpObjectType.Directory)
+                client.MoveDirectory(from, to, FtpRemoteExists.Overwrite);
+            else
+                client.MoveFile(from, to, FtpRemoteExists.Overwrite);
+        }
+
+        // Имена записей верхнего уровня папки (пустой набор, если папки нет).
+        private static HashSet<string> TopLevelNames(FtpClient client, string dir)
+        {
+            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (client.DirectoryExists(dir))
+                foreach (var item in client.GetListing(dir))
+                    set.Add(item.Name);
+            return set;
+        }
+
+        // Записи боевой папки, которых нет в новом патче, — их и сохраняем (неотслеживаемое).
+        private static List<FtpListItem> UntrackedEntries(FtpClient client, string target, HashSet<string> patchNames)
+        {
+            var result = new List<FtpListItem>();
+            foreach (var item in client.GetListing(target))
+                if (!patchNames.Contains(item.Name))
+                    result.Add(item);
+            return result;
         }
 
         // Залить Output/ в указанную папку и убедиться, что все файлы дошли (иначе подменять нечем).
