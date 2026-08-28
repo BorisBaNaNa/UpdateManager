@@ -37,6 +37,8 @@ namespace UpdateManager.Forms
             this.recentProjectsMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.projectSeparator2 = new System.Windows.Forms.ToolStripSeparator();
             this.exitMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.securityMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.generateKeysMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.viewMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.themeLightItem = new System.Windows.Forms.ToolStripMenuItem();
             this.themeDarkItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -67,6 +69,7 @@ namespace UpdateManager.Forms
             // 
             this.menuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.projectMenuItem,
+            this.securityMenuItem,
             this.viewMenuItem});
             this.menuStrip.Location = new System.Drawing.Point(0, 0);
             this.menuStrip.Name = "menuStrip";
@@ -120,9 +123,23 @@ namespace UpdateManager.Forms
             this.exitMenuItem.Name = "exitMenuItem";
             this.exitMenuItem.Size = new System.Drawing.Size(171, 22);
             this.exitMenuItem.Text = "Выход";
-            // 
+            //
+            // securityMenuItem
+            //
+            this.securityMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.generateKeysMenuItem});
+            this.securityMenuItem.Name = "securityMenuItem";
+            this.securityMenuItem.Size = new System.Drawing.Size(94, 20);
+            this.securityMenuItem.Text = "Безопасность";
+            //
+            // generateKeysMenuItem
+            //
+            this.generateKeysMenuItem.Name = "generateKeysMenuItem";
+            this.generateKeysMenuItem.Size = new System.Drawing.Size(230, 22);
+            this.generateKeysMenuItem.Text = "Сгенерировать RSA-ключи…";
+            //
             // viewMenuItem
-            // 
+            //
             this.viewMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.themeLightItem,
             this.themeDarkItem,
@@ -373,6 +390,8 @@ namespace UpdateManager.Forms
         private System.Windows.Forms.ToolStripMenuItem recentProjectsMenuItem;
         private System.Windows.Forms.ToolStripSeparator projectSeparator2;
         private System.Windows.Forms.ToolStripMenuItem exitMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem securityMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem generateKeysMenuItem;
         private System.Windows.Forms.ToolStripMenuItem viewMenuItem;
         private System.Windows.Forms.ToolStripMenuItem themeLightItem;
         private System.Windows.Forms.ToolStripMenuItem themeDarkItem;

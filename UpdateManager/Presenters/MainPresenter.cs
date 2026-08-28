@@ -4,6 +4,7 @@ using UpdateManager.Core.Common;
 using UpdateManager.Core.Delivery;
 using UpdateManager.Core.Operations;
 using UpdateManager.Core.Project;
+using UpdateManager.Core.Security;
 using UpdateManager.Core.Versioning;
 using UpdateManager.Views;
 
@@ -20,6 +21,10 @@ namespace UpdateManager.Presenters
         private readonly RecentProjectsStore _recent;
         private readonly VersionDetector _detector;
         private readonly FtpConnectionStore _ftpStore;
+
+        // Помощники подписи RSA — без состояния/конфига, создаём на месте (как PatchBuilder и пр.).
+        private readonly RsaKeyManager _keys = new RsaKeyManager();
+        private readonly PatchSigner _signer = new PatchSigner();
 
         private UpdateProject _project; // текущий открытый проект (null = не открыт)
 
@@ -49,6 +54,7 @@ namespace UpdateManager.Presenters
             _view.DeliverPatchRequested += OnDeliverPatch;
             _view.VerifyRequested += OnVerify;
             _view.ConfigureFtpRequested += OnConfigureFtp;
+            _view.GenerateKeysRequested += OnGenerateKeys;
 
             _view.RenderNoProject(); // стартовое состояние — проект не открыт
             RefreshRecent();
@@ -294,6 +300,146 @@ namespace UpdateManager.Presenters
                     "Введите пароль заново.");
         }
 
+        // --- RSA-подпись патча ---
+
+        // Сгенерировать пару ключей в папке ОТКРЫТОГО проекта обновления и (по возможности)
+        // залить приватный ключ в отдельную закрытую папку на FTP для коллег.
+        private void OnGenerateKeys(object sender, EventArgs e)
+        {
+            if (_project == null)
+                return;
+
+            var root = _project.RootPath;
+
+            // Перегенерация делает НЕДЕЙСТВИТЕЛЬНЫМИ всех клиентов с прежним публичным ключом.
+            if (_keys.HasPublicKey(root) || _keys.HasPrivateKey(root))
+            {
+                if (!_view.Confirm(
+                    "В проекте уже есть RSA-ключи.\n" +
+                    "Перегенерация создаст НОВУЮ пару и сделает НЕДЕЙСТВИТЕЛЬНЫМИ всех клиентов, " +
+                    "у которых зашит прежний публичный ключ (их обновления перестанут проходить проверку).\n\n" +
+                    "Точно перегенерировать ключи?"))
+                    return;
+            }
+
+            try
+            {
+                _keys.Generate(root);
+            }
+            catch (Exception ex)
+            {
+                _view.ShowError("Не удалось сгенерировать ключи:\n" + ex.Message);
+                return;
+            }
+
+            // Заливаем приватный ключ коллегам (отдельная закрытая папка); заметку покажем в итоге.
+            var uploadNote = TryUploadPrivateKey(root);
+
+            _view.ShowInfo(
+                "RSA-ключи сгенерированы.\n\n" +
+                "Публичный ключ — передать разработчику клиента (для UseVersionInfoVerifier):\n" +
+                _keys.PublicKeyPath(root) + "\n\n" +
+                "Приватный ключ — СЕКРЕТ (не коммитить, не класть в папку патча):\n" +
+                _keys.PrivateKeyPath(root) + "\n\n" +
+                uploadNote);
+        }
+
+        // Залить приватный ключ в отдельную защищённую папку на FTP. Возвращает заметку для итога.
+        private string TryUploadPrivateKey(string projectRoot)
+        {
+            var conn = _ftpStore.Load(projectRoot);
+            WarnIfPasswordUndecryptable(conn);
+
+            // Нет реквизитов/пароля — просим ввести (иначе заливка не пойдёт).
+            if (conn == null || !conn.IsComplete() || conn.PasswordDecryptFailed)
+            {
+                conn = _view.ConfigureFtp(conn ?? new FtpConnection(), GetUploadDirectory());
+                if (conn == null)
+                    return "Приватный ключ на FTP НЕ залит (реквизиты не введены). " +
+                           "Он сохранён локально — задайте FTP и повторите либо залейте вручную.";
+                _ftpStore.Save(projectRoot, conn);
+            }
+
+            var keyRemote = (conn.PrivateKeyRemotePath ?? "").Trim();
+            if (keyRemote.Length == 0)
+                return "Приватный ключ на FTP НЕ залит: не задана «Папка для ключа» в настройках " +
+                       "FTP-сервера. Укажите ОТДЕЛЬНУЮ закрытую папку (не путь патча) и повторите.";
+
+            // БЕЗОПАСНОСТЬ: папка ключа не должна совпадать/пересекаться с публичной папкой патча —
+            // иначе приватный ключ окажется там, откуда его качают клиенты.
+            var patchRemote = DownloadUrl.CombineRemote(conn.RemotePath, GetUploadDirectory());
+            if (RemotePathsOverlap(keyRemote, patchRemote))
+                return "❌ Приватный ключ НЕ залит: «Папка для ключа» (" + keyRemote + ") совпадает " +
+                       "или пересекается с папкой патча (" + patchRemote + "). Приватный ключ нельзя " +
+                       "класть туда, откуда качают клиенты. Укажите ОТДЕЛЬНУЮ закрытую папку.";
+
+            try
+            {
+                new FtpKeyUploader(conn).Upload(
+                    _keys.PrivateKeyPath(projectRoot), keyRemote, RsaKeyManager.PrivateKeyFileName);
+                return "Приватный ключ залит в закрытую папку на FTP:\n" +
+                       keyRemote.TrimEnd('/') + "/" + RsaKeyManager.PrivateKeyFileName;
+            }
+            catch (Exception ex)
+            {
+                return "Приватный ключ на FTP НЕ залит (ошибка): " + ex.Message +
+                       "\nОн сохранён локально — залейте вручную.";
+            }
+        }
+
+        // Подписать собранный Output приватным ключом. false + показанная ошибка = провал.
+        private bool SignBuiltPatch()
+        {
+            var root = _project.RootPath;
+            if (!_keys.HasPrivateKey(root))
+            {
+                _view.ShowError(
+                    "Включена подпись патча, но приватный ключ (" + RsaKeyManager.PrivateKeyFileName +
+                    ") не найден в папке проекта.\n" +
+                    "Сгенерируйте ключи (меню «Безопасность») или снимите галочку подписи в настройках.");
+                return false;
+            }
+
+            try
+            {
+                var output = _service.GetOutputPath(root);
+                var signed = _signer.Sign(output, _keys.ReadPrivateKey(root));
+                if (signed.Count == 0)
+                {
+                    _view.ShowError(
+                        "Подпись не выполнена: в Output не найден VersionInfo.info.\n" +
+                        "Проверьте, что сборка патча прошла успешно.");
+                    return false;
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _view.ShowError("Не удалось подписать патч:\n" + ex.Message);
+                return false;
+            }
+        }
+
+        // Пересекаются ли два удалённых пути (равны или один вложен в другой) — по сегментам.
+        private static bool RemotePathsOverlap(string a, string b)
+        {
+            var na = NormalizeRemotePath(a);
+            var nb = NormalizeRemotePath(b);
+            if (na.Length == 0 || nb.Length == 0)
+                return false;
+            if (string.Equals(na, nb, StringComparison.OrdinalIgnoreCase))
+                return true;
+            return nb.StartsWith(na + "/", StringComparison.OrdinalIgnoreCase)
+                || na.StartsWith(nb + "/", StringComparison.OrdinalIgnoreCase);
+        }
+
+        // "/a/b" из "a/b", "\a\b\", "/a/b/". Корень ("/", "") -> "" (не участвует в сравнении).
+        private static string NormalizeRemotePath(string p)
+        {
+            p = (p ?? "").Trim().Replace('\\', '/').Trim('/');
+            return p.Length == 0 ? "" : "/" + p;
+        }
+
         private void OnVerify(object sender, EventArgs e)
         {
             if (_project == null)
@@ -495,6 +641,15 @@ namespace UpdateManager.Presenters
             // Запоминаем отпечаток настроек, с которыми собран Output, — для проверки при доставке.
             if (builder.Succeeded)
             {
+                // Подпись RSA (если включена): ПОСЛЕ сборки (BaseDownloadURL уже запечён в манифест)
+                // и ДО доставки. При провале отпечаток не сохраняем — Output не считается готовым.
+                if (settings.SignPatch && !SignBuiltPatch())
+                {
+                    _project = _service.Open(_project.RootPath);
+                    ShowProject();
+                    return;
+                }
+
                 _project.Meta.LastBuiltSettings = _service.BuildSettingsFingerprint(_project.RootPath);
                 _project.Meta.Save(_project.RootPath);
             }

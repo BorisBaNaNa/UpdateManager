@@ -24,6 +24,7 @@ namespace UpdateManager.Views
         event EventHandler DeliverPatchRequested;       // "Доставить патч"
         event EventHandler VerifyRequested;             // "Проверить"
         event EventHandler ConfigureFtpRequested;       // "FTP-сервер…"
+        event EventHandler GenerateKeysRequested;       // "Сгенерировать RSA-ключи…"
 
         // Команды презентера к вью — обновить отображение.
         void RenderProject(UpdateProject project);

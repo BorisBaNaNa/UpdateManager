@@ -30,6 +30,7 @@ namespace UpdateManager.Forms
             txtUser.Text = current.Username;
             txtPass.Text = current.Password;
             txtRemote.Text = current.RemotePath;
+            txtPrivKeyRemote.Text = current.PrivateKeyRemotePath;
 
             txtRemote.TextChanged += (s, e) => UpdateComputedPath();
             UpdateComputedPath();
@@ -64,7 +65,8 @@ namespace UpdateManager.Forms
                 Port = (int)numPort.Value,
                 Username = txtUser.Text.Trim(),
                 Password = txtPass.Text,
-                RemotePath = txtRemote.Text.Trim()
+                RemotePath = txtRemote.Text.Trim(),
+                PrivateKeyRemotePath = txtPrivKeyRemote.Text.Trim()
             };
         }
 

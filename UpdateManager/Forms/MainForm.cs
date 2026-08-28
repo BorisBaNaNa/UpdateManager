@@ -33,6 +33,7 @@ namespace UpdateManager.Forms
             btnDeliver.Click += (s, e) => DeliverPatchRequested?.Invoke(this, EventArgs.Empty);
             btnVerify.Click += (s, e) => VerifyRequested?.Invoke(this, EventArgs.Empty);
             btnFtpServer.Click += (s, e) => ConfigureFtpRequested?.Invoke(this, EventArgs.Empty);
+            generateKeysMenuItem.Click += (s, e) => GenerateKeysRequested?.Invoke(this, EventArgs.Empty);
 
             ThemeManager.Register(this);
             themeLightItem.Click += (s, e) => SetTheme(AppTheme.Light);
@@ -67,6 +68,7 @@ namespace UpdateManager.Forms
         public event EventHandler DeliverPatchRequested;
         public event EventHandler VerifyRequested;
         public event EventHandler ConfigureFtpRequested;
+        public event EventHandler GenerateKeysRequested;
 
         // --- IMainView: отрисовка ---
 
@@ -84,6 +86,7 @@ namespace UpdateManager.Forms
             btnDeliver.Enabled = true;
             btnVerify.Enabled = true;
             btnFtpServer.Enabled = true;
+            generateKeysMenuItem.Enabled = true;
             btnCreatePatch.Enabled = !string.IsNullOrEmpty(project.Meta.LastBuildSource);
             btnPickExe.Enabled = !string.IsNullOrEmpty(project.Meta.LastBuildSource);
 
@@ -122,6 +125,7 @@ namespace UpdateManager.Forms
             btnDeliver.Enabled = false;
             btnVerify.Enabled = false;
             btnFtpServer.Enabled = false;
+            generateKeysMenuItem.Enabled = false;
             btnCreatePatch.Enabled = false;
             btnPickExe.Enabled = false;
         }

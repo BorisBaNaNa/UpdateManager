@@ -27,6 +27,7 @@ namespace UpdateManager.Forms
             this.lblMaintUrl = new System.Windows.Forms.Label();
             this.txtMaintUrl = new System.Windows.Forms.TextBox();
             this.chkSelfPatching = new System.Windows.Forms.CheckBox();
+            this.chkSignPatch = new System.Windows.Forms.CheckBox();
             this.grpPatchTypes = new System.Windows.Forms.GroupBox();
             this.chkRepair = new System.Windows.Forms.CheckBox();
             this.chkInstaller = new System.Windows.Forms.CheckBox();
@@ -132,7 +133,17 @@ namespace UpdateManager.Forms
             this.chkSelfPatching.TabIndex = 4;
             this.chkSelfPatching.Text = "Self-patching приложение";
             this.chkSelfPatching.UseVisualStyleBackColor = true;
-            // 
+            //
+            // chkSignPatch
+            //
+            this.chkSignPatch.AutoSize = true;
+            this.chkSignPatch.Location = new System.Drawing.Point(200, 135);
+            this.chkSignPatch.Name = "chkSignPatch";
+            this.chkSignPatch.Size = new System.Drawing.Size(178, 17);
+            this.chkSignPatch.TabIndex = 15;
+            this.chkSignPatch.Text = "Подписывать патч RSA-ключом";
+            this.chkSignPatch.UseVisualStyleBackColor = true;
+            //
             // grpPatchTypes
             // 
             this.grpPatchTypes.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
@@ -346,6 +357,7 @@ namespace UpdateManager.Forms
             this.Controls.Add(this.lblIgnored);
             this.Controls.Add(this.grpAdvanced);
             this.Controls.Add(this.grpPatchTypes);
+            this.Controls.Add(this.chkSignPatch);
             this.Controls.Add(this.chkSelfPatching);
             this.Controls.Add(this.txtMaintUrl);
             this.Controls.Add(this.lblMaintUrl);
@@ -382,6 +394,7 @@ namespace UpdateManager.Forms
         private System.Windows.Forms.Label lblMaintUrl;
         private System.Windows.Forms.TextBox txtMaintUrl;
         private System.Windows.Forms.CheckBox chkSelfPatching;
+        private System.Windows.Forms.CheckBox chkSignPatch;
         private System.Windows.Forms.GroupBox grpPatchTypes;
         private System.Windows.Forms.CheckBox chkRepair;
         private System.Windows.Forms.CheckBox chkInstaller;

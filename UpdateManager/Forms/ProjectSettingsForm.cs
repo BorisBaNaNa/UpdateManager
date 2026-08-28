@@ -35,6 +35,7 @@ namespace UpdateManager.Forms
             txtUploadDir.Text = directory;
             txtMaintUrl.Text = settings.MaintenanceCheckURL;
             chkSelfPatching.Checked = settings.IsSelfPatchingApp;
+            chkSignPatch.Checked = settings.SignPatch;
             chkRepair.Checked = settings.CreateRepairPatch;
             chkInstaller.Checked = settings.CreateInstallerPatch;
             chkIncremental.Checked = settings.CreateIncrementalPatch;
@@ -60,6 +61,7 @@ namespace UpdateManager.Forms
                 BaseDownloadURL = DownloadUrl.Join(txtServer.Text, txtUploadDir.Text),
                 MaintenanceCheckURL = txtMaintUrl.Text.Trim(),
                 IsSelfPatchingApp = chkSelfPatching.Checked,
+                SignPatch = chkSignPatch.Checked,
                 CreateRepairPatch = chkRepair.Checked,
                 CreateInstallerPatch = chkInstaller.Checked,
                 CreateIncrementalPatch = chkIncremental.Checked,
