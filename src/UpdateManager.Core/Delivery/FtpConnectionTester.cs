@@ -44,7 +44,7 @@ namespace UpdateManager.Core.Delivery
             }
             catch (Exception ex)
             {
-                return new FtpTestResult { Success = false, Message = ex.Message };
+                return new FtpTestResult { Success = false, Message = FtpErrorText.Describe(ex) };
             }
         }
     }

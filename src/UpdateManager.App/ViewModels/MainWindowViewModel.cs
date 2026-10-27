@@ -431,7 +431,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            return "Приватный ключ на FTP НЕ залит (ошибка): " + ex.Message +
+            return "Приватный ключ на FTP НЕ залит: " + FtpErrorText.Describe(ex) +
                    "\nОн сохранён локально — залейте вручную.";
         }
     }

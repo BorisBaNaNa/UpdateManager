@@ -66,7 +66,7 @@ public sealed partial class FtpBrowserViewModel : DialogViewModel, IDisposable
         catch (Exception ex)
         {
             SetBusy(false, "");
-            await _dialogs.ShowErrorAsync("Не удалось подключиться:\n" + ex.Message);
+            await _dialogs.ShowErrorAsync("Не удалось подключиться:\n" + FtpErrorText.Describe(ex));
             Close(false);
             return;
         }
@@ -91,7 +91,7 @@ public sealed partial class FtpBrowserViewModel : DialogViewModel, IDisposable
         }
         catch (Exception ex)
         {
-            node.ShowInfo("Ошибка: " + ex.Message);
+            node.ShowInfo("Ошибка: " + FtpErrorText.Describe(ex));
         }
         finally
         {

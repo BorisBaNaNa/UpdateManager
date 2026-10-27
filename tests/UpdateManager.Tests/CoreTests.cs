@@ -276,3 +276,46 @@ public sealed class StoresTests : IDisposable
         Assert.True(loaded.SignPatch);
     }
 }
+
+public class ExceptionTextTests
+{
+    [Fact]
+    public void Full_IncludesInnerExceptions()
+    {
+        var ex = new Exception("Error while uploading the file to the server. See InnerException for more info.",
+            new IOException("550 Permission denied", new IOException("550 Permission denied")));
+
+        Assert.Equal("Error while uploading the file to the server. See InnerException for more info. → 550 Permission denied",
+            ExceptionText.Full(ex));
+    }
+}
+
+public class FtpErrorTextTests
+{
+    [Fact]
+    public void Describe_ServerCodeInHumanWords()
+    {
+        // Как FluentFTP: обёртка "See InnerException", настоящая причина — ответ сервера внутри.
+        var ex = new Exception("Error while uploading the file to the server. See InnerException for more info.",
+            new FluentFTP.Exceptions.FtpCommandException("553", "Could not create file."));
+
+        Assert.Equal("Сервер не разрешил создать файл — у пользователя нет прав на запись в эту папку " +
+            "(553 Could not create file.).", FtpErrorText.Describe(ex));
+    }
+
+    [Fact]
+    public void Describe_WrongPassword() =>
+        Assert.StartsWith("Неверный логин или пароль",
+            FtpErrorText.Describe(new FluentFTP.Exceptions.FtpAuthenticationException("530", "Login incorrect.")));
+
+    [Fact]
+    public void Describe_ConnectionRefused() =>
+        Assert.StartsWith("Сервер отказал в подключении",
+            FtpErrorText.Describe(new System.Net.Sockets.SocketException((int)System.Net.Sockets.SocketError.ConnectionRefused)));
+
+    [Fact]
+    public void Describe_KeepsOwnMessages() =>
+        Assert.Equal("Не удалось создать временную папку /a_new.",
+            FtpErrorText.Describe(new FtpDeliveryException("Не удалось создать временную папку /a_new.",
+                new FluentFTP.Exceptions.FtpCommandException("550", "Permission denied"))));
+}

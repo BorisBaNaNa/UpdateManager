@@ -29,6 +29,15 @@ namespace UpdateManager.Core.Delivery
         private string _details = "";
         private string _lastLoggedFile;
 
+        // Полный протокол FTP (команды/ответы сервера) — в окно не выводится, при ошибке пишется в файл
+        // FtpTraceFile для разбора. Пишется из потока заливки.
+        private readonly List<string> _ftpTrace = new List<string>();
+
+        /// <summary>Файл с протоколом FTP последней неудачной заливки.</summary>
+        public static readonly string FtpTraceFile = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "UpdateManager", "logs", "ftp-last-error.log");
+
         public FtpUploadOperation(FtpConnection conn, string localDir, string remotePath)
         {
             _conn = conn;
@@ -66,7 +75,16 @@ namespace UpdateManager.Core.Delivery
                 using (var client = new FtpClient(_conn.Host, _conn.Username, _conn.Password, _conn.Port))
                 {
                     client.Config.UploadDataType = FtpDataType.Binary;
-                    client.Connect();
+                    client.LegacyLogger = OnFtpTrace; // пароль FluentFTP в протоколе маскирует
+                    try
+                    {
+                        client.Connect();
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new FtpDeliveryException("Не удалось подключиться к " + _conn.Host + ":" + _conn.Port +
+                            ". " + FtpErrorText.Describe(ex), ex);
+                    }
                     AppendLog("Подключено.");
 
                     // target="" — заливка в корень FTP. Атомарный обмен там невозможен (нельзя
@@ -90,8 +108,10 @@ namespace UpdateManager.Core.Delivery
             catch (Exception ex)
             {
                 _succeeded = false;
-                _details = ex.Message;
-                AppendLog("Ошибка заливки: " + ex.Message);
+                // В лог не пишем — окно операции само выведет ResultDetails под «завершилась с ошибкой».
+                _details = FtpErrorText.Describe(ex);
+                if (SaveFtpTrace())
+                    _details += "\nПротокол FTP: " + FtpTraceFile;
             }
             finally
             {
@@ -126,6 +146,18 @@ namespace UpdateManager.Core.Delivery
                 client.DeleteDirectory(staging);
             }
 
+            // Создаём временную папку заранее: нет прав — одна понятная ошибка, а не отказ на каждом файле.
+            try
+            {
+                client.CreateDirectory(staging, true);
+            }
+            catch (Exception ex)
+            {
+                throw new FtpDeliveryException("Не удалось создать временную папку " + staging + ". " +
+                    FtpErrorText.Describe(ex) + "\nДля публикации нужна запись в " + ParentOf(staging) +
+                    " (рядом с папкой патча создаются " + staging + " и " + backup + ").", ex);
+            }
+
             AppendLog("Заливка во временную папку " + staging + " …");
             UploadInto(client, staging);
 
@@ -135,7 +167,7 @@ namespace UpdateManager.Core.Delivery
                 // Боевой папки ещё нет — просто публикуем.
                 AppendLog("Публикация: " + staging + " → " + target);
                 if (!client.MoveDirectory(staging, target, FtpRemoteExists.Overwrite))
-                    throw new Exception("Не удалось переименовать " + staging + " в " + target + ".");
+                    throw new FtpDeliveryException("Не удалось переименовать " + staging + " в " + target + ".");
                 return;
             }
 
@@ -155,7 +187,7 @@ namespace UpdateManager.Core.Delivery
                 // Не удалось опубликовать новый патч — возвращаем старую папку целиком (с неотслеживаемым) на место.
                 if (!client.DirectoryExists(target) && client.DirectoryExists(backup))
                     client.MoveDirectory(backup, target, FtpRemoteExists.Overwrite);
-                throw new Exception("Не удалось переименовать " + staging + " в " + target + ".");
+                throw new FtpDeliveryException("Не удалось переименовать " + staging + " в " + target + ".");
             }
 
             // Возвращаем неотслеживаемое из резерва в новую боевую папку (переименованием — быстро, без пере-заливки).
@@ -241,13 +273,22 @@ namespace UpdateManager.Core.Delivery
             if (results == null)
                 return;
 
-            foreach (var r in results)
-            {
-                if (!r.IsFailed)
-                    continue;
-                var reason = r.Exception != null ? ": " + r.Exception.Message : "";
-                throw new Exception("Не удалось залить файл " + r.Name + reason);
-            }
+            // Причина — по первому неудачному файлу; остальные обычно падают по той же причине.
+            var failed = results.FindAll(r => r.IsFailed);
+            if (failed.Count == 0)
+                return;
+
+            var first = failed[0];
+            var more = failed.Count > 1 ? " (и ещё файлов: " + (failed.Count - 1) + ")" : "";
+            throw new FtpDeliveryException("Не удалось залить " + first.Name + more + ". " +
+                (first.Exception != null ? FtpErrorText.Describe(first.Exception) : ""), first.Exception);
+        }
+
+        // "/a/b_new" → "/a"; "/b_new" → "/".
+        private static string ParentOf(string path)
+        {
+            var i = path.TrimEnd('/').LastIndexOf('/');
+            return i <= 0 ? "/" : path.Substring(0, i);
         }
 
         private void OnProgress(FtpProgress p)
@@ -268,6 +309,29 @@ namespace UpdateManager.Core.Delivery
                 double fileProgress = p.Progress >= 0 ? Math.Min(p.Progress, 100.0) : 0.0;
                 double overall = 100.0 * (p.FileIndex + fileProgress / 100.0) / p.FileCount;
                 _percent = (int)Math.Max(0, Math.Min(100, overall));
+            }
+        }
+
+        private void OnFtpTrace(FtpTraceLevel level, string message)
+        {
+            _ftpTrace.Add(message ?? "");
+        }
+
+        // Записать протокол FTP в файл. false — не вышло (не критично, ошибку покажем и без него).
+        private bool SaveFtpTrace()
+        {
+            if (_ftpTrace.Count == 0)
+                return false;
+
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(FtpTraceFile));
+                File.WriteAllLines(FtpTraceFile, _ftpTrace);
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
             }
         }
 
