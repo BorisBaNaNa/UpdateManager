@@ -181,3 +181,4 @@ Write-Host "  2. «Создать патч» (версия $fileVersion) → «�
 if (-not $NoBump) {
     Write-Host "  3. Закоммитить подъём версии: git commit -am `"Версия $nextText`""
 }
+Write-Host "  Когда патч проверен — тег на коммите, из которого собран Release/: git tag -a v$nextText -m `"UpdateManager $nextText`""
