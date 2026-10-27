@@ -73,7 +73,7 @@ public sealed class FakeDialogService : IDialogService
 
     public Task<ProjectSettings?> EditSettingsAsync(ProjectSettings current) => Task.FromResult(SettingsAnswer(current));
 
-    public Task<DeliveryConfig?> ConfigureDeliveryAsync(DeliveryConfig current) => Task.FromResult(DeliveryAnswer(current));
+    public Task<DeliveryConfig?> ConfigureDeliveryAsync(DeliveryConfig current, bool deliverNow) => Task.FromResult(DeliveryAnswer(current));
 
     public Task<FtpConnection?> ConfigureFtpAsync(FtpConnection current, string uploadDirectory) =>
         Task.FromResult<FtpConnection?>(null);

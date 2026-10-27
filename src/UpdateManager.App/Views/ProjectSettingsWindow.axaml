@@ -5,78 +5,92 @@
                 x:Class="UpdateManager.App.Views.ProjectSettingsWindow"
                 x:DataType="vm:ProjectSettingsViewModel"
                 Title="Настройки проекта"
-                Width="540" Height="720" MinWidth="460" MinHeight="480"
+                Width="640" Height="760" MinWidth="520" MinHeight="480"
                 ShowInTaskbar="False"
                 WindowStartupLocation="CenterOwner">
 
-    <DockPanel Margin="16">
-        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8"
-                    HorizontalAlignment="Right" Margin="0,12,0,0">
-            <Button Content="Сохранить" MinWidth="90" HorizontalContentAlignment="Center"
-                    IsDefault="True" Command="{Binding SaveCommand}" />
-            <Button Content="Отмена" MinWidth="90" HorizontalContentAlignment="Center"
-                    IsCancel="True" Command="{Binding CancelCommand}" />
-        </StackPanel>
+    <!-- Разделы под тонкой линией вместо рамок-групп: подпись слева (170 px), поле справа. -->
+    <DockPanel>
+        <Border DockPanel.Dock="Bottom" Classes="footer">
+            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+                <Button Classes="primary" Content="Сохранить"
+                        IsDefault="True" Command="{Binding SaveCommand}" />
+                <Button Classes="quiet" Content="Отмена"
+                        IsCancel="True" Command="{Binding CancelCommand}" />
+            </StackPanel>
+        </Border>
 
         <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <StackPanel Spacing="10" Margin="0,0,12,0">
-                <Grid ColumnDefinitions="175,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
-                    <TextBlock Grid.Row="0" Text="Имя проекта:" VerticalAlignment="Center" />
+            <StackPanel Margin="24,22,24,28">
+                <TextBlock Classes="heading" Text="Проект и сервер" />
+                <Grid Margin="0,14,0,0" ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                      RowSpacing="10">
+                    <TextBlock Grid.Row="0" Classes="field" Text="Имя проекта" />
                     <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Name}" />
-                    <TextBlock Grid.Row="1" Text="Адрес сервера:" VerticalAlignment="Center" />
+
+                    <TextBlock Grid.Row="1" Classes="field" Text="Адрес сервера" />
                     <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Server}"
-                             PlaceholderText="http://updates.example.com/" />
-                    <TextBlock Grid.Row="2" Text="Директория загрузки:" VerticalAlignment="Center" />
+                             PlaceholderText="https://updates.example.com/" />
+
+                    <TextBlock Grid.Row="2" Classes="field" Text="Директория загрузки" />
                     <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding UploadDirectory}"
-                             PlaceholderText="MyApp/Output" />
-                    <TextBlock Grid.Row="3" Text="MaintenanceCheckURL:" VerticalAlignment="Center" />
-                    <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding MaintenanceCheckUrl}" />
+                             PlaceholderText="MyApp" />
+
+                    <!-- Итоговый BaseDownloadURL: главная защита от «проверка есть, скачивания нет». -->
+                    <TextBlock Grid.Row="3" Grid.Column="1" Margin="0,-2,0,4" Classes="detail"
+                               Text="{Binding DownloadUrlText}" />
+
+                    <TextBlock Grid.Row="4" Classes="field" Text="MaintenanceCheckURL" />
+                    <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding MaintenanceCheckUrl}" />
                 </Grid>
 
-                <CheckBox Content="Self-patching приложение" IsChecked="{Binding IsSelfPatchingApp}" />
-                <CheckBox Content="Подписывать патч RSA-ключом" IsChecked="{Binding SignPatch}" />
-
-                <HeaderedContentControl Classes="group" Header="Типы патчей">
-                    <StackPanel Spacing="2">
-                        <StackPanel Orientation="Horizontal" Spacing="16">
-                            <CheckBox Content="Repair" IsChecked="{Binding CreateRepairPatch}" />
-                            <CheckBox Content="Installer" IsChecked="{Binding CreateInstallerPatch}" />
-                            <CheckBox Content="Incremental" IsChecked="{Binding CreateIncrementalPatch}" />
-                        </StackPanel>
-                        <CheckBox Content="Инкрементальные от каждой предыдущей версии"
-                                  IsChecked="{Binding CreateAllIncrementalPatches}" />
+                <Border Classes="rule" Margin="0,24,0,0" />
+                <TextBlock Margin="0,18,0,0" Classes="heading" Text="Патч" />
+                <Grid Margin="0,12,0,0" ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto">
+                    <TextBlock Grid.Row="0" Classes="field" Text="Типы патчей" />
+                    <WrapPanel Grid.Row="0" Grid.Column="1">
+                        <CheckBox Margin="0,0,20,0" Content="Repair" IsChecked="{Binding CreateRepairPatch}" />
+                        <CheckBox Margin="0,0,20,0" Content="Installer" IsChecked="{Binding CreateInstallerPatch}" />
+                        <CheckBox Content="Incremental" IsChecked="{Binding CreateIncrementalPatch}" />
+                    </WrapPanel>
+                    <CheckBox Grid.Row="1" Grid.Column="1" Content="Инкрементальные от каждой предыдущей версии"
+                              IsChecked="{Binding CreateAllIncrementalPatches}" />
+                    <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,8,0,0">
+                        <CheckBox Content="Self-patching приложение" IsChecked="{Binding IsSelfPatchingApp}" />
+                        <CheckBox Content="Подписывать патч RSA-ключом" IsChecked="{Binding SignPatch}" />
                     </StackPanel>
-                </HeaderedContentControl>
+                </Grid>
 
-                <HeaderedContentControl Classes="group" Header="Дополнительно">
-                    <StackPanel Spacing="8">
-                        <Grid ColumnDefinitions="175,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
-                            <TextBlock Grid.Row="0" Text="Сжатие Repair:" VerticalAlignment="Center" />
-                            <ComboBox Grid.Row="0" Grid.Column="1" MinWidth="140"
-                                      ItemsSource="{Binding CompressionFormats}"
-                                      SelectedItem="{Binding CompressionRepair}" />
-                            <TextBlock Grid.Row="1" Text="Сжатие Installer:" VerticalAlignment="Center" />
-                            <ComboBox Grid.Row="1" Grid.Column="1" MinWidth="140"
-                                      ItemsSource="{Binding CompressionFormats}"
-                                      SelectedItem="{Binding CompressionInstaller}" />
-                            <TextBlock Grid.Row="2" Text="Сжатие Incremental:" VerticalAlignment="Center" />
-                            <ComboBox Grid.Row="2" Grid.Column="1" MinWidth="140"
-                                      ItemsSource="{Binding CompressionFormats}"
-                                      SelectedItem="{Binding CompressionIncremental}" />
-                            <TextBlock Grid.Row="3" Text="BinaryDiffQuality:" VerticalAlignment="Center" />
-                            <NumericUpDown Grid.Row="3" Grid.Column="1" Width="140" HorizontalAlignment="Left"
-                                           Minimum="0"
-                                           Maximum="9"
-                                           Increment="1" FormatString="0"
-                                           Value="{Binding BinaryDiffQuality}" />
-                        </Grid>
-                        <CheckBox Content="Не создавать патч-файлы для неизменённых файлов"
-                                  IsChecked="{Binding DontCreatePatchFilesForUnchangedFiles}" />
-                    </StackPanel>
-                </HeaderedContentControl>
+                <Border Classes="rule" Margin="0,24,0,0" />
+                <TextBlock Margin="0,18,0,0" Classes="heading" Text="Сжатие и разница файлов" />
+                <Grid Margin="0,14,0,0" ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                      RowSpacing="10">
+                    <TextBlock Grid.Row="0" Classes="field" Text="Repair" />
+                    <ComboBox Grid.Row="0" Grid.Column="1" MinWidth="140"
+                              ItemsSource="{Binding CompressionFormats}"
+                              SelectedItem="{Binding CompressionRepair}" />
+                    <TextBlock Grid.Row="1" Classes="field" Text="Installer" />
+                    <ComboBox Grid.Row="1" Grid.Column="1" MinWidth="140"
+                              ItemsSource="{Binding CompressionFormats}"
+                              SelectedItem="{Binding CompressionInstaller}" />
+                    <TextBlock Grid.Row="2" Classes="field" Text="Incremental" />
+                    <ComboBox Grid.Row="2" Grid.Column="1" MinWidth="140"
+                              ItemsSource="{Binding CompressionFormats}"
+                              SelectedItem="{Binding CompressionIncremental}" />
+                    <TextBlock Grid.Row="3" Classes="field" Text="BinaryDiffQuality" />
+                    <NumericUpDown Grid.Row="3" Grid.Column="1" Width="140" HorizontalAlignment="Left"
+                                   Minimum="0"
+                                   Maximum="9"
+                                   Increment="1" FormatString="0"
+                                   Value="{Binding BinaryDiffQuality}" />
+                    <CheckBox Grid.Row="4" Grid.Column="1" Content="Не создавать патч-файлы для неизменённых файлов"
+                              IsChecked="{Binding DontCreatePatchFilesForUnchangedFiles}" />
+                </Grid>
 
-                <TextBlock Text="Игнорируемые пути (по одному в строке):" />
-                <TextBox Text="{Binding IgnoredPaths}" AcceptsReturn="True" Height="120"
+                <Border Classes="rule" Margin="0,24,0,0" />
+                <TextBlock Margin="0,18,0,0" Classes="heading" Text="Игнорируемые пути" />
+                <TextBlock Margin="0,4,0,0" Classes="detail" Text="По одному в строке." />
+                <TextBox Margin="0,10,0,0" Text="{Binding IgnoredPaths}" AcceptsReturn="True" Height="120"
                          ScrollViewer.VerticalScrollBarVisibility="Auto" />
             </StackPanel>
         </ScrollViewer>

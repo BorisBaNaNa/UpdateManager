@@ -43,8 +43,21 @@ public sealed partial class ProjectSettingsViewModel : DialogViewModel
     public ProjectSettings? Result { get; private set; }
 
     [ObservableProperty] private string _name;
-    [ObservableProperty] private string _server;
-    [ObservableProperty] private string _uploadDirectory;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DownloadUrlText), nameof(HasNoServer))]
+    private string _server;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DownloadUrlText))]
+    private string _uploadDirectory;
+
+    /// <summary>Итоговый BaseDownloadURL — откуда клиенты будут качать патч.</summary>
+    public string DownloadUrlText => HasNoServer
+        ? "Адрес сервера не задан — патч не соберётся: клиентам неоткуда будет качать файлы."
+        : "Клиенты будут качать патч с " + DownloadUrl.Join(Server, UploadDirectory);
+
+    public bool HasNoServer => string.IsNullOrWhiteSpace(Server);
+
     [ObservableProperty] private string _maintenanceCheckUrl;
     [ObservableProperty] private bool _isSelfPatchingApp;
     [ObservableProperty] private bool _signPatch;

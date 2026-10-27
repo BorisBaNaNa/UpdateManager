@@ -19,15 +19,8 @@ public sealed partial class MessageViewModel : DialogViewModel
     public MessageKind Kind { get; }
 
     public bool IsQuestion => Kind == MessageKind.Question;
+    public bool IsError => Kind == MessageKind.Error;
     public string OkText => IsQuestion ? "Да" : "OK";
-
-    public string Icon => Kind switch
-    {
-        MessageKind.Error => "✖",
-        MessageKind.Warning => "⚠",
-        MessageKind.Question => "?",
-        _ => "ℹ"
-    };
 
     [RelayCommand]
     private void Ok() => Close(true);

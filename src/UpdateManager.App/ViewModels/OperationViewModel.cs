@@ -47,6 +47,17 @@ public sealed partial class OperationViewModel : DialogViewModel
 
     public string ButtonText => IsRunning ? "Прервать" : "Закрыть";
 
+    /// <summary>Состояние словами: идёт (с процентом), готово, ошибка, прерывание.</summary>
+    [ObservableProperty]
+    private string _stateText = "Запуск…";
+
+    [ObservableProperty]
+    private bool _isFailed;
+
+    /// <summary>Причина провала одной-двумя строками (над логом, не в его конце).</summary>
+    [ObservableProperty]
+    private string _failureText = "";
+
     /// <summary>Запустить операцию (окно уже показано).</summary>
     public void Start()
     {
@@ -58,6 +69,7 @@ public sealed partial class OperationViewModel : DialogViewModel
         }
 
         AppendLog(_operation.Title + " — запущено…");
+        StateText = "Выполняется…";
         IsRunning = true;
         _timer.Start();
     }
@@ -73,6 +85,8 @@ public sealed partial class OperationViewModel : DialogViewModel
         {
             IsIndeterminate = false;
             Progress = Math.Clamp(percentage.Value, 0, 100);
+            if (!_cancelRequested)
+                StateText = $"Выполняется · {Progress:0} %";
         }
 
         if (!_operation.IsRunning)
@@ -102,6 +116,11 @@ public sealed partial class OperationViewModel : DialogViewModel
         if (!success && !string.IsNullOrEmpty(details))
             AppendLog(details);
 
+        StateText = success ? "Готово" : "Завершилось с ошибкой";
+        IsFailed = !success;
+        if (!success)
+            FailureText = string.IsNullOrEmpty(details) ? "Подробности — в журнале ниже." : details;
+
         CanPressButton = true;
     }
 
@@ -130,6 +149,7 @@ public sealed partial class OperationViewModel : DialogViewModel
 
         _cancelRequested = true;
         AppendLog("Прерывание операции…");
+        StateText = "Прерывание…";
         CanPressButton = false; // защита от повторных нажатий, пока операция тормозит
         _operation.Cancel();
     }

@@ -135,9 +135,9 @@ public sealed class DialogService : IDialogService
         return await ShowAsync(new ProjectSettingsWindow { DataContext = vm }) ? vm.Result : null;
     }
 
-    public async Task<DeliveryConfig?> ConfigureDeliveryAsync(DeliveryConfig current)
+    public async Task<DeliveryConfig?> ConfigureDeliveryAsync(DeliveryConfig current, bool deliverNow)
     {
-        var vm = new DeliveryViewModel(current, this);
+        var vm = new DeliveryViewModel(current, this, deliverNow);
         return await ShowAsync(new DeliveryWindow { DataContext = vm }) ? vm.Result : null;
     }
 

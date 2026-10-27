@@ -58,27 +58,6 @@
             <Setter Property="Background" Value="{DynamicResource GroundBrush}" />
         </Style>
 
-        <!-- Рамка-группа вместо WinForms GroupBox (окна настроек/доставки). -->
-        <Style Selector="HeaderedContentControl.group">
-            <Setter Property="Template">
-                <ControlTemplate>
-                    <Border BorderBrush="{DynamicResource HairlineBrush}"
-                            BorderThickness="1" Padding="8">
-                        <DockPanel>
-                            <TextBlock DockPanel.Dock="Top" Text="{TemplateBinding Header}"
-                                       FontWeight="SemiBold" Margin="0,0,0,6" />
-                            <ContentPresenter Content="{TemplateBinding Content}" />
-                        </DockPanel>
-                    </Border>
-                </ControlTemplate>
-            </Setter>
-        </Style>
-
-        <Style Selector="TextBlock.hint">
-            <Setter Property="Opacity" Value="0.7" />
-            <Setter Property="TextWrapping" Value="Wrap" />
-        </Style>
-
         <!-- Текст -->
         <Style Selector="TextBlock.muted">
             <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
@@ -91,6 +70,80 @@
         </Style>
         <Style Selector="TextBlock.number">
             <Setter Property="FontFeatures" Value="+tnum" />
+        </Style>
+        <Style Selector="TextBlock.heading">
+            <Setter Property="FontSize" Value="17" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="TextBlock.heading.failed">
+            <Setter Property="Foreground" Value="{DynamicResource FailedBrush}" />
+        </Style>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="TextBlock.detail">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+
+        <!-- Диалоги: поля 24 px, подписи полей приглушены, разделы — под тонкой линией,
+             подвал с кнопками — на тоне панели. Главная кнопка одна, остальные — тихие. -->
+        <Style Selector="TextBlock.field">
+            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Border.rule">
+            <Setter Property="Height" Value="1" />
+            <Setter Property="Background" Value="{DynamicResource HairlineBrush}" />
+        </Style>
+        <Style Selector="Border.footer">
+            <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}" />
+            <Setter Property="BorderThickness" Value="0,1,0,0" />
+            <Setter Property="Padding" Value="24,14" />
+        </Style>
+        <Style Selector="Border.footer Button">
+            <Setter Property="MinWidth" Value="96" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Border.footer Button.quiet">
+            <Setter Property="Padding" Value="16,10" />
+        </Style>
+        <!-- Провал словами: тот же код, что у проваленного этапа, — красный контур 2 px. -->
+        <Style Selector="Border.failure">
+            <Setter Property="BorderBrush" Value="{DynamicResource FailedBrush}" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="Padding" Value="14,12" />
+        </Style>
+        <Style Selector="Border.failure TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource FailedBrush}" />
+        </Style>
+        <!-- Журнал операции: данные, поэтому моноширинный; плоский, на тоне панели. -->
+        <Style Selector="TextBox.log">
+            <Setter Property="FontFamily" Value="Cascadia Mono,Consolas,monospace" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Padding" Value="14,12" />
+        </Style>
+        <Style Selector="TextBox.log /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style Selector="TextBox.log:pointerover /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+        </Style>
+        <Style Selector="TextBox.log:focus /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style Selector="ProgressBar">
+            <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
+            <Setter Property="Background" Value="{DynamicResource HairlineBrush}" />
+            <Setter Property="MinHeight" Value="4" />
+            <Setter Property="Height" Value="4" />
+            <Setter Property="CornerRadius" Value="0" />
         </Style>
 
         <!-- Кнопки: прямые углы; главная — залитая краской, остальные — тонкий контур. -->
@@ -147,6 +200,24 @@
         <Style Selector="ListBox.catalog ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
+        </Style>
+
+        <!-- Дерево папок FTP: выделение — та же серая подложка, что в каталоге. -->
+        <Style Selector="TreeView.folders TreeViewItem">
+            <Setter Property="CornerRadius" Value="0" />
+        </Style>
+        <Style Selector="TreeView.folders TreeViewItem:selected /template/ Border#PART_LayoutRoot">
+            <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+        </Style>
+        <Style Selector="TreeView.folders TreeViewItem:selected:pointerover /template/ Border#PART_LayoutRoot">
+            <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+        </Style>
+        <Style Selector="TreeView.folders TreeViewItem:selected /template/ Border#PART_LayoutRoot > ContentPresenter">
+            <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
+        </Style>
+
+        <Style Selector="ListBox.choice ListBoxItem">
+            <Setter Property="Padding" Value="12,10" />
         </Style>
 
         <!-- Недавний проект, чья папка пропала: приглушён, клик предлагает убрать из списка. -->

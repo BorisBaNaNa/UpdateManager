@@ -7,17 +7,17 @@ namespace UpdateManager.App.ViewModels;
 
 /// <summary>
 /// Окно доставки: выбор метода (запоминается последний) и пути.
-/// По «Доставить» заполняет <see cref="Result"/> и закрывает окно с OK.
+/// По «Доставить» (или «Сохранить», если окно открыто только для настройки) заполняет
+/// <see cref="Result"/> и закрывает окно с OK.
 /// </summary>
 public sealed partial class DeliveryViewModel : DialogViewModel
 {
-    private const string FtpHint = "Параметры подключения — кнопка «FTP-сервер…» в главном окне";
-
     private readonly IDialogService _dialogs;
 
-    public DeliveryViewModel(DeliveryConfig current, IDialogService dialogs)
+    public DeliveryViewModel(DeliveryConfig current, IDialogService dialogs, bool deliverNow)
     {
         _dialogs = dialogs;
+        ActionText = deliverNow ? "Доставить" : "Сохранить";
         Methods = DeliveryMethods.Available();
         // Преселект сохранённого метода (или первый доступный).
         _selectedMethod = Methods.FirstOrDefault(m => m.Id == current.Method) ?? Methods[0];
@@ -28,29 +28,19 @@ public sealed partial class DeliveryViewModel : DialogViewModel
 
     public DeliveryConfig? Result { get; private set; }
 
+    /// <summary>Подпись главной кнопки: «Доставить» или «Сохранить».</summary>
+    public string ActionText { get; }
+
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsFtp), nameof(PathLabel), nameof(PathText))]
+    [NotifyPropertyChangedFor(nameof(IsFtp))]
     [NotifyCanExecuteChangedFor(nameof(BrowseCommand))]
     private DeliveryMethods.Info _selectedMethod;
 
-    // Путь папки хранится отдельно — у FTP в поле показывается подсказка, путь не теряется.
+    // Путь папки хранится и при выбранном FTP — при возврате к папке не теряется.
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(PathText))]
     private string _path;
 
     public bool IsFtp => SelectedMethod.Id == DeliveryMethods.Ftp;
-
-    public string PathLabel => IsFtp ? "Сервер:" : "Путь доставки:";
-
-    public string PathText
-    {
-        get => IsFtp ? FtpHint : Path;
-        set
-        {
-            if (!IsFtp)
-                Path = value;
-        }
-    }
 
     [RelayCommand(CanExecute = nameof(CanBrowse))]
     private async Task Browse()

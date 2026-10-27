@@ -276,7 +276,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
 
         // Окно доставки: метод (преселект сохранённого) + путь.
-        var config = await _dialogs.ConfigureDeliveryAsync(_project.Meta.Delivery);
+        var config = await _dialogs.ConfigureDeliveryAsync(_project.Meta.Delivery, deliverNow: true);
         if (config == null)
             return; // отмена
 
@@ -411,7 +411,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         if (_project == null)
             return;
 
-        var config = await _dialogs.ConfigureDeliveryAsync(_project.Meta.Delivery);
+        var config = await _dialogs.ConfigureDeliveryAsync(_project.Meta.Delivery, deliverNow: false);
         if (config == null)
             return; // отмена
 

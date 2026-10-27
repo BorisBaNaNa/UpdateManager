@@ -28,7 +28,8 @@ public interface IDialogService
     Task ShowOperationAsync(IEngineOperation operation);
 
     Task<ProjectSettings?> EditSettingsAsync(ProjectSettings current);
-    Task<DeliveryConfig?> ConfigureDeliveryAsync(DeliveryConfig current);
+    /// <summary>Метод и путь доставки. deliverNow — окно открыто перед доставкой (кнопка «Доставить»), иначе «Сохранить».</summary>
+    Task<DeliveryConfig?> ConfigureDeliveryAsync(DeliveryConfig current, bool deliverNow);
     Task<FtpConnection?> ConfigureFtpAsync(FtpConnection current, string uploadDirectory);
 
     /// <summary>Выбор папки на FTP-сервере по реквизитам. null = отмена.</summary>
