@@ -42,18 +42,28 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:StageItem">
-                        <Border Classes="stage" Padding="14,12" MinHeight="112"
-                                Classes.build="{Binding IsBuild}" Classes.patch="{Binding IsPatch}"
-                                Classes.files="{Binding IsFiles}" Classes.delivery="{Binding IsDelivery}"
-                                Classes.verify="{Binding IsVerify}"
-                                Classes.done="{Binding IsDone}" Classes.failed="{Binding IsFailed}"
-                                ToolTip.Tip="{Binding ToolTipText}">
-                            <StackPanel Spacing="6">
-                                <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="SemiBold" />
-                                <TextBlock Classes="number" Text="{Binding Detail}" FontSize="12"
-                                           TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" />
-                            </StackPanel>
-                        </Border>
+                        <!-- Блок — кнопка: в последнем выпуске пройденный или следующий этап можно (пере)выполнить. -->
+                        <Button Classes="stagebtn"
+                                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).RunStageCommand, FallbackValue={x:Null}}"
+                                CommandParameter="{Binding}">
+                            <Border Classes="stage" Padding="14,12" MinHeight="112"
+                                    Classes.build="{Binding IsBuild}" Classes.patch="{Binding IsPatch}"
+                                    Classes.files="{Binding IsFiles}" Classes.delivery="{Binding IsDelivery}"
+                                    Classes.verify="{Binding IsVerify}"
+                                    Classes.done="{Binding IsDone}" Classes.failed="{Binding IsFailed}"
+                                    ToolTip.Tip="{Binding ToolTipText}">
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Bottom" Classes="stageaction" Margin="0,8,0,0"
+                                               Text="{Binding ActionText}"
+                                               IsVisible="{Binding $parent[Button].IsEffectivelyEnabled}" />
+                                    <StackPanel Spacing="6">
+                                        <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="SemiBold" />
+                                        <TextBlock Classes="number" Text="{Binding Detail}" FontSize="12"
+                                                   TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                        </Button>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>

@@ -186,6 +186,40 @@
             <Setter Property="TextElement.Foreground" Value="{DynamicResource FailedBrush}" />
         </Style>
 
+        <!-- Блок этапа как кнопка: без оформления Fluent, отклик — на самом блоке. -->
+        <Style Selector="Button.stagebtn">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <!-- Не PART_ContentPresenter: иначе стили Fluent (:disabled, :pointerover) красят фон. -->
+                    <ContentPresenter Name="StagePresenter" Content="{TemplateBinding Content}"
+                                      HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="Button.stagebtn:pointerover">
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.stagebtn:disabled">
+            <Setter Property="Cursor" Value="Arrow" />
+        </Style>
+        <Style Selector="Button.stagebtn:pointerover Border.stage">
+            <Setter Property="BorderBrush" Value="{DynamicResource InkBrush}" />
+        </Style>
+        <Style Selector="Button.stagebtn:pointerover Border.stage.done">
+            <Setter Property="Opacity" Value="0.88" />
+        </Style>
+        <Style Selector="Button.stagebtn:pressed Border.stage">
+            <Setter Property="Opacity" Value="0.74" />
+        </Style>
+        <Style Selector="TextBlock.stageaction">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="TextDecorations" Value="Underline" />
+        </Style>
+
         <!-- Мини-полоса в каталоге: тот же код, без текста. -->
         <Style Selector="Border.chip">
             <Setter Property="Width" Value="14" />

@@ -97,7 +97,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(BrowseBuildSourceCommand), nameof(OpenInExplorerCommand),
         nameof(EditSettingsCommand), nameof(DeliverCommand), nameof(VerifyCommand),
-        nameof(ConfigureFtpCommand), nameof(ConfigureDeliveryCommand), nameof(GenerateKeysCommand))]
+        nameof(ConfigureFtpCommand), nameof(ConfigureDeliveryCommand), nameof(GenerateKeysCommand),
+        nameof(RunStageCommand))]
     [NotifyPropertyChangedFor(nameof(IsStartScreen))]
     private bool _hasProject;
 
@@ -367,6 +368,29 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 break;
         }
     }
+
+    // Нажатие на блок этапа последнего выпуска: выполнить (или повторить) этот шаг.
+    [RelayCommand(CanExecute = nameof(CanRunStage))]
+    private async Task RunStage(StageItem? stage)
+    {
+        switch (stage?.Kind)
+        {
+            case StageKind.Build:
+                await BrowseBuildSourceCommand.ExecuteAsync(null);
+                break;
+            case StageKind.Patch:
+                await CreatePatchCommand.ExecuteAsync(null);
+                break;
+            case StageKind.Delivery:
+                await DeliverCommand.ExecuteAsync(null);
+                break;
+            case StageKind.Verify:
+                await VerifyCommand.ExecuteAsync(null);
+                break;
+        }
+    }
+
+    private bool CanRunStage(StageItem? stage) => HasProject && stage is { IsActionable: true };
 
     // Отмечаем факт доставки за самой новой собранной версией: Output всегда содержит патч до неё.
     private void MarkDelivered()

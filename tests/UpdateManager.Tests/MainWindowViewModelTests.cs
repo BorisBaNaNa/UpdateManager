@@ -331,6 +331,55 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task RunStage_RebuildsAndRedeliversLatestRelease()
+    {
+        await CreateProjectWithBuild();
+        var target = Path.Combine(_root, "server");
+        _dialogs.DeliveryAnswer = _ => new DeliveryConfig { Method = DeliveryMethods.Folder, Path = target };
+        _dialogs.Prompts.Enqueue("1.0.0");
+        await _vm.CreatePatchCommand.ExecuteAsync(null);
+        await _vm.DeliverCommand.ExecuteAsync(null);
+
+        // Блок «Патч» пройденного выпуска: пересобрать ту же версию (с подтверждением перезаписи).
+        var patch = Stage("1.0.0", StageKind.Patch);
+        Assert.True(_vm.RunStageCommand.CanExecute(patch));
+        Assert.Equal("Пересобрать", patch.ActionText);
+        Thread.Sleep(20);
+        _dialogs.Prompts.Enqueue("1.0.0");
+        await _vm.RunStageCommand.ExecuteAsync(patch);
+
+        Assert.Contains(_dialogs.Confirms, m => m.Contains("Перезаписать"));
+        var delivery = Stage("1.0.0", StageKind.Delivery);
+        Assert.Equal(StageState.Pending, delivery.State); // доставка устарела после пересборки
+        Assert.Equal("Доставить", _vm.NextStepText);
+
+        // Блок «Доставка» — доставить заново.
+        await _vm.RunStageCommand.ExecuteAsync(delivery);
+        Assert.Equal(StageState.Done, Stage("1.0.0", StageKind.Delivery).State);
+        Assert.Empty(_dialogs.Errors);
+    }
+
+    [Fact]
+    public async Task RunStage_LockedBeyondNextStepAndInArchive()
+    {
+        await CreateProjectWithBuild();
+        _dialogs.Prompts.Enqueue("1.0.0");
+        await _vm.CreatePatchCommand.ExecuteAsync(null);
+
+        // Патч собран, не доставлен: «Проверка» заперта (сначала доставка).
+        Assert.True(_vm.RunStageCommand.CanExecute(Stage("1.0.0", StageKind.Delivery)));
+        Assert.False(_vm.RunStageCommand.CanExecute(Stage("1.0.0", StageKind.Verify)));
+
+        File.WriteAllText(Path.Combine(BuildDir, "app.txt"), "v2");
+        _dialogs.Prompts.Enqueue("1.0.1");
+        await _vm.CreatePatchCommand.ExecuteAsync(null);
+
+        // 1.0.0 теперь архивный: его блоки не нажимаются.
+        Assert.All(_vm.Releases.Single(r => r.Version == "1.0.0").Platforms[0].Stages,
+            s => Assert.False(_vm.RunStageCommand.CanExecute(s)));
+    }
+
+    [Fact]
     public async Task ConfigureDelivery_SavesMethodWithoutDelivering()
     {
         await CreateProjectWithBuild();

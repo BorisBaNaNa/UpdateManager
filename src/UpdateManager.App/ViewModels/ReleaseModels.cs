@@ -43,6 +43,22 @@ public sealed class StageItem
 
     public string ToolTipText => Title + ": " + FullDetail;
 
+    /// <summary>
+    /// Блок можно нажать: только в последнем выпуске и только пройденный или следующий этап —
+    /// повторить шаг (пересобрать, доставить снова) можно, перепрыгнуть через непройденный — нет.
+    /// </summary>
+    public bool IsActionable { get; internal set; }
+
+    /// <summary>Что сделает нажатие на блок.</summary>
+    public string ActionText => Kind switch
+    {
+        StageKind.Build => "Сменить папку билда",
+        StageKind.Patch => State == StageState.Done ? "Пересобрать" : "Собрать",
+        StageKind.Files => State == StageState.Done ? "Создать заново" : "Создать",
+        StageKind.Delivery => State == StageState.Done ? "Доставить снова" : "Доставить",
+        _ => State == StageState.Pending ? "Проверить" : "Проверить снова"
+    };
+
     // Классы для стилей: цвет блока задаёт этап, заливка — состояние.
     public bool IsBuild => Kind == StageKind.Build;
     public bool IsPatch => Kind == StageKind.Patch;
@@ -222,7 +238,17 @@ public static class ReleaseCatalog
 
         result.Reverse();
         if (result.Count > 0)
+        {
             result[0] = new ReleaseItem(result[0].Number, result[0].Version, result[0].IsNew, isLatest: true, result[0].Platforms);
+            foreach (var track in result[0].Platforms)
+            {
+                // Пройденные этапы и первый непройденный; дальше — заперто, пока не пройден предыдущий.
+                var next = track.NextStage;
+                var limit = next == null ? track.Stages.Count - 1 : IndexOf(track.Stages, next);
+                for (int i = 0; i <= limit; i++)
+                    track.Stages[i].IsActionable = true;
+            }
+        }
         return result;
     }
 
@@ -245,6 +271,14 @@ public static class ReleaseCatalog
         meta.Delivery.Method == Core.Delivery.DeliveryMethods.Ftp ? "FTP" : "папка";
 
     public static string Stamp(DateTime at) => at.ToString("dd.MM.yyyy HH:mm");
+
+    private static int IndexOf(IReadOnlyList<StageItem> stages, StageItem stage)
+    {
+        for (int i = 0; i < stages.Count; i++)
+            if (ReferenceEquals(stages[i], stage))
+                return i;
+        return -1;
+    }
 
     private static string FirstLine(string text)
     {
