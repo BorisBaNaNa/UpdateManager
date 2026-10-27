@@ -56,3 +56,10 @@
 
 - Если `BaseDownloadURL` нельзя задать на этапе создания — вкладка для проставления ссылок
   в готовый `VersionInfo.info`.
+
+## Шаг 8. Самообновление UpdateManager (сделано, ждёт сквозного прогона)
+
+- Клиентская часть на движке: `CheckForUpdates(false)` → `Run(true)` → `ApplySelfPatch` → выход.
+- URL/ключ — `App.config` (`SelfUpdate.VersionInfoUrl`, `SelfUpdate.PublicKey`).
+- Распознавание билда самого UpdateManager и пресет проекта.
+- Спек: `docs/superpowers/specs/2026-10-27-self-update-design.md`.

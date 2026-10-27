@@ -114,3 +114,29 @@ Patcher create -root="<root>" -out="<out>" -name="<name>" -version="<ver>" \
 - `InstallerPatch/` — файлы installer-патча.
 - Файлы патча качаются по `BaseDownloadURL` из манифеста (НЕ по version-info URL — отсюда
   класс ошибок с забытым `BaseDownloadURL`).
+
+## 6. Клиент — `SimplePatchTool` (проверка, обновление, self-patching)
+
+Сверено рефлексией по `lib/SimplePatchTool.dll`.
+
+```csharp
+var patcher = new SimplePatchTool( rootPath, versionInfoUrl )
+    .UseRepairPatch( true ).UseIncrementalPatch( true ).UseInstallerPatch( true )
+    .CheckForMultipleRunningInstances( false )
+    .UseVersionInfoVerifier( ( ref string xml ) => XMLSigner.VerifyXMLContents( xml, publicKey ) )
+    .UsePatchInfoVerifier( ( ref string xml ) => XMLSigner.VerifyXMLContents( xml, publicKey ) );
+
+patcher.CheckForUpdates( checkVersionOnly );   // асинхронно; ждать IsRunning == false
+patcher.Run( isSelfPatchingApp );              // true = качать в кэш (exe занят), не поверх
+patcher.ApplySelfPatch( selfPatcherExe, postSelfPatchExe ); // после Run(true); затем приложение выходит
+```
+
+- `Result`: `Success` (после `CheckForUpdates` = есть обновление), `AlreadyUpToDate`, `Failed`
+  (+ `FailReason`, `FailDetails`). `NewVersion` — версия на сервере.
+- `Operation`: `CheckingForUpdates`, `Patching`, `SelfPatching`, `ApplyingSelfPatch`.
+- `CheckForUpdates(false)` сверяет файлы с манифестом, а не только version holder `*_vers.sptv` —
+  работает и на установке без него.
+- `XMLVerifier` — делегат `bool (ref string xml)`.
+- Полезные константы `PatchParameters`: `SELF_PATCHER_DIRECTORY = "SPPatcher"`,
+  `VERSION_HOLDER_FILENAME_POSTFIX = "_vers.sptv"`, `LOG_FILE_NAME = "spt_logs.txt"`,
+  `SELF_PATCH_INSTRUCTIONS_FILENAME = "psp.in0"`.

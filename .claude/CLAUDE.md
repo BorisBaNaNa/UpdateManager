@@ -48,6 +48,14 @@
 - Защиты `BaseDownloadURL`: блок сборки при пустом; авто-добавление `/` при сохранении (движок клеит
   ссылки без слеша). Встроенный self-patcher (`UpdateManager/SelfPatcher/`, Content → bin) кладётся в
   каждый новый проект.
+- **RSA-подпись** (`Core/Security/`) — «Безопасность → Сгенерировать RSA-ключи…»; `public.key`/`private.key`
+  в корне проекта (не в `Output/`); при `SignPatch` манифесты подписываются после сборки (`PatchSigner`);
+  приватный ключ можно залить коллегам в отдельную FTP-папку (`FtpKeyUploader`).
+- **Самообновление** (`Core/SelfUpdate/`, `SelfUpdatePresenter`) — тихая проверка при старте +
+  «Справка → Проверить обновления…»; `Run(true)` в кэш → `ApplySelfPatch` → выход. URL и RSA-ключ —
+  `App.config` (`SelfUpdate.*`). Билд самого UpdateManager распознаётся по ProductName/CompanyName
+  (`SelfIdentity`) → предложение пресета (`IsSelfPatchingApp`, `BaseDownloadURL`, `IgnoredPaths`).
+  Спек: `docs/superpowers/specs/2026-10-27-self-update-design.md`.
 - **Темы** (`Forms/Theming/`) — светлая/тёмная/«как в Windows» (через реестр). Ручная темизация
   WinForms: `ThemeManager.Apply` рекурсивно по контролам, меню через `ThemedToolStripRenderer`,
   тёмная рамка окна через DWM, disabled-текст кнопок дорисовывается. Режим в `%AppData%\...\theme.txt`.
@@ -61,12 +69,15 @@ MVP + доменный слой, инверсия зависимостей (до
 - `Forms/` — UI (реализуют `Views/IMainView`); `Presenters/MainPresenter` — логика окна; композиция
   собирается в `Program.Main`.
 - `Core/` по подпапкам со строгими namespace'ами `UpdateManager.Core.*`: `Project/`, `Delivery/`,
-  `Operations/` (`IEngineOperation`, `PatchBuilder`, `PatchVerifier`), `Versioning/`, `Common/`.
-- `Core/Project/ProjectService` — **единственный** слой, напрямую зовущий движок.
+  `Operations/` (`IEngineOperation`, `PatchBuilder`, `PatchVerifier`), `Versioning/`, `Common/`,
+  `Security/`, `SelfUpdate/`.
+- Настройки проекта движка правит только `Core/Project/ProjectService`; операции (`PatchBuilder`,
+  `PatchVerifier`, `SelfUpdate*`) создают движковые объекты сами.
 
 ## Осталось
 
-- Подпись манифеста (RSA, `SimplePatchToolSecurity`) — на потом.
+- Сквозной прогон самообновления (1.0.3 → 1.0.4 через `updates.borealis-soft-home`) — сервер пока
+  недоступен; заодно уточнить, где движок держит self-patcher на клиенте (`SPPatcher\` или наш `SelfPatcher\`).
 - FTPS/TLS для FTP-доставки (сейчас только обычный FTP) — при необходимости.
 
 ## Стек
