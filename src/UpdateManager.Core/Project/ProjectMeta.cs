@@ -39,6 +39,17 @@ namespace UpdateManager.Core.Project
         private const string VerifiedVersionsElement = "VerifiedVersions";
         private const string VerifiedOkAttribute = "ok";
         private const string VerifiedDetailsAttribute = "details";
+        private const string PlatformsElement = "Platforms";
+        private const string WindowsAttribute = "windows";
+        private const string AndroidAttribute = "android";
+        private const string AndroidElement = "Android";
+        private const string AndroidBuildSourceAttribute = "buildSource";
+        private const string AndroidChannelAttribute = "channel";
+        private const string AndroidSignElement = "Sign";
+        private const string AndroidExcludeElement = "Exclude";
+        private const string AndroidSignedElement = "AndroidSigned";
+        private const string AndroidDeliveredElement = "AndroidDelivered";
+        private const string AndroidVerifiedElement = "AndroidVerified";
 
         /// <summary>Версия схемы этого файла — чтобы в будущем безболезненно менять формат.</summary>
         public int SchemaVersion { get; set; } = CurrentSchemaVersion;
@@ -85,6 +96,27 @@ namespace UpdateManager.Core.Project
         /// </summary>
         public bool SignPatch { get; set; }
 
+        /// <summary>Платформа Windows (патч движка) включена. У старых проектов — да.</summary>
+        public bool WindowsEnabled { get; set; } = true;
+
+        /// <summary>Платформа Android (подпись файлов по маске, без патчей) включена.</summary>
+        public bool AndroidEnabled { get; set; }
+
+        /// <summary>Настройки платформы Android.</summary>
+        public AndroidConfig Android { get; set; } = new AndroidConfig();
+
+        /// <summary>Android: когда файлы версии подписаны (версия → время).</summary>
+        public Dictionary<string, DateTime> AndroidSignedVersions { get; set; } =
+            new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>Android: когда версия выложена в канал (версия → время).</summary>
+        public Dictionary<string, DateTime> AndroidDeliveredVersions { get; set; } =
+            new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>Android: итог проверки канала по версиям.</summary>
+        public Dictionary<string, VerificationResult> AndroidVerifiedVersions { get; set; } =
+            new Dictionary<string, VerificationResult>(StringComparer.OrdinalIgnoreCase);
+
         /// <summary>Прочитать наш файл из корня проекта. Если его нет — вернуть значения по умолчанию.</summary>
         public static ProjectMeta Load(string projectRoot)
         {
@@ -118,20 +150,59 @@ namespace UpdateManager.Core.Project
             LoadVersionDates(root.Element(DeliveredVersionsElement), meta.DeliveredVersions);
             LoadVersionDates(root.Element(PatchedVersionsElement), meta.PatchedVersions);
 
-            var verified = root.Element(VerifiedVersionsElement);
-            if (verified != null)
+            LoadVerification(root.Element(VerifiedVersionsElement), meta.VerifiedVersions);
+
+            var platforms = root.Element(PlatformsElement);
+            if (platforms != null)
             {
-                foreach (var item in verified.Elements(DeliveredVersionElement))
-                {
-                    var id = (string)item.Attribute(DeliveredVersionIdAttribute);
-                    if (!string.IsNullOrEmpty(id) && TryParseAt(item, out parsed))
-                        meta.VerifiedVersions[id] = new VerificationResult(parsed,
-                            (bool?)item.Attribute(VerifiedOkAttribute) ?? false,
-                            (string)item.Attribute(VerifiedDetailsAttribute) ?? "");
-                }
+                meta.WindowsEnabled = (bool?)platforms.Attribute(WindowsAttribute) ?? true;
+                meta.AndroidEnabled = (bool?)platforms.Attribute(AndroidAttribute) ?? false;
             }
 
+            var android = root.Element(AndroidElement);
+            if (android != null)
+            {
+                meta.Android.BuildSource = (string)android.Attribute(AndroidBuildSourceAttribute) ?? "";
+                meta.Android.Channel = (string)android.Attribute(AndroidChannelAttribute) ?? AndroidConfig.DefaultChannel;
+                meta.Android.SignMasks = android.Elements(AndroidSignElement).Select(e => e.Value).ToList();
+                meta.Android.ExcludeMasks = android.Elements(AndroidExcludeElement).Select(e => e.Value).ToList();
+            }
+
+            LoadVersionDates(root.Element(AndroidSignedElement), meta.AndroidSignedVersions);
+            LoadVersionDates(root.Element(AndroidDeliveredElement), meta.AndroidDeliveredVersions);
+            LoadVerification(root.Element(AndroidVerifiedElement), meta.AndroidVerifiedVersions);
+
             return meta;
+        }
+
+        // <X><Version id at ok details/></X> → словарь версия → итог проверки.
+        private static void LoadVerification(XElement container, Dictionary<string, VerificationResult> target)
+        {
+            if (container == null)
+                return;
+
+            foreach (var item in container.Elements(DeliveredVersionElement))
+            {
+                var id = (string)item.Attribute(DeliveredVersionIdAttribute);
+                DateTime parsed;
+                if (!string.IsNullOrEmpty(id) && TryParseAt(item, out parsed))
+                    target[id] = new VerificationResult(parsed,
+                        (bool?)item.Attribute(VerifiedOkAttribute) ?? false,
+                        (string)item.Attribute(VerifiedDetailsAttribute) ?? "");
+            }
+        }
+
+        private static XElement SaveVerification(string name, Dictionary<string, VerificationResult> source)
+        {
+            if (source.Count == 0)
+                return null;
+
+            return new XElement(name,
+                source.Select(pair => new XElement(DeliveredVersionElement,
+                    new XAttribute(DeliveredVersionIdAttribute, pair.Key),
+                    new XAttribute(DeliveredVersionAtAttribute, pair.Value.At.ToString("o", CultureInfo.InvariantCulture)),
+                    new XAttribute(VerifiedOkAttribute, pair.Value.Succeeded),
+                    new XAttribute(VerifiedDetailsAttribute, pair.Value.Details ?? ""))));
         }
 
         // <X><Version id="1.0.0" at="…"/></X> → словарь версия → время.
@@ -182,16 +253,20 @@ namespace UpdateManager.Core.Project
                         : null,
                     SaveVersionDates(DeliveredVersionsElement, DeliveredVersions),
                     SaveVersionDates(PatchedVersionsElement, PatchedVersions),
-                    VerifiedVersions.Count > 0
-                        ? new XElement(VerifiedVersionsElement,
-                            VerifiedVersions.Select(pair => new XElement(DeliveredVersionElement,
-                                new XAttribute(DeliveredVersionIdAttribute, pair.Key),
-                                new XAttribute(DeliveredVersionAtAttribute, pair.Value.At.ToString("o", CultureInfo.InvariantCulture)),
-                                new XAttribute(VerifiedOkAttribute, pair.Value.Succeeded),
-                                new XAttribute(VerifiedDetailsAttribute, pair.Value.Details ?? ""))))
-                        : null,
+                    SaveVerification(VerifiedVersionsElement, VerifiedVersions),
                     new XElement(LastBuiltSettingsElement, LastBuiltSettings ?? ""),
-                    new XElement(SignPatchElement, SignPatch)
+                    new XElement(SignPatchElement, SignPatch),
+                    new XElement(PlatformsElement,
+                        new XAttribute(WindowsAttribute, WindowsEnabled),
+                        new XAttribute(AndroidAttribute, AndroidEnabled)),
+                    new XElement(AndroidElement,
+                        new XAttribute(AndroidBuildSourceAttribute, Android.BuildSource ?? ""),
+                        new XAttribute(AndroidChannelAttribute, Android.Channel ?? AndroidConfig.DefaultChannel),
+                        Android.SignMasks.Select(m => new XElement(AndroidSignElement, m)),
+                        Android.ExcludeMasks.Select(m => new XElement(AndroidExcludeElement, m))),
+                    SaveVersionDates(AndroidSignedElement, AndroidSignedVersions),
+                    SaveVersionDates(AndroidDeliveredElement, AndroidDeliveredVersions),
+                    SaveVerification(AndroidVerifiedElement, AndroidVerifiedVersions)
                 ));
             doc.Save(Path.Combine(projectRoot, FileName));
         }

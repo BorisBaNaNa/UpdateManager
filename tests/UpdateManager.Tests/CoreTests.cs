@@ -307,6 +307,34 @@ public sealed class StoresTests : IDisposable
         Assert.False(failed.Succeeded);
         Assert.Equal(new DateTime(2026, 10, 27, 11, 5, 0), failed.At);
         Assert.Equal("timeout \"30 s\"", failed.Details);
+        Assert.True(loaded.WindowsEnabled);
+        Assert.False(loaded.AndroidEnabled);
+    }
+
+    [Fact]
+    public void ProjectMeta_AndroidRoundTrip()
+    {
+        var meta = new ProjectMeta { WindowsEnabled = false, AndroidEnabled = true };
+        meta.Android.BuildSource = @"D:\AlmaProfile\build\android";
+        meta.Android.Channel = "AndroidPatch";
+        meta.Android.SignMasks.Add("latest.json");
+        meta.Android.SignMasks.Add("manifests/*.json");
+        meta.Android.ExcludeMasks.Add("AlmaProfile-x86_64.apk");
+        meta.AndroidSignedVersions["0.9.24"] = new DateTime(2026, 10, 28, 9, 0, 0);
+        meta.AndroidDeliveredVersions["0.9.24"] = new DateTime(2026, 10, 28, 9, 5, 0);
+        meta.AndroidVerifiedVersions["0.9.24"] = new VerificationResult(new DateTime(2026, 10, 28, 9, 6, 0), true, "");
+        meta.Save(_root);
+
+        var loaded = ProjectMeta.Load(_root);
+        Assert.False(loaded.WindowsEnabled);
+        Assert.True(loaded.AndroidEnabled);
+        Assert.Equal(@"D:\AlmaProfile\build\android", loaded.Android.BuildSource);
+        Assert.Equal("AndroidPatch", loaded.Android.Channel);
+        Assert.Equal(new[] { "latest.json", "manifests/*.json" }, loaded.Android.SignMasks);
+        Assert.Equal(new[] { "AlmaProfile-x86_64.apk" }, loaded.Android.ExcludeMasks);
+        Assert.Equal(new DateTime(2026, 10, 28, 9, 0, 0), loaded.AndroidSignedVersions["0.9.24"]);
+        Assert.Equal(new DateTime(2026, 10, 28, 9, 5, 0), loaded.AndroidDeliveredVersions["0.9.24"]);
+        Assert.True(loaded.AndroidVerifiedVersions["0.9.24"].Succeeded);
     }
 }
 
