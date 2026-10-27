@@ -196,27 +196,40 @@ public static class ReleaseCatalog
                 ? new StageItem(StageKind.Patch, StageState.Done, patchedAt.HasValue ? "собран " + Stamp(patchedAt.Value) : "собран")
                 : new StageItem(StageKind.Patch, StageState.Pending, "не собран"));
 
-            // Доставка и проверка «устаревают», если после них пересобрали патч / заново доставили.
+            // Этап не засчитан, если выполнен раньше предыдущего. Повтор этапа и так стирает записи
+            // следующих (MainWindowViewModel.ResetStagesFrom); правила ниже держат и старые записи —
+            // например, проверку, сделанную до пересборки патча.
             DateTime? deliveredAt = delivered.TryGetValue(v.Version, out var d) ? d : null;
-            if (deliveredAt.HasValue && patchedAt.HasValue && deliveredAt < patchedAt)
+            if (!patched)
+                stages.Add(new StageItem(StageKind.Delivery, StageState.Pending, "не доставлен"));
+            else if (deliveredAt.HasValue && patchedAt.HasValue && deliveredAt < patchedAt)
                 stages.Add(new StageItem(StageKind.Delivery, StageState.Pending, "устарела: патч пересобран"));
             else if (deliveredAt.HasValue)
                 stages.Add(new StageItem(StageKind.Delivery, StageState.Done, DeliveryLabel(meta) + " · " + Stamp(deliveredAt.Value)));
             else
                 stages.Add(new StageItem(StageKind.Delivery, StageState.Pending, "не доставлен"));
 
-            if (meta.VerifiedVersions.TryGetValue(v.Version, out var check) &&
-                (!deliveredAt.HasValue || check.At >= deliveredAt))
+            // Проверка — о том, что лежит на сервере: засчитана, если сделана после последней сборки
+            // патча и после последней доставки (доставить могли и не нами — тогда записи доставки нет).
+            meta.VerifiedVersions.TryGetValue(v.Version, out var check);
+            if (check == null)
+            {
+                stages.Add(new StageItem(StageKind.Verify, StageState.Pending, "не проверялся"));
+            }
+            else if (!patched || (patchedAt.HasValue && check.At < patchedAt))
+            {
+                stages.Add(new StageItem(StageKind.Verify, StageState.Pending, "устарела: патч пересобран"));
+            }
+            else if (deliveredAt.HasValue && check.At < deliveredAt)
+            {
+                stages.Add(new StageItem(StageKind.Verify, StageState.Pending, "устарела: доставлено заново"));
+            }
+            else
             {
                 stages.Add(check.Succeeded
                     ? new StageItem(StageKind.Verify, StageState.Done, "прошла " + Stamp(check.At))
                     : new StageItem(StageKind.Verify, StageState.Failed, "не прошла " + Stamp(check.At) + "\n" + FirstLine(check.Details),
                         "не прошла " + Stamp(check.At) + "\n" + check.Details, check.Details.Trim()));
-            }
-            else
-            {
-                stages.Add(new StageItem(StageKind.Verify, StageState.Pending,
-                    check != null ? "устарела: доставлено заново" : "не проверялся"));
             }
 
             result.Add(new ReleaseItem(i + 1, v.Version, isNew: false, isLatest: false,

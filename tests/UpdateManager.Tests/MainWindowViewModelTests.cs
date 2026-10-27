@@ -360,6 +360,59 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task RunStage_RerunResetsLaterStages()
+    {
+        // Выпуск пройден целиком: собран, доставлен (BaseDownloadURL = Output), проверен.
+        await CreateProjectWithBuild();
+        _dialogs.DeliveryAnswer = _ => new DeliveryConfig { Method = DeliveryMethods.Folder, Path = Path.Combine(_root, "server") };
+        _dialogs.Prompts.Enqueue("1.0.0");
+        await _vm.CreatePatchCommand.ExecuteAsync(null);
+        await _vm.DeliverCommand.ExecuteAsync(null);
+        await _vm.VerifyCommand.ExecuteAsync(null);
+        Assert.Equal(StageState.Done, Stage("1.0.0", StageKind.Verify).State);
+
+        // Доставили заново — прежняя проверка к новой доставке не относится.
+        await _vm.RunStageCommand.ExecuteAsync(Stage("1.0.0", StageKind.Delivery));
+        Assert.Equal(StageState.Done, Stage("1.0.0", StageKind.Delivery).State);
+        Assert.Equal(StageState.Pending, Stage("1.0.0", StageKind.Verify).State);
+        Assert.False(ProjectMeta.Load(ProjectDir).VerifiedVersions.ContainsKey("1.0.0"));
+
+        // Проверили и пересобрали патч — сбрасываются и доставка, и проверка.
+        await _vm.VerifyCommand.ExecuteAsync(null);
+        _dialogs.Prompts.Enqueue("1.0.0");
+        await _vm.RunStageCommand.ExecuteAsync(Stage("1.0.0", StageKind.Patch));
+        Assert.Equal(StageState.Done, Stage("1.0.0", StageKind.Patch).State);
+        Assert.Equal(StageState.Pending, Stage("1.0.0", StageKind.Delivery).State);
+        Assert.Equal(StageState.Pending, Stage("1.0.0", StageKind.Verify).State);
+        var meta = ProjectMeta.Load(ProjectDir);
+        Assert.False(meta.DeliveredVersions.ContainsKey("1.0.0"));
+        Assert.False(meta.VerifiedVersions.ContainsKey("1.0.0"));
+        Assert.Equal("Доставить", _vm.NextStepText);
+    }
+
+    [Fact]
+    public void Catalog_VerificationBeforeRebuildIsNotCounted()
+    {
+        // Записи до фикса: проверка прошла, потом пересобрали патч (доставка устарела, проверка осталась).
+        _service.Create(ProjectDir, "TestApp");
+        Directory.CreateDirectory(BuildDir);
+        File.WriteAllText(Path.Combine(BuildDir, "app.txt"), "v1");
+        _service.StageBuild(ProjectDir, BuildDir, "1.0.0");
+        var meta = ProjectMeta.Load(ProjectDir);
+        var t = DateTime.Now;
+        meta.DeliveredVersions["1.0.0"] = t.AddMinutes(-20);
+        meta.VerifiedVersions["1.0.0"] = new VerificationResult(t.AddMinutes(-10), true, "");
+        meta.PatchedVersions["1.0.0"] = t;
+        meta.Save(ProjectDir);
+
+        var stages = ReleaseCatalog.Build(_service.Open(ProjectDir), null)[0].Platforms[0].Stages;
+
+        Assert.Equal(StageState.Pending, stages[2].State);
+        Assert.Equal(StageState.Pending, stages[3].State);
+        Assert.Equal("устарела: патч пересобран", stages[3].Detail);
+    }
+
+    [Fact]
     public async Task RunStage_LockedBeyondNextStepAndInArchive()
     {
         await CreateProjectWithBuild();

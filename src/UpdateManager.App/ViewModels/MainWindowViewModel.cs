@@ -292,12 +292,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
 
         // Доставляем через выбранный обработчик (папка).
+        ResetDeliveryOfMaxVersion();
         try
         {
             DeliveryFactory.Create(config).Deliver(outputDir);
         }
         catch (Exception ex)
         {
+            ShowProject();
             await _dialogs.ShowErrorAsync("Доставка не удалась:\n" + ex.Message);
             return;
         }
@@ -328,6 +330,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         var remotePath = DownloadUrl.CombineRemote(conn.RemotePath, uploadDir);
 
         // Окно операции модальное: после его закрытия op.Succeeded уже валиден.
+        ResetDeliveryOfMaxVersion();
         var op = new FtpUploadOperation(conn, outputDir, remotePath);
         await _dialogs.ShowOperationAsync(op);
 
@@ -336,6 +339,18 @@ public sealed partial class MainWindowViewModel : ObservableObject
             MarkDelivered();
             await _dialogs.ShowInfoAsync("Патч залит на FTP:\n" + remotePath);
         }
+        else
+        {
+            ShowProject();
+        }
+    }
+
+    // Доставка (заново) начинается: прежние доставка и проверка самой новой версии не засчитаны.
+    private void ResetDeliveryOfMaxVersion()
+    {
+        var version = _service.GetMaxVersion(_project!.RootPath);
+        if (version != null)
+            ResetStagesFrom(version, StageKind.Delivery);
     }
 
     // Директория загрузки проекта = хвост BaseDownloadURL (общий и для URL, и для пути на FTP).
@@ -391,6 +406,23 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     private bool CanRunStage(StageItem? stage) => HasProject && stage is { IsActionable: true };
+
+    // Этап выполняется (заново) — его запись и записи всех следующих этапов версии больше не верны:
+    // пересобранный патч ещё не доставлен и не проверен, заново доставленный — не проверен. Зовём,
+    // когда этап реально начинается (после всех вопросов): прерванный или упавший этап тоже не засчитан.
+    private void ResetStagesFrom(string version, StageKind from)
+    {
+        var meta = _project!.Meta;
+        if (from <= StageKind.Patch)
+            meta.PatchedVersions.Remove(version);
+        if (from <= StageKind.Delivery)
+        {
+            meta.DeliveredVersions.Remove(version);
+            meta.LastDeliveredAt = null; // иначе старая дата 1.x снова «засчитает» доставку (ReleaseCatalog)
+        }
+        meta.VerifiedVersions.Remove(version);
+        meta.Save(_project.RootPath);
+    }
 
     // Отмечаем факт доставки за самой новой собранной версией: Output всегда содержит патч до неё.
     private void MarkDelivered()
@@ -804,7 +836,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
             !await _dialogs.ConfirmAsync("Версия " + version + " уже есть в Versions/. Перезаписать её?"))
             return;
 
-        // Копируем билд в Versions/<версия>.
+        // Копируем билд в Versions/<версия>. С этого момента прежний патч этой версии (и его доставка,
+        // проверка) недействителен — даже если сборка упадёт.
+        ResetStagesFrom(version, StageKind.Patch);
         try
         {
             _service.StageBuild(_project.RootPath, source, version);
