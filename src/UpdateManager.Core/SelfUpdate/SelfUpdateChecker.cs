@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using SimplePatchToolCore;
 using SimplePatchToolSecurity;
@@ -64,15 +65,28 @@ namespace UpdateManager.Core.SelfUpdate
             _config = config;
         }
 
+        /// <summary>
+        /// Дольше проверка не ждёт. Без лимита недоступный сервер (например, свой внешний адрес изнутри
+        /// LAN без NAT loopback) держал проверку до сетевого таймаута движка — минуты.
+        /// </summary>
+        public static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
+
         public SelfUpdateCheckResult Check()
         {
             var patcher = SelfUpdateClient.Create(_config);
             if (!patcher.CheckForUpdates(false))
                 return Fail("Не удалось запустить проверку обновлений.");
 
+            var deadline = DateTime.UtcNow + Timeout;
             while (patcher.IsRunning)
             {
                 while (patcher.FetchLog() != null) { } // очередь логов не копим
+                if (DateTime.UtcNow > deadline)
+                {
+                    patcher.Cancel(); // кооперативно; поток движка доработает сам, результат уже не нужен
+                    return Fail("Сервер обновлений не ответил за " + (int)Timeout.TotalSeconds + " с (" +
+                        _config.VersionInfoUrl + ").");
+                }
                 Thread.Sleep(100);
             }
 

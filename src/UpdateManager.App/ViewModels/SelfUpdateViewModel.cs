@@ -24,10 +24,13 @@ public sealed partial class SelfUpdateViewModel : ObservableObject
     /// <summary>Скачано и запущен self-patcher — приложение должно выйти, чтобы он подменил файлы.</summary>
     public event EventHandler? ShutdownRequested;
 
-    // Идёт проверка — вторую параллельно не запускаем (и пункт меню неактивен).
+    // Идёт проверка — вторую параллельно не запускаем. Пункт меню при этом НЕ гасим: ручной клик
+    // во время фоновой проверки просит показать её результат (раньше пункт серел до конца проверки).
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(CheckCommand))]
     private bool _isChecking;
+
+    // Пользователь нажал «Проверить обновления…», пока шла фоновая проверка, — показать её итог.
+    private bool _reportRunningCheck;
 
     /// <summary>Окно впервые показано — время фоновой проверки.</summary>
     public void OnStartup()
@@ -37,12 +40,20 @@ public sealed partial class SelfUpdateViewModel : ObservableObject
             _ = RunCheck(manual: false);
     }
 
-    private bool CanCheck() => _config.IsEnabled && !IsChecking;
+    private bool CanCheck() => _config.IsEnabled;
 
     // «Справка → Проверить обновления…»
-    [RelayCommand(CanExecute = nameof(CanCheck))]
+    [RelayCommand(CanExecute = nameof(CanCheck), AllowConcurrentExecutions = true)]
     private async Task Check()
     {
+        if (IsChecking)
+        {
+            _reportRunningCheck = true;
+            await _dialogs.ShowInfoAsync("Проверка обновлений уже идёт — покажу результат, как только она закончится " +
+                "(не дольше " + (int)SelfUpdateChecker.Timeout.TotalSeconds + " с).");
+            return;
+        }
+
         if (Debugger.IsAttached && !await _dialogs.ConfirmAsync(
                 "Программа запущена под отладчиком: обновление заменит файлы в папке сборки.\n" +
                 "Всё равно проверить?"))
@@ -71,6 +82,9 @@ public sealed partial class SelfUpdateViewModel : ObservableObject
         {
             IsChecking = false;
         }
+
+        manual |= _reportRunningCheck;
+        _reportRunningCheck = false;
 
         await OnChecked(result, manual);
     }
