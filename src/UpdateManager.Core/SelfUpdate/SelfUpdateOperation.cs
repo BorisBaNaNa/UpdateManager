@@ -14,9 +14,6 @@ namespace UpdateManager.Core.SelfUpdate
     {
         private const string SelfPatcherExe = "SelfPatcher.exe";
 
-        // Встроенный self-patcher, который кладётся в bin для новых проектов (Content → SelfPatcher\).
-        private const string BundledSelfPatcherDirectory = "SelfPatcher";
-
         private readonly SimplePatchTool _patcher;
 
         public SelfUpdateOperation(SelfUpdateConfig config)
@@ -81,27 +78,15 @@ namespace UpdateManager.Core.SelfUpdate
         /// </summary>
         public void ApplyAndRestart()
         {
-            var selfPatcher = FindSelfPatcher();
-            if (selfPatcher == null)
+            // SPPatcher\ — и встроенный (Content), и обновляемый движком из self-patching-патча.
+            var selfPatcher = Path.Combine(SelfIdentity.AppDirectory, PatchParameters.SELF_PATCHER_DIRECTORY, SelfPatcherExe);
+            if (!File.Exists(selfPatcher))
                 throw new InvalidOperationException(
-                    "Не найден " + SelfPatcherExe + " (ни в " + PatchParameters.SELF_PATCHER_DIRECTORY +
-                    "\\, ни в " + BundledSelfPatcherDirectory + "\\ рядом с программой).\n" +
+                    "Не найден " + selfPatcher + ".\n" +
                     "Переустановите UpdateManager вручную.");
 
             if (!_patcher.ApplySelfPatch(selfPatcher, SelfIdentity.ExecutablePath))
                 throw new InvalidOperationException("Не удалось запустить self-patcher:\n" + _patcher.FailDetails);
-        }
-
-        private static string FindSelfPatcher()
-        {
-            // Сначала — куда его раскладывает движок из self-patching-патча, затем — наш встроенный.
-            foreach (var directory in new[] { PatchParameters.SELF_PATCHER_DIRECTORY, BundledSelfPatcherDirectory })
-            {
-                var path = Path.Combine(SelfIdentity.AppDirectory, directory, SelfPatcherExe);
-                if (File.Exists(path))
-                    return path;
-            }
-            return null;
         }
     }
 }

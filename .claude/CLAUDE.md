@@ -64,8 +64,9 @@
 - **Проверить** — клиентский `SimplePatchTool.Run()` реально качает патч во временную папку; ловит
   неверный/пустой `BaseDownloadURL`.
 - Защиты `BaseDownloadURL`: блок сборки при пустом; авто-добавление `/` при сохранении (движок клеит
-  ссылки без слеша). Встроенный self-patcher (`src/UpdateManager.App/SelfPatcher/`, Content → bin)
-  кладётся в каждый новый проект.
+  ссылки без слеша). Встроенный self-patcher (`src/UpdateManager.App/SPPatcher/`, Content → `SPPatcher\` рядом
+  с exe — туда же его кладёт движок из self-patching-патча) кладётся в каждый новый проект (в его `SelfPatcher/`)
+  и запускается при самообновлении. Другой копии рядом с exe нет.
 - **RSA-подпись** (`Core/Security/`) — «Безопасность → Сгенерировать RSA-ключи…»; `public.key`/`private.key`
   в корне проекта (не в `Output/`); при `SignPatch` манифесты подписываются после сборки (`PatchSigner`);
   приватный ключ можно залить коллегам в отдельную FTP-папку (`FtpKeyUploader`).
@@ -102,9 +103,9 @@ MVVM + доменный слой, домен не знает про UI:
   `dotnet publish src/UpdateManager.App -p:PublishProfile=win-x64` → `Release/`
   (self-contained, без single-file — движок подменяет файлы по одному).
 - Выпуск: `scripts/release.ps1 patch|minor|major|-To X.Y.Z|-NoBump` — тесты → версия в
-  `Directory.Build.props` → publish в `Release/` (папка очищается) → копия `SelfPatcher\` в `Release/SPPatcher\`
-  (туда self-patcher кладёт движок в патче; без неё свежий выпуск сразу «обновляется» ради него) → `Release/<Product>_vers.sptv` с версией
-  X.Y.Z.0 (version holder движка: клиентский `CheckForUpdates(true)` и наш `VersionDetector`) → сверка FileVersion.
+  `Directory.Build.props` → publish в `Release/` (папка очищается) → `Release/<Product>_vers.sptv` с версией
+  X.Y.Z.0 (version holder движка: клиентский `CheckForUpdates(true)` и наш `VersionDetector`) → сверка FileVersion
+  и наличия `Release/SPPatcher/SelfPatcher.exe`.
   Ничего не коммитит; при запущенном из репозитория UpdateManager останавливается с понятной ошибкой.
   Скрипт — Windows PowerShell 5.1, сохранять в UTF-8 **с BOM** (иначе кириллица ломается).
 
@@ -116,9 +117,7 @@ MVVM + доменный слой, домен не знает про UI:
 - Сквозной прогон самообновления 2.0 (`Run(true)` → SelfPatcher.exe → перезапуск) — тестами не покрыт;
   сервер `https://updates.borealis-soft-home.duckdns.org:51943/` (только HTTPS; FTP — 192.168.0.100 в LAN).
   Роутер без NAT loopback: изнутри LAN публичный адрес недоступен (проверка/«Проверить» виснут до таймаута),
-  а снаружи недоступен FTP 192.168.0.100 — HTTP-проверки делать из внешней сети.
-  На клиенте движок держит self-patcher в `SPPatcher\` (наш `SelfPatcher\` — запасной путь `FindSelfPatcher`).
-- FTPS/TLS для FTP-доставки (сейчас только обычный FTP) — при необходимости.
+  а снаружи недоступен FTP 192.168.0.100 — HTTP-проверки делать из внешней сети.- FTPS/TLS для FTP-доставки (сейчас только обычный FTP) — при необходимости.
 
 ## Стек
 

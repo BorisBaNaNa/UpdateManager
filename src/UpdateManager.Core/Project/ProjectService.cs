@@ -21,13 +21,13 @@ namespace UpdateManager.Core.Project
         /// <summary>Папка движка с версиями-билдами.</summary>
         public const string VersionsFolder = PatchParameters.PROJECT_VERSIONS_DIRECTORY;
 
-        /// <summary>Папка движка с self-patcher'ом (для self-patching приложений).</summary>
+        /// <summary>Папка проекта движка с self-patcher'ом (для self-patching приложений).</summary>
         public const string SelfPatcherFolder = "SelfPatcher";
 
-        // Встроенный self-patcher лежит рядом с нашим exe (папка приложения\SelfPatcher),
-        // куда его кладёт сборка (Content + CopyToOutputDirectory). Кладём его в каждый новый проект.
+        // Встроенный self-patcher лежит рядом с нашим exe в SPPatcher\ — там же, куда движок кладёт его
+        // у клиентов self-patching-приложения (Content + CopyToOutputDirectory). Кладём его в каждый новый проект.
         private static readonly string SelfPatcherSourceDir =
-            Path.Combine(AppContext.BaseDirectory, SelfPatcherFolder);
+            Path.Combine(AppContext.BaseDirectory, PatchParameters.SELF_PATCHER_DIRECTORY);
 
         /// <summary>
         /// Создать новый проект в папке folder: движок генерирует структуру,

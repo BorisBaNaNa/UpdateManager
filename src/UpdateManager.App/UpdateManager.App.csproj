@@ -41,9 +41,10 @@
     <Content Include="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <!-- Встроенный self-patcher: копируется в SelfPatcher\ рядом с exe, оттуда кладётся
-         в каждый создаваемый проект и запускается при самообновлении. -->
-    <Content Include="SelfPatcher\*">
+    <!-- Встроенный self-patcher: копируется в SPPatcher\ рядом с exe — туда же его кладёт движок
+         из self-patching-патча. Оттуда он идёт в каждый создаваемый проект и запускается при
+         самообновлении; в выпуске уже на месте, поэтому свежая установка его не докачивает. -->
+    <Content Include="SPPatcher\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
