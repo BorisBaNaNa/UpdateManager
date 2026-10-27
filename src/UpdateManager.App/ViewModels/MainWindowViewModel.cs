@@ -153,6 +153,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private async Task OpenRecent(string path)
     {
+        // Сначала даём меню закрыться: открытие проекта пересобирает RecentProjects, и нажатый пункт
+        // исчезал из дерева раньше, чем меню успевало закрыться по цепочке родителей — оставалось открытым.
+        await Task.Yield();
+
         // Папку проекта удалили/перенесли → запись мёртвая. Как с ярлыком Windows:
         // предупреждаем и предлагаем убрать её из списка.
         if (!_service.IsProjectFolder(path))
