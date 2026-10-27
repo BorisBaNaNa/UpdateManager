@@ -212,6 +212,15 @@ Flat. There are no shadows anywhere. Depth is conveyed by tonal steps only: Grou
 ### Named Rules
 **The No Lift Rule.** Nothing casts a shadow or floats. Hover and selection change fill (Selected Grey) or opacity, never elevation.
 
+**The Still Catalog Rule.** No motion. State changes are instant: after an operation the catalog is rebuilt and the strip simply shows the new state, spelled out in words. Only Fluent's own control feedback (scrollbar expand, progress bar) moves.
+
+## Stock Chrome
+
+The parts Fluent draws itself carry the palette too (overridden by resource key in `App.axaml`, per theme):
+- **Focus ring:** keyboard focus only; a 2px Ink outline with a 1px Ground gap inside (`SystemControlFocusVisualPrimaryBrush` / `SecondaryBrush`), square.
+- **Scrollbars:** thumb Pending Grey, Muted under the pointer, Ink when pressed; track Panel Grey; square thumb. Collapsed to Fluent's thin line until hovered.
+- **Inputs, checkboxes, text selection:** stock Fluent with square corners and Build Blue as the accent (focus underline, checked fill, selection), the one place the accent appears outside stage blocks.
+
 ## Shapes
 
 Square everywhere: corner radius 0 on buttons, stage blocks, chips, and through `ControlCornerRadius` / `OverlayCornerRadius` on every stock Fluent control (inputs, menus, tooltips). Borders are 1px hairlines; the only heavier stroke is the 2px failure outline. The recurring silhouette is the rectangle: large stage blocks (min 112px tall) and their 14×8px miniature chips.

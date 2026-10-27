@@ -18,6 +18,17 @@
                     <SolidColorBrush x:Key="HairlineBrush" Color="#C9C9C6" />
                     <SolidColorBrush x:Key="PendingBrush" Color="#8A8A87" />
                     <SolidColorBrush x:Key="FailedBrush" Color="#C8262B" />
+
+                    <!-- То, что рисует сам Fluent: рамка фокуса (краска поверх фона) и полосы прокрутки
+                         (ползунок — серый «ещё не пройден», под указателем темнее, нажат — краска). -->
+                    <SolidColorBrush x:Key="SystemControlFocusVisualPrimaryBrush" Color="#111111" />
+                    <SolidColorBrush x:Key="SystemControlFocusVisualSecondaryBrush" Color="#EFEFED" />
+                    <SolidColorBrush x:Key="ScrollBarPanningThumbBackground" Color="#8A8A87" />
+                    <Color x:Key="ScrollBarThumbBackgroundColor">#8A8A87</Color>
+                    <SolidColorBrush x:Key="ScrollBarThumbFillPointerOver" Color="#595957" />
+                    <SolidColorBrush x:Key="ScrollBarThumbFillPressed" Color="#111111" />
+                    <SolidColorBrush x:Key="ScrollBarTrackFill" Color="#E5E5E3" />
+                    <SolidColorBrush x:Key="ScrollBarTrackFillPointerOver" Color="#E5E5E3" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
                     <SolidColorBrush x:Key="GroundBrush" Color="#111111" />
@@ -29,6 +40,15 @@
                     <SolidColorBrush x:Key="HairlineBrush" Color="#2C2C2C" />
                     <SolidColorBrush x:Key="PendingBrush" Color="#686866" />
                     <SolidColorBrush x:Key="FailedBrush" Color="#FF5A4F" />
+
+                    <SolidColorBrush x:Key="SystemControlFocusVisualPrimaryBrush" Color="#F2F2F0" />
+                    <SolidColorBrush x:Key="SystemControlFocusVisualSecondaryBrush" Color="#111111" />
+                    <SolidColorBrush x:Key="ScrollBarPanningThumbBackground" Color="#686866" />
+                    <Color x:Key="ScrollBarThumbBackgroundColor">#686866</Color>
+                    <SolidColorBrush x:Key="ScrollBarThumbFillPointerOver" Color="#9B9B98" />
+                    <SolidColorBrush x:Key="ScrollBarThumbFillPressed" Color="#F2F2F0" />
+                    <SolidColorBrush x:Key="ScrollBarTrackFill" Color="#161616" />
+                    <SolidColorBrush x:Key="ScrollBarTrackFillPointerOver" Color="#161616" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
@@ -56,6 +76,11 @@
 
         <Style Selector="Window">
             <Setter Property="Background" Value="{DynamicResource GroundBrush}" />
+        </Style>
+
+        <!-- Ползунок прокрутки — прямоугольник, как всё в «каталоге». -->
+        <Style Selector="ScrollBar /template/ Thumb">
+            <Setter Property="CornerRadius" Value="0" />
         </Style>
 
         <!-- Текст -->
