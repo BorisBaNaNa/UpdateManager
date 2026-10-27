@@ -240,6 +240,7 @@ The world's defining component. A square rectangle, min 112px tall, padding 12px
 - **Done:** filled with the stage's hue, Stage Ink text, no border.
 - **Pending:** transparent, 1px Pending Grey outline, Muted text («не собран», «не доставлен», «не проверялся», «устарела: патч пересобран»).
 - **Failed:** transparent, 2px Failure Red outline, red text («не прошла 27.10.2026 21:16» + reason).
+- **Actionable:** in the latest release, done stages and the first not-done stage are buttons (no Fluent chrome). An underlined 12px SemiBold action line sits at the bottom («Сменить папку билда», «Пересобрать», «Доставить снова», «Проверить снова»). Hover sets an Ink outline, or opacity 0.88 on filled blocks; pressed sets opacity 0.74. Stages after the first not-done one, archive releases and the start-screen preview are not clickable and show no action line.
 
 ### Label / Value / Action Table
 Under a hairline: muted label (150px), value in body text trimmed with path ellipsis and a full-text tooltip, quiet button (128px) at the end of each row («Выбрать…», «Настройки…», «Настроить…», «Открыть»).
