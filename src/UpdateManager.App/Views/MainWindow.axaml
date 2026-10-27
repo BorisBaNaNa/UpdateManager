@@ -121,7 +121,7 @@
             </MenuItem>
         </Menu>
 
-        <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource HairlineBrush}" />
+        <Border DockPanel.Dock="Top" Classes="rule" />
 
         <Grid ColumnDefinitions="280,*">
             <!-- ===== Левая колонка: недавние проекты или каталог выпусков ===== -->
@@ -261,7 +261,7 @@
                         </WrapPanel>
 
                         <!-- Сведения о проекте: подпись · значение · действие -->
-                        <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,22,0,6" />
+                        <Border Classes="rule" Margin="0,22,0,6" />
                         <Grid ColumnDefinitions="150,*,128" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
                             <Grid.Styles>
                                 <Style Selector="Grid > TextBlock">

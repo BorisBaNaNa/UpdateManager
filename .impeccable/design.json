@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-28T00:00:00Z",
+  "generatedAt": "2026-10-28T12:00:00Z",
   "title": "Design System: UpdateManager",
   "extensions": {
-    "platform": "Avalonia 12 XAML (Fluent), Windows desktop. Tokens live in src/UpdateManager.App/App.axaml (ThemeDictionaries Light/Dark + static stage brushes); font set in Program.cs. No CSS; snippets below are web approximations for the panel.",
+    "platform": "Avalonia 12 XAML (Fluent), Windows desktop. Recorded as `web` only because Impeccable has no desktop value: there is no browser and no CSS. Tokens live in src/UpdateManager.App/App.axaml (ThemeDictionaries Light/Dark + static stage brushes + Fluent resource-key overrides); font Golos Text set as default in Program.cs. Component snippets below are Avalonia XAML: `xaml` is the markup as used in Views/*.axaml, `styles` is the App.axaml style it depends on.",
     "themeMap": {
       "GroundBrush": ["ground", "ground-dark"],
       "PanelBrush": ["panel", "panel-dark"],
@@ -21,6 +21,17 @@
       "StageVerifyBrush": ["stage-verify", "stage-verify"],
       "StageInkBrush": ["stage-ink", "stage-ink"]
     },
+    "stockChrome": [
+      { "name": "focus-visual-primary", "resourceKey": "SystemControlFocusVisualPrimaryBrush", "value": ["ink", "ink-dark"], "purpose": "Keyboard focus ring: 2px Ink outline (Fluent default thickness), square." },
+      { "name": "focus-visual-secondary", "resourceKey": "SystemControlFocusVisualSecondaryBrush", "value": ["ground", "ground-dark"], "purpose": "1px Ground gap inside the focus ring." },
+      { "name": "scrollbar-thumb", "resourceKey": "ScrollBarThumbBackgroundColor / ScrollBarPanningThumbBackground", "value": ["pending", "pending-dark"], "purpose": "Scrollbar thumb at rest (Pending Grey); square via `ScrollBar /template/ Thumb` CornerRadius 0." },
+      { "name": "scrollbar-thumb-pointerover", "resourceKey": "ScrollBarThumbFillPointerOver", "value": ["muted", "muted-dark"], "purpose": "Thumb under the pointer." },
+      { "name": "scrollbar-thumb-pressed", "resourceKey": "ScrollBarThumbFillPressed", "value": ["ink", "ink-dark"], "purpose": "Thumb while dragged." },
+      { "name": "scrollbar-track", "resourceKey": "ScrollBarTrackFill / ScrollBarTrackFillPointerOver", "value": ["panel", "panel-dark"], "purpose": "Expanded scrollbar track; collapsed to Fluent's thin line until hovered." },
+      { "name": "corner-radius", "resourceKey": "ControlCornerRadius / OverlayCornerRadius", "value": "0", "purpose": "Square corners on every stock Fluent control: inputs, menus, tooltips, combo boxes." },
+      { "name": "fluent-accent", "resourceKey": "ColorPaletteResources.Accent (Light/Dark)", "value": "stage-build", "purpose": "Build Blue as the Fluent accent for inputs, checkboxes and text selection; the one place a stage hue appears outside stage blocks." },
+      { "name": "region", "resourceKey": "ColorPaletteResources.RegionColor (Light/Dark)", "value": ["ground", "ground-dark"], "purpose": "Fluent region colour matches the Matte Ground." }
+    ],
     "colorMeta": {
       "ink": { "role": "primary", "displayName": "Ink", "canonical": "#111111", "tonalRamp": ["#0B0B0B", "#262626", "#454545", "#666666", "#898989", "#AEAEAE", "#D1D1D1", "#EEEEEE"] },
       "ink-inverse": { "role": "primary", "displayName": "Ink Inverse", "canonical": "#F4F4F2" },
@@ -50,24 +61,31 @@
     "typographyMeta": {
       "display": { "displayName": "Display", "purpose": "Selected release version number; one per screen." },
       "headline": { "displayName": "Headline", "purpose": "Featured recent project name; empty states «Первый проект» / «Первый выпуск»." },
-      "title": { "displayName": "Title", "purpose": "Project name at the top of the catalog panel." },
+      "title": { "displayName": "Title", "purpose": "Project name at the top of the catalog panel; dialog headings (`TextBlock.heading`, red via `.failed` only for an error message)." },
       "title-sm": { "displayName": "Title Small", "purpose": "Stage block titles, recent project names, primary button label." },
       "entry": { "displayName": "Entry", "purpose": "Version in a catalog row (tabular)." },
-      "body": { "displayName": "Body", "purpose": "Status line, metadata beside the version, table values." },
-      "detail": { "displayName": "Detail", "purpose": "Paths, catalog second line, stage block detail." },
-      "label": { "displayName": "Label", "purpose": "Uppercase tracked list headers in the left panel only." }
+      "body": { "displayName": "Body", "purpose": "Status line, metadata beside the version, table values, dialog message text." },
+      "detail": { "displayName": "Detail", "purpose": "Paths, catalog second line, stage block detail, dialog help and derived values under an input (`TextBlock.detail`)." },
+      "label": { "displayName": "Label", "purpose": "Uppercase tracked list headers in the left panel only (`TextBlock.caps`)." }
     },
     "shadows": [],
-    "motion": [],
+    "motion": [
+      { "name": "none", "value": "none", "purpose": "The Still Catalog Rule: no transitions or animations are authored; state changes are instant. Only Fluent's own control feedback (scrollbar expand, indeterminate progress bar) moves." }
+    ],
     "states": [
       { "name": "button-primary-hover", "value": "opacity: 0.86", "purpose": "Primary ink button on pointer-over." },
       { "name": "button-primary-pressed", "value": "opacity: 0.72", "purpose": "Primary ink button while pressed." },
+      { "name": "button-quiet-hover", "value": "background: selected; border: pending", "purpose": "Quiet button on pointer-over." },
+      { "name": "button-quiet-disabled", "value": "foreground: pending; border: hairline", "purpose": "Quiet button disabled." },
+      { "name": "stage-actionable-hover", "value": "border: ink (outlined) / opacity: 0.88 (filled)", "purpose": "Actionable stage block on pointer-over." },
+      { "name": "stage-actionable-pressed", "value": "opacity: 0.74", "purpose": "Actionable stage block while pressed." },
       { "name": "recent-missing", "value": "opacity: 0.55", "purpose": "Recent project whose folder no longer exists." },
-      { "name": "stage-failed-stroke", "value": "2px solid failed", "purpose": "Only heavy stroke in the system; failed stage block and chip." }
+      { "name": "failed-stroke", "value": "2px solid failed", "purpose": "Only heavy stroke in the system: failed stage block, failed chip, and the dialog failure box." }
     ],
     "breakpoints": [
       { "name": "window-min", "value": "720x520" },
-      { "name": "stage-strip-wrap", "value": "150px min block width; below it the strip goes two per row" }
+      { "name": "stage-strip-wrap", "value": "150px min block width; below it the strip goes two per row" },
+      { "name": "content-max", "value": "980px max content column width" }
     ]
   },
   "components": [
@@ -75,62 +93,94 @@
       "name": "Primary Button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "The single filled ink button that names the next step.",
-      "html": "<button class=\"ds-btn-primary\">Создать патч</button>",
-      "css": ".ds-btn-primary { background: #111111; color: #F4F4F2; font-family: 'Golos Text', sans-serif; font-size: 15px; font-weight: 600; padding: 11px 22px; border: none; border-radius: 0; cursor: pointer; } .ds-btn-primary:hover { opacity: 0.86; } .ds-btn-primary:active { opacity: 0.72; } .ds-btn-primary:focus-visible { outline: 2px solid #2E86AB; outline-offset: 2px; }"
+      "description": "The single filled ink button that names the next step; one per screen or dialog footer.",
+      "xaml": "<Button Classes=\"primary\" Content=\"Создать патч\" />",
+      "styles": "<Style Selector=\"Button\"><Setter Property=\"CornerRadius\" Value=\"0\" /></Style>\n<Style Selector=\"Button.primary\"><Setter Property=\"Background\" Value=\"{DynamicResource InkBrush}\" /><Setter Property=\"Foreground\" Value=\"{DynamicResource InkInverseBrush}\" /><Setter Property=\"FontWeight\" Value=\"SemiBold\" /><Setter Property=\"FontSize\" Value=\"15\" /><Setter Property=\"Padding\" Value=\"22,11\" /><Setter Property=\"BorderThickness\" Value=\"0\" /></Style>\n<Style Selector=\"Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter\"><Setter Property=\"Opacity\" Value=\"0.86\" /></Style>\n<Style Selector=\"Button.primary:pressed /template/ ContentPresenter#PART_ContentPresenter\"><Setter Property=\"Opacity\" Value=\"0.72\" /></Style>"
     },
     {
       "name": "Quiet Button",
       "kind": "button",
       "refersTo": "button-quiet",
-      "description": "Hairline-outlined secondary action (table actions, alternatives beside the primary).",
-      "html": "<button class=\"ds-btn-quiet\">Выбрать…</button>",
-      "css": ".ds-btn-quiet { background: transparent; color: #111111; font-family: 'Golos Text', sans-serif; font-size: 14px; padding: 5px 12px; border: 1px solid #C9C9C6; border-radius: 0; cursor: pointer; } .ds-btn-quiet:hover { background: #D6D6D3; border-color: #8A8A87; } .ds-btn-quiet:focus-visible { outline: 2px solid #2E86AB; outline-offset: 2px; } .ds-btn-quiet:disabled { background: transparent; color: #8A8A87; border-color: #C9C9C6; }"
+      "description": "Hairline-outlined secondary action: table actions, pickers, footer Отмена/Нет, alternatives beside the primary (16,10 padding there).",
+      "xaml": "<Button Classes=\"quiet\" Content=\"Выбрать…\" />",
+      "styles": "<Style Selector=\"Button.quiet\"><Setter Property=\"Background\" Value=\"Transparent\" /><Setter Property=\"BorderBrush\" Value=\"{DynamicResource HairlineBrush}\" /><Setter Property=\"BorderThickness\" Value=\"1\" /><Setter Property=\"Padding\" Value=\"12,5\" /></Style>\n<Style Selector=\"Button.quiet:pointerover /template/ ContentPresenter#PART_ContentPresenter\"><Setter Property=\"Background\" Value=\"{DynamicResource SelectedBrush}\" /><Setter Property=\"BorderBrush\" Value=\"{DynamicResource PendingBrush}\" /></Style>\n<Style Selector=\"Button.quiet:disabled /template/ ContentPresenter#PART_ContentPresenter\"><Setter Property=\"Background\" Value=\"Transparent\" /><Setter Property=\"BorderBrush\" Value=\"{DynamicResource HairlineBrush}\" /><Setter Property=\"Foreground\" Value=\"{DynamicResource PendingBrush}\" /></Style>"
     },
     {
-      "name": "Stage Strip",
+      "name": "Stage Block",
       "kind": "custom",
       "refersTo": "stage-block-done-build",
-      "description": "Signature component: one row of square stage blocks; fill = done, hairline = pending, red outline = failed.",
-      "html": "<div class=\"ds-strip\"><div class=\"ds-stage ds-done\" style=\"background:#2E86AB\"><b>Билд</b><span>скопирован 27.10.2026 20:41</span></div><div class=\"ds-stage ds-done\" style=\"background:#F3B61F\"><b>Патч</b><span>собран 27.10.2026 20:44</span></div><div class=\"ds-stage ds-done\" style=\"background:#1FA39A\"><b>Доставка</b><span>папка · 27.10.2026 20:50</span></div><div class=\"ds-stage ds-failed\"><b>Проверка</b><span>не прошла 27.10.2026 21:16</span></div></div>",
-      "css": ".ds-strip { display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 6px; font-family: 'Golos Text', sans-serif; } .ds-stage { min-height: 112px; padding: 12px 14px; border: 1px solid #8A8A87; color: #595957; display: flex; flex-direction: column; gap: 6px; border-radius: 0; } .ds-stage b { font-size: 15px; font-weight: 600; } .ds-stage span { font-size: 12px; font-variant-numeric: tabular-nums; } .ds-done { border: none; color: #111111; } .ds-failed { border: 2px solid #C8262B; color: #C8262B; }"
-    },
-    {
-      "name": "Pending Stage Block",
-      "kind": "custom",
-      "refersTo": "stage-block-pending",
-      "description": "Stage not yet done: transparent with a 1px pending outline and muted words.",
-      "html": "<div class=\"ds-stage-pending\"><b>Патч</b><span>не собран</span></div>",
-      "css": ".ds-stage-pending { width: 180px; min-height: 112px; padding: 12px 14px; border: 1px solid #8A8A87; color: #595957; font-family: 'Golos Text', sans-serif; display: flex; flex-direction: column; gap: 6px; } .ds-stage-pending b { font-size: 15px; font-weight: 600; } .ds-stage-pending span { font-size: 12px; }"
+      "description": "Signature component: square block, min 112px, 12x14 padding; fill = done, 1px Pending outline = not yet, 2px Failure Red outline = failed. Actionable blocks wrap in Button.stagebtn with an underlined action line. Laid out by StageGrid (6px gap, 150px min cell).",
+      "xaml": "<Button Classes=\"stagebtn\">\n  <Border Classes=\"stage done build\" MinHeight=\"112\" Padding=\"14,12\">\n    <DockPanel>\n      <TextBlock DockPanel.Dock=\"Bottom\" Classes=\"stageaction\" Margin=\"0,8,0,0\" Text=\"Сменить папку билда\" />\n      <StackPanel Spacing=\"6\">\n        <TextBlock FontSize=\"15\" FontWeight=\"SemiBold\" Text=\"Билд\" />\n        <TextBlock Classes=\"number\" FontSize=\"12\" TextWrapping=\"Wrap\" MaxLines=\"3\" Text=\"скопирован 27.10.2026 20:41\" />\n      </StackPanel>\n    </DockPanel>\n  </Border>\n</Button>",
+      "styles": "<Style Selector=\"Border.stage\"><Setter Property=\"BorderBrush\" Value=\"{DynamicResource PendingBrush}\" /><Setter Property=\"BorderThickness\" Value=\"1\" /><Setter Property=\"Background\" Value=\"Transparent\" /><Setter Property=\"TextElement.Foreground\" Value=\"{DynamicResource MutedBrush}\" /></Style>\n<Style Selector=\"Border.stage.done\"><Setter Property=\"BorderThickness\" Value=\"0\" /><Setter Property=\"TextElement.Foreground\" Value=\"{StaticResource StageInkBrush}\" /></Style>\n<Style Selector=\"Border.stage.done.build\"><Setter Property=\"Background\" Value=\"{StaticResource StageBuildBrush}\" /></Style>\n<Style Selector=\"Border.stage.failed\"><Setter Property=\"BorderBrush\" Value=\"{DynamicResource FailedBrush}\" /><Setter Property=\"BorderThickness\" Value=\"2\" /><Setter Property=\"TextElement.Foreground\" Value=\"{DynamicResource FailedBrush}\" /></Style>\n<Style Selector=\"Button.stagebtn:pointerover Border.stage\"><Setter Property=\"BorderBrush\" Value=\"{DynamicResource InkBrush}\" /></Style>\n<Style Selector=\"Button.stagebtn:pointerover Border.stage.done\"><Setter Property=\"Opacity\" Value=\"0.88\" /></Style>\n<Style Selector=\"Button.stagebtn:pressed Border.stage\"><Setter Property=\"Opacity\" Value=\"0.74\" /></Style>\n<Style Selector=\"TextBlock.stageaction\"><Setter Property=\"FontSize\" Value=\"12\" /><Setter Property=\"FontWeight\" Value=\"SemiBold\" /><Setter Property=\"TextDecorations\" Value=\"Underline\" /></Style>"
     },
     {
       "name": "Catalog Row",
       "kind": "nav",
       "refersTo": "catalog-row",
-      "description": "Release entry in the left panel: version, state in words, mini stage chips; selection is a grey fill.",
-      "html": "<ul class=\"ds-catalog\"><li class=\"ds-row ds-selected\"><div><div class=\"ds-ver\">2.0.0.0</div><div class=\"ds-line\">№ 5 · проверка не прошла</div></div><div class=\"ds-chips\"><i style=\"background:#2E86AB\"></i><i style=\"background:#F3B61F\"></i><i style=\"background:#1FA39A\"></i><i class=\"ds-chip-failed\"></i></div></li><li class=\"ds-row\"><div><div class=\"ds-ver\">1.0.1.0</div><div class=\"ds-line\">№ 2 · не проверялся</div></div><div class=\"ds-chips\"><i style=\"background:#2E86AB\"></i><i style=\"background:#F3B61F\"></i><i style=\"background:#1FA39A\"></i><i class=\"ds-chip-pending\"></i></div></li></ul>",
-      "css": ".ds-catalog { list-style: none; margin: 0; padding: 0; width: 280px; background: #E5E5E3; font-family: 'Golos Text', sans-serif; } .ds-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 20px; border-top: 1px solid #C9C9C6; color: #111111; cursor: pointer; } .ds-row:hover, .ds-selected { background: #D6D6D3; } .ds-ver { font-size: 15px; font-variant-numeric: tabular-nums; } .ds-line { font-size: 12px; color: #595957; font-variant-numeric: tabular-nums; } .ds-chips { display: flex; gap: 3px; margin-left: 8px; } .ds-chips i { display: block; width: 14px; height: 8px; box-sizing: border-box; } .ds-chip-pending { border: 1px solid #8A8A87; } .ds-chip-failed { border: 2px solid #C8262B; }"
+      "description": "Release entry in the left panel: version (Entry, tabular), state in words, 14x8 stage chips 3px apart; hairline top border; hover and selection are a Selected Grey fill, no accent bar.",
+      "xaml": "<ListBox Classes=\"catalog\" ItemsSource=\"{Binding Releases}\">\n  <!-- item -->\n  <Grid ColumnDefinitions=\"*,Auto\">\n    <StackPanel Spacing=\"1\">\n      <TextBlock Classes=\"number\" FontSize=\"15\" Text=\"2.0.0.0\" />\n      <TextBlock Classes=\"muted number\" FontSize=\"12\" Text=\"№ 5 · проверка не прошла\" />\n    </StackPanel>\n    <StackPanel Grid.Column=\"1\" Orientation=\"Horizontal\" Spacing=\"3\" Margin=\"8,0,0,0\" VerticalAlignment=\"Center\">\n      <Border Classes=\"chip done build\" />\n      <Border Classes=\"chip done patch\" />\n      <Border Classes=\"chip done delivery\" />\n      <Border Classes=\"chip failed\" />\n    </StackPanel>\n  </Grid>\n</ListBox>",
+      "styles": "<Style Selector=\"ListBox.catalog\"><Setter Property=\"Background\" Value=\"Transparent\" /><Setter Property=\"Padding\" Value=\"0\" /></Style>\n<Style Selector=\"ListBox.catalog ListBoxItem\"><Setter Property=\"Padding\" Value=\"20,11\" /><Setter Property=\"BorderBrush\" Value=\"{DynamicResource HairlineBrush}\" /><Setter Property=\"BorderThickness\" Value=\"0,1,0,0\" /></Style>\n<Style Selector=\"ListBox.catalog ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter\"><Setter Property=\"Background\" Value=\"{DynamicResource SelectedBrush}\" /></Style>\n<Style Selector=\"ListBox.catalog ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter\"><Setter Property=\"Background\" Value=\"{DynamicResource SelectedBrush}\" /><Setter Property=\"Foreground\" Value=\"{DynamicResource InkBrush}\" /></Style>\n<Style Selector=\"Border.chip\"><Setter Property=\"Width\" Value=\"14\" /><Setter Property=\"Height\" Value=\"8\" /><Setter Property=\"BorderThickness\" Value=\"1\" /><Setter Property=\"BorderBrush\" Value=\"{DynamicResource PendingBrush}\" /></Style>\n<Style Selector=\"Border.chip.done\"><Setter Property=\"BorderThickness\" Value=\"0\" /></Style>\n<Style Selector=\"Border.chip.failed\"><Setter Property=\"BorderBrush\" Value=\"{DynamicResource FailedBrush}\" /><Setter Property=\"BorderThickness\" Value=\"2\" /></Style>"
     },
     {
       "name": "Version Heading",
       "kind": "custom",
       "refersTo": "display",
-      "description": "The one big number, with platform and release number beside it on the baseline.",
-      "html": "<div class=\"ds-heading\"><span class=\"ds-display\">2.0.0.0</span><span class=\"ds-meta\">Windows · выпуск 5</span></div>",
-      "css": ".ds-heading { display: flex; align-items: baseline; gap: 20px; font-family: 'Golos Text', sans-serif; color: #111111; } .ds-display { font-size: 72px; font-weight: 400; letter-spacing: -2px; font-variant-numeric: tabular-nums; line-height: 1; } .ds-meta { font-size: 14px; color: #595957; }"
+      "description": "The one big number, with platform and release number beside it on the baseline in muted body text.",
+      "xaml": "<StackPanel Orientation=\"Horizontal\">\n  <TextBlock Classes=\"number\" FontSize=\"72\" LetterSpacing=\"-2\" Margin=\"0,0,20,0\" Text=\"2.0.0.0\" />\n  <TextBlock Classes=\"muted\" FontSize=\"14\" VerticalAlignment=\"Bottom\" Margin=\"0,0,0,14\" Text=\"Windows · выпуск 5\" />\n</StackPanel>",
+      "styles": "<Style Selector=\"TextBlock.number\"><Setter Property=\"FontFeatures\" Value=\"+tnum\" /></Style>\n<Style Selector=\"TextBlock.muted\"><Setter Property=\"Foreground\" Value=\"{DynamicResource MutedBrush}\" /></Style>"
     },
     {
       "name": "Info Table Row",
       "kind": "custom",
       "refersTo": "button-quiet",
-      "description": "Label / value / action row under a hairline.",
-      "html": "<div class=\"ds-info\"><span class=\"ds-k\">Папка билда</span><span class=\"ds-v\">C:\\Users\\…\\UpdateManager\\Release</span><button class=\"ds-a\">Выбрать…</button></div>",
-      "css": ".ds-info { display: grid; grid-template-columns: 150px 1fr 128px; align-items: center; padding: 11px 0; border-top: 1px solid #C9C9C6; font-family: 'Golos Text', sans-serif; font-size: 14px; } .ds-k { color: #595957; } .ds-v { color: #111111; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 16px; } .ds-a { background: transparent; border: 1px solid #C9C9C6; border-radius: 0; padding: 5px 12px; font: inherit; color: #111111; cursor: pointer; } .ds-a:hover { background: #D6D6D3; border-color: #8A8A87; } .ds-a:focus-visible { outline: 2px solid #2E86AB; outline-offset: 2px; }"
+      "description": "Label / value / action row under a hairline: columns 150 / * / 128, 11px vertical padding, path ellipsis with full-text tooltip.",
+      "xaml": "<Grid ColumnDefinitions=\"150,*,128\" Margin=\"0,11\">\n  <TextBlock Classes=\"muted\" VerticalAlignment=\"Center\" Text=\"Папка билда\" />\n  <TextBlock Grid.Column=\"1\" TextTrimming=\"PathSegmentEllipsis\" ToolTip.Tip=\"C:\\Users\\…\\Release\" Text=\"C:\\Users\\…\\Release\" />\n  <Button Grid.Column=\"2\" Classes=\"quiet\" Content=\"Выбрать…\" />\n</Grid>",
+      "styles": "<Style Selector=\"Button.quiet\"><Setter Property=\"BorderBrush\" Value=\"{DynamicResource HairlineBrush}\" /><Setter Property=\"BorderThickness\" Value=\"1\" /><Setter Property=\"Padding\" Value=\"12,5\" /></Style>"
+    },
+    {
+      "name": "Dialog Footer",
+      "kind": "custom",
+      "refersTo": "button-primary",
+      "description": "Panel Grey band under a hairline, 24x14 padding; one primary naming the action then quiet Отмена/Нет (16x10, min width 96), right-aligned; an optional quiet tool action sits on the left.",
+      "xaml": "<Border DockPanel.Dock=\"Bottom\" Classes=\"footer\">\n  <Grid ColumnDefinitions=\"Auto,*,Auto\">\n    <Button Classes=\"quiet\" Content=\"Проверить соединение\" />\n    <StackPanel Grid.Column=\"2\" Orientation=\"Horizontal\" Spacing=\"10\">\n      <Button Classes=\"primary\" Content=\"Сохранить\" IsDefault=\"True\" />\n      <Button Classes=\"quiet\" Content=\"Отмена\" IsCancel=\"True\" />\n    </StackPanel>\n  </Grid>\n</Border>",
+      "styles": "<Style Selector=\"Border.footer\"><Setter Property=\"Background\" Value=\"{DynamicResource PanelBrush}\" /><Setter Property=\"BorderBrush\" Value=\"{DynamicResource HairlineBrush}\" /><Setter Property=\"BorderThickness\" Value=\"0,1,0,0\" /><Setter Property=\"Padding\" Value=\"24,14\" /></Style>\n<Style Selector=\"Border.footer Button\"><Setter Property=\"MinWidth\" Value=\"96\" /><Setter Property=\"HorizontalContentAlignment\" Value=\"Center\" /></Style>\n<Style Selector=\"Border.footer Button.quiet\"><Setter Property=\"Padding\" Value=\"16,10\" /></Style>"
+    },
+    {
+      "name": "Dialog Field Row and Section",
+      "kind": "input",
+      "refersTo": "body",
+      "description": "Dialog body (inset 24, 22 top): Title heading, muted field label in a 140-170px column, stock square input, 10px row spacing, 12px muted help line under the input; sections are a hairline rule (24 above) then a heading 18 below, never a framed group.",
+      "xaml": "<StackPanel Margin=\"24,22,24,24\">\n  <TextBlock Classes=\"heading\" Text=\"Проект и сервер\" />\n  <Grid Margin=\"0,14,0,0\" ColumnDefinitions=\"170,*\" RowDefinitions=\"Auto,Auto\" RowSpacing=\"10\">\n    <TextBlock Classes=\"field\" Text=\"Адрес сервера\" />\n    <TextBox Grid.Column=\"1\" PlaceholderText=\"https://updates.example.com/\" />\n    <TextBlock Grid.Row=\"1\" Grid.Column=\"1\" Classes=\"detail\" Text=\"Клиенты будут качать патч с …\" />\n  </Grid>\n  <Border Classes=\"rule\" Margin=\"0,24,0,0\" />\n  <TextBlock Margin=\"0,18,0,0\" Classes=\"heading\" Text=\"Патч\" />\n</StackPanel>",
+      "styles": "<Style Selector=\"TextBlock.heading\"><Setter Property=\"FontSize\" Value=\"17\" /><Setter Property=\"FontWeight\" Value=\"SemiBold\" /><Setter Property=\"TextWrapping\" Value=\"Wrap\" /></Style>\n<Style Selector=\"TextBlock.heading.failed\"><Setter Property=\"Foreground\" Value=\"{DynamicResource FailedBrush}\" /></Style>\n<Style Selector=\"TextBlock.field\"><Setter Property=\"Foreground\" Value=\"{DynamicResource MutedBrush}\" /><Setter Property=\"VerticalAlignment\" Value=\"Center\" /></Style>\n<Style Selector=\"TextBlock.detail\"><Setter Property=\"FontSize\" Value=\"12\" /><Setter Property=\"Foreground\" Value=\"{DynamicResource MutedBrush}\" /><Setter Property=\"TextWrapping\" Value=\"Wrap\" /></Style>\n<Style Selector=\"Border.rule\"><Setter Property=\"Height\" Value=\"1\" /><Setter Property=\"Background\" Value=\"{DynamicResource HairlineBrush}\" /></Style>"
+    },
+    {
+      "name": "Choice List",
+      "kind": "chip",
+      "refersTo": "catalog-row-selected",
+      "description": "A choice of few (delivery method) as catalog rows, not a dropdown; 12x10 rows, Selected Grey fill bleeding 12px into the gutter so text stays on the heading's edge; hairline below.",
+      "xaml": "<Border Margin=\"-12,14,-12,0\" BorderBrush=\"{DynamicResource HairlineBrush}\" BorderThickness=\"0,0,0,1\">\n  <ListBox Classes=\"catalog choice\" ItemsSource=\"{Binding Methods}\" SelectedItem=\"{Binding SelectedMethod}\" />\n</Border>",
+      "styles": "<Style Selector=\"ListBox.choice ListBoxItem\"><Setter Property=\"Padding\" Value=\"12,10\" /></Style>"
+    },
+    {
+      "name": "Operation Progress, Failure and Log",
+      "kind": "custom",
+      "refersTo": "detail",
+      "description": "Operation dialog: heading, state in muted tabular words, 4px Ink-on-Hairline progress bar; on failure the bar gives way to a 2px Failure Red box; the log is data, so monospace 12px on a flat Panel Grey field.",
+      "xaml": "<StackPanel Spacing=\"4\">\n  <TextBlock Classes=\"heading\" Text=\"Сборка патча\" />\n  <TextBlock Classes=\"muted number\" Text=\"Выполняется · 42 %\" />\n</StackPanel>\n<ProgressBar Margin=\"0,14,0,0\" Minimum=\"0\" Maximum=\"100\" Value=\"42\" IsVisible=\"{Binding !IsFailed}\" />\n<Border Classes=\"failure\" Margin=\"0,14,0,0\" IsVisible=\"{Binding IsFailed}\">\n  <SelectableTextBlock TextWrapping=\"Wrap\" Foreground=\"{DynamicResource FailedBrush}\" Text=\"DownloadError: …\" />\n</Border>\n<TextBox Classes=\"log\" Margin=\"0,16,0,0\" IsReadOnly=\"True\" AcceptsReturn=\"True\" TextWrapping=\"Wrap\" />",
+      "styles": "<Style Selector=\"ProgressBar\"><Setter Property=\"Foreground\" Value=\"{DynamicResource InkBrush}\" /><Setter Property=\"Background\" Value=\"{DynamicResource HairlineBrush}\" /><Setter Property=\"MinHeight\" Value=\"4\" /><Setter Property=\"Height\" Value=\"4\" /><Setter Property=\"CornerRadius\" Value=\"0\" /></Style>\n<Style Selector=\"Border.failure\"><Setter Property=\"BorderBrush\" Value=\"{DynamicResource FailedBrush}\" /><Setter Property=\"BorderThickness\" Value=\"2\" /><Setter Property=\"Padding\" Value=\"14,12\" /></Style>\n<Style Selector=\"Border.failure TextBlock\"><Setter Property=\"Foreground\" Value=\"{DynamicResource FailedBrush}\" /></Style>\n<Style Selector=\"TextBox.log\"><Setter Property=\"FontFamily\" Value=\"Cascadia Mono,Consolas,monospace\" /><Setter Property=\"FontSize\" Value=\"12\" /><Setter Property=\"Padding\" Value=\"14,12\" /></Style>\n<Style Selector=\"TextBox.log /template/ Border#PART_BorderElement\"><Setter Property=\"Background\" Value=\"{DynamicResource PanelBrush}\" /><Setter Property=\"BorderThickness\" Value=\"0\" /></Style>"
+    },
+    {
+      "name": "Folder Tree",
+      "kind": "nav",
+      "refersTo": "catalog-row-selected",
+      "description": "FTP folder picker: stock Fluent tree, square items, selection as Selected Grey fill with Ink text; files muted; a hairline status strip (24x10) above the footer shows loading state or the selected path.",
+      "xaml": "<Border DockPanel.Dock=\"Bottom\" Padding=\"24,10\" BorderBrush=\"{DynamicResource HairlineBrush}\" BorderThickness=\"0,1,0,0\">\n  <TextBlock TextTrimming=\"PathSegmentEllipsis\" Text=\"/updates/MyApp\" />\n</Border>\n<TreeView Classes=\"folders\" Padding=\"12,10\" ItemsSource=\"{Binding Roots}\" SelectedItem=\"{Binding Selected}\">\n  <TreeView.ItemTemplate>\n    <TreeDataTemplate ItemsSource=\"{Binding Children}\">\n      <TextBlock Text=\"{Binding Name}\" Classes.muted=\"{Binding !IsFolder}\" />\n    </TreeDataTemplate>\n  </TreeView.ItemTemplate>\n</TreeView>",
+      "styles": "<Style Selector=\"TreeView.folders TreeViewItem\"><Setter Property=\"CornerRadius\" Value=\"0\" /></Style>\n<Style Selector=\"TreeView.folders TreeViewItem:selected /template/ Border#PART_LayoutRoot\"><Setter Property=\"Background\" Value=\"{DynamicResource SelectedBrush}\" /></Style>\n<Style Selector=\"TreeView.folders TreeViewItem:selected:pointerover /template/ Border#PART_LayoutRoot\"><Setter Property=\"Background\" Value=\"{DynamicResource SelectedBrush}\" /></Style>\n<Style Selector=\"TreeView.folders TreeViewItem:selected /template/ Border#PART_LayoutRoot > ContentPresenter\"><Setter Property=\"Foreground\" Value=\"{DynamicResource InkBrush}\" /></Style>"
     }
   ],
   "narrative": {
     "northStar": "The Catalog Sleeve",
-    "overview": "The world borrows from a record-label catalog sleeve (Saville / Factory): a matte ground, hairline rules, ink type, and colour that appears only as code. Every version of an application is a catalog entry. Its state is a strip of square stage blocks (Билд, Патч, Файлы, Доставка, Проверка) read left to right: filled means done, a hairline outline means not yet, a heavy red outline means failed. The strip is always spelled out in words beside or inside it, so colour is never the only carrier of meaning.\n\nThe surface is a tool, not a showcase. Density is calm: one oversized version number per screen, one row of stage blocks, one primary ink button that names the next step, and a quiet label/value/action table under a hairline. Everything else is neutral grey on matte ground. Light and dark themes are the same world with the values inverted; stage colours are identical in both because they are code, not decoration.\n\nScope as built: the main window (start screen and project screen) is the only surface drawn in this world. The other windows (project settings, delivery, FTP connection, FTP browser, operation log, message and prompt dialogs) still use the pre-redesign 1.x layout and only inherit the tokens (ground, hairline, square corners, Golos Text, Fluent accent). Their framed groups, `hint` opacity text and Consolas log are legacy, not rules of this system.",
+    "overview": "The world borrows from a record-label catalog sleeve (Saville / Factory): a matte ground, hairline rules, ink type, and colour that appears only as code. Every version of an application is a catalog entry. Its state is a strip of square stage blocks (Билд, Патч, Файлы, Доставка, Проверка) read left to right: filled means done, a hairline outline means not yet, a heavy red outline means failed. The strip is always spelled out in words beside or inside it, so colour is never the only carrier of meaning.\n\nThe surface is a tool, not a showcase. Density is calm: one oversized version number per screen, one row of stage blocks, one primary ink button that names the next step, and a quiet label/value/action table under a hairline. Everything else is neutral grey on matte ground. Light and dark themes are the same world with the values inverted; stage colours are identical in both because they are code, not decoration.\n\nScope as built: every window is drawn in this world: the main window (start screen and project screen) and the dialogs (project settings, delivery, FTP connection, FTP browser, operation log, message and prompt), which share one dialog grammar (see Components → Dialogs).",
     "keyCharacteristics": [
       "Matte neutral ground, ink type, hairline rules; no gradients, no shadows, no rounded corners.",
       "Colour exists only as the five stage hues; state is encoded as fill (done), outline (pending), red outline (failed).",
@@ -139,19 +189,20 @@
       "Every coded state is also written in Russian words («№ 5 · проверка не прошла»)."
     ],
     "rules": [
-      { "name": "The Colour Is Code Rule", "body": "The five stage hues and the failure red appear only on stage blocks and stage chips. Text, buttons, panels, rules and selection stay neutral.", "section": "colors" },
+      { "name": "The Colour Is Code Rule", "body": "The five stage hues and the failure red appear only on stage blocks and stage chips (failure red also on the failure line and box that report a failed stage or operation). Text, buttons, panels, rules and selection stay neutral. The one exception is Build Blue as Fluent's accent inside stock inputs (see Components → Stock Chrome).", "section": "colors" },
       { "name": "The Same Code In Both Themes Rule", "body": "Stage hues and Stage Ink do not change between light and dark; only neutrals and Failure Red adapt.", "section": "colors" },
       { "name": "The Spelled-Out Rule", "body": "Every stage state shown in colour is also present as words: the block title and detail, the catalog line («новый · патч не собран»), and the tooltip («Проверка: не прошла …»).", "section": "colors" },
       { "name": "The One Big Number Rule", "body": "The version number is the only display-size text on the project screen; platform and release number sit beside it on the baseline in muted body text, never above it.", "section": "typography" },
       { "name": "The Tabular Figures Rule", "body": "Any text that is a version, date, number or count uses tabular figures so catalog columns and dates align.", "section": "typography" },
       { "name": "The Single Strip Rule", "body": "Stages render as one strip per platform track; never as a dashboard of equal cards spread across the screen.", "section": "layout" },
-      { "name": "The No Lift Rule", "body": "Nothing casts a shadow or floats. Hover and selection change fill (Selected Grey) or opacity, never elevation.", "section": "elevation" }
+      { "name": "The No Lift Rule", "body": "Nothing casts a shadow or floats. Hover and selection change fill (Selected Grey) or opacity, never elevation.", "section": "elevation" },
+      { "name": "The Still Catalog Rule", "body": "No motion. State changes are instant: after an operation the catalog is rebuilt and the strip simply shows the new state, spelled out in words. Only Fluent's own control feedback (scrollbar expand, progress bar) moves.", "section": "elevation" }
     ],
     "dos": [
       "Do keep colour exclusively on stage blocks and chips: fill for done, 1px Pending outline for not yet, 2px Failure Red outline for failed.",
       "Do spell out every coded state in Russian words next to or inside the colour («№ 5 · проверка не прошла»).",
       "Do use one Ink primary button per screen whose label names the next step; put every other action in quiet hairline buttons or the menu.",
-      "Do use square corners (0) and 1px hairlines on every new surface, including the legacy windows when they are redrawn.",
+      "Do use square corners (0) and 1px hairlines on every surface, including stock Fluent controls and every new window.",
       "Do use tabular figures for versions, dates and counts.",
       "Do keep stage hues and Stage Ink identical in light and dark themes."
     ],

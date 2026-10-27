@@ -104,10 +104,6 @@
         <Style Selector="TextBlock.heading.failed">
             <Setter Property="Foreground" Value="{DynamicResource FailedBrush}" />
         </Style>
-        <Style Selector="TextBlock.section">
-            <Setter Property="FontSize" Value="15" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-        </Style>
         <Style Selector="TextBlock.detail">
             <Setter Property="FontSize" Value="12" />
             <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />

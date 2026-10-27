@@ -44,7 +44,7 @@
             <TextBlock Margin="140,8,0,0" Classes="detail"
                        Text="Реквизиты хранятся в профиле пользователя Windows, пароль зашифрован (DPAPI)." />
 
-            <Border Classes="rule" Margin="0,22,0,0" />
+            <Border Classes="rule" Margin="0,24,0,0" />
             <TextBlock Margin="0,18,0,0" Classes="heading" Text="Папки на сервере" />
             <Grid Margin="0,14,0,0" ColumnDefinitions="140,*,10,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
                 <TextBlock Grid.Row="0" Classes="field" Text="Патчи" />

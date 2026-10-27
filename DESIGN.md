@@ -165,7 +165,7 @@ A near-achromatic warm-grey ground with ink type, plus five saturated stage hues
 - **Pending Grey** (`pending` / `pending-dark`): outline of not-yet-done stage blocks and chips; quiet button hover border; disabled quiet text.
 
 ### Named Rules
-**The Colour Is Code Rule.** The five stage hues and the failure red appear only on stage blocks and stage chips. Text, buttons, panels, rules and selection stay neutral.
+**The Colour Is Code Rule.** The five stage hues and the failure red appear only on stage blocks and stage chips (failure red also on the failure line and box that report a failed stage or operation). Text, buttons, panels, rules and selection stay neutral. The one exception is Build Blue as Fluent's accent inside stock inputs (see Components → Stock Chrome).
 
 **The Same Code In Both Themes Rule.** Stage hues and Stage Ink do not change between light and dark; only neutrals and Failure Red adapt.
 
@@ -214,13 +214,6 @@ Flat. There are no shadows anywhere. Depth is conveyed by tonal steps only: Grou
 
 **The Still Catalog Rule.** No motion. State changes are instant: after an operation the catalog is rebuilt and the strip simply shows the new state, spelled out in words. Only Fluent's own control feedback (scrollbar expand, progress bar) moves.
 
-## Stock Chrome
-
-The parts Fluent draws itself carry the palette too (overridden by resource key in `App.axaml`, per theme):
-- **Focus ring:** keyboard focus only; a 2px Ink outline with a 1px Ground gap inside (`SystemControlFocusVisualPrimaryBrush` / `SecondaryBrush`), square.
-- **Scrollbars:** thumb Pending Grey, Muted under the pointer, Ink when pressed; track Panel Grey; square thumb. Collapsed to Fluent's thin line until hovered.
-- **Inputs, checkboxes, text selection:** stock Fluent with square corners and Build Blue as the accent (focus underline, checked fill, selection), the one place the accent appears outside stage blocks.
-
 ## Shapes
 
 Square everywhere: corner radius 0 on buttons, stage blocks, chips, and through `ControlCornerRadius` / `OverlayCornerRadius` on every stock Fluent control (inputs, menus, tooltips). Borders are 1px hairlines; the only heavier stroke is the 2px failure outline. The recurring silhouette is the rectangle: large stage blocks (min 112px tall) and their 14×8px miniature chips.
@@ -264,13 +257,19 @@ One grammar for every modal window.
 - **Operation:** heading = operation title, state in muted words below («Выполняется · 42 %», «Готово», «Завершилось с ошибкой»), a 4px Ink-on-Hairline progress bar; on failure the bar gives way to the reason in a 2px Failure Red outline (`failure`) above the log. The log is data, so it is monospace (Cascadia Mono / Consolas, 12px) on a flat Panel Grey field. «Прервать» is quiet while running; «Закрыть» becomes primary when done.
 - **Tree (FTP folders):** stock Fluent tree with selection as Selected Grey fill; a hairline status strip above the footer shows what is loading or the selected path.
 
+### Stock Chrome
+The parts Fluent draws itself carry the palette too (overridden by resource key in `App.axaml`, per theme):
+- **Focus ring:** keyboard focus only; a 2px Ink outline with a 1px Ground gap inside (`SystemControlFocusVisualPrimaryBrush` / `SecondaryBrush`), square.
+- **Scrollbars:** thumb Pending Grey, Muted under the pointer, Ink when pressed; track Panel Grey; square thumb. Collapsed to Fluent's thin line until hovered.
+- **Inputs, checkboxes, text selection:** stock Fluent with square corners and Build Blue as the accent (focus underline, checked fill, selection), the one place the accent appears outside stage blocks.
+
 ## Do's and Don'ts
 
 ### Do:
 - **Do** keep colour exclusively on stage blocks and chips: fill for done, 1px Pending outline for not yet, 2px Failure Red outline for failed.
 - **Do** spell out every coded state in Russian words next to or inside the colour («№ 5 · проверка не прошла»).
 - **Do** use one Ink primary button per screen whose label names the next step; put every other action in quiet hairline buttons or the menu.
-- **Do** use square corners (0) and 1px hairlines on every new surface, including the legacy windows when they are redrawn.
+- **Do** use square corners (0) and 1px hairlines on every surface, including stock Fluent controls and every new window.
 - **Do** use tabular figures for versions, dates and counts.
 - **Do** keep stage hues and Stage Ink identical in light and dark themes.
 
