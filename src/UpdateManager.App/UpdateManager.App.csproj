@@ -18,7 +18,6 @@
   <ItemGroup>
     <PackageReference Include="Avalonia.Desktop" Version="12.1.2" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.2" />
-    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.2" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
   </ItemGroup>
@@ -33,6 +32,11 @@
 
   <ItemGroup>
     <AvaloniaResource Include="UpdateManagerIcon.ico" />
+    <!-- Golos Text (SIL OFL 1.1, Assets/Fonts/OFL.txt): статические начертания 400/500/600 из вариативного. -->
+    <AvaloniaResource Include="Assets\Fonts\*.ttf" />
+    <Content Include="Assets\Fonts\OFL.txt" Link="licenses\GolosText-OFL.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <!-- Конфиг самообновления: входит в патч, смена сервера разъезжается с обновлением. -->
     <Content Include="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
