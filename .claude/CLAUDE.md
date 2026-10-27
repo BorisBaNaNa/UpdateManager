@@ -86,7 +86,9 @@ MVVM + доменный слой, домен не знает про UI:
   `dotnet publish src/UpdateManager.App -p:PublishProfile=win-x64` → `Release/`
   (self-contained, без single-file — движок подменяет файлы по одному).
 - Выпуск: `scripts/release.ps1 patch|minor|major|-To X.Y.Z|-NoBump` — тесты → версия в
-  `Directory.Build.props` → publish в `Release/` (папка очищается) → сверка FileVersion. Ничего не коммитит.
+  `Directory.Build.props` → publish в `Release/` (папка очищается) → `Release/<Product>_vers.sptv` с версией
+  X.Y.Z.0 (version holder движка: клиентский `CheckForUpdates(true)` и наш `VersionDetector`) → сверка FileVersion.
+  Ничего не коммитит; при запущенном из репозитория UpdateManager останавливается с понятной ошибкой.
   Скрипт — Windows PowerShell 5.1, сохранять в UTF-8 **с BOM** (иначе кириллица ломается).
 
 ## Осталось

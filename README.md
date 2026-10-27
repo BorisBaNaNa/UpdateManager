@@ -60,7 +60,8 @@ dotnet publish src/UpdateManager.App -p:PublishProfile=win-x64
 Результат — в `Release/` в корне репозитория (`UpdateManager.exe` + DLL + рантайм + `SelfPatcher/`); папка очищается перед каждым publish. Из неё же UpdateManager собирает патч сам себе.
 
 Выпуск новой версии одной командой — `scripts/release.ps1`: тесты → подъём версии в
-`Directory.Build.props` → publish в `Release/` → сверка `FileVersion`:
+`Directory.Build.props` → publish в `Release/` → version holder `Release/UpdateManager_vers.sptv`
+(клиент проверяет обновления по нему, не сверяя файлы) → сверка `FileVersion`:
 
 ```bash
 powershell.exe -ExecutionPolicy Bypass -File scripts/release.ps1 patch    # 2.0.0 → 2.0.1

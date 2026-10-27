@@ -21,6 +21,26 @@ public class VersionRulesTests
     public void IsValid(string version, bool expected) => Assert.Equal(expected, VersionRules.IsValid(version));
 }
 
+public sealed class VersionDetectorTests : IDisposable
+{
+    private readonly string _root = Directory.CreateTempSubdirectory("UpdateManagerTests_").FullName;
+
+    public void Dispose() => Directory.Delete(_root, recursive: true);
+
+    [Fact]
+    public void PrefersVersionHolderOverExe()
+    {
+        // Как в Release/ после scripts/release.ps1: exe + UpdateManager_vers.sptv с версией патча.
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "UpdateManager.exe"), Path.Combine(_root, "UpdateManager.exe"));
+        File.WriteAllText(Path.Combine(_root, "UpdateManager_vers.sptv"), "2.3.4.0");
+
+        var build = new VersionDetector().Detect(_root, "UpdateManager", "");
+
+        Assert.Equal("UpdateManager.exe", build.ExecutableName);
+        Assert.Equal("2.3.4.0", build.Version);
+    }
+}
+
 public class DownloadUrlTests
 {
     [Fact]

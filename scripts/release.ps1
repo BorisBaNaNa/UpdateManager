@@ -7,7 +7,10 @@
   2. Поднимает версию в Directory.Build.props: <Version> X.Y.Z и <FileVersion> X.Y.Z.0
      (FileVersion главного exe читает UpdateManager при сборке патча).
   3. Делает self-contained publish в Release/ (папка очищается — см. win-x64.pubxml).
-  4. Сверяет FileVersion собранного UpdateManager.exe и печатает следующие шаги.
+  4. Пишет version holder Release/<Product>_vers.sptv с версией X.Y.Z.0: по нему клиент движка
+     проверяет обновления только по версии (CheckForUpdates(true)), не сверяя файлы, а UpdateManager
+     берёт из него версию патча. Файл входит в патч — у клиентов он обновляется вместе с версией.
+  5. Сверяет FileVersion собранного UpdateManager.exe и печатает следующие шаги.
 
   Схема версий — SemVer из трёх чисел: появилась новая возможность → minor, иначе patch.
   Скрипт НИЧЕГО не коммитит и не заливает — патч собирается и доставляется в самом UpdateManager.
@@ -55,6 +58,7 @@ $AppProject = Join-Path $RepoRoot 'src\UpdateManager.App\UpdateManager.App.cspro
 $TestsProject = Join-Path $RepoRoot 'tests\UpdateManager.Tests\UpdateManager.Tests.csproj'
 $ReleaseDir = Join-Path $RepoRoot 'Release'
 $ReleaseExe = Join-Path $ReleaseDir 'UpdateManager.exe'
+$VersionHolderPostfix = '_vers.sptv' # PatchParameters.VERSION_HOLDER_FILENAME_POSTFIX движка
 $Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
 function ConvertTo-Version([string]$text) {
@@ -73,6 +77,11 @@ $props = [IO.File]::ReadAllText($PropsPath)
 if ($props -notmatch '<Version>([^<]+)</Version>') { throw "в $PropsPath нет <Version>" }
 $current = ConvertTo-Version $Matches[1]
 if (-not $current) { throw "<Version>$($Matches[1])</Version> не похожа на X.Y.Z" }
+
+# Имя проекта обновлений = Product (по нему же SelfIdentity узнаёт себя) → <Product>_vers.sptv.
+if ($props -notmatch '<Product>([^<]+)</Product>') { throw "в $PropsPath нет <Product>" }
+$productName = $Matches[1].Trim()
+$VersionHolder = Join-Path $ReleaseDir ($productName + $VersionHolderPostfix)
 
 if ($NoBump) {
     $next = $current
@@ -102,14 +111,18 @@ if ($DryRun) {
     if (-not $SkipTests) { Write-Host "  dotnet test $TestsProject" }
     if (-not $NoBump) { Write-Host "  Directory.Build.props: Version $nextText, FileVersion $fileVersion" }
     Write-Host "  dotnet publish $AppProject -p:PublishProfile=win-x64 → $ReleaseDir (папка очищается)"
+    Write-Host "  $VersionHolder ← $fileVersion"
     return
 }
 
-# --- Release/ не должна быть занята запущенным из неё UpdateManager ------------------------------
+# --- Запущенный из репозитория UpdateManager держит файлы сборки --------------------------------
+# Из Release/ — publish не сможет очистить папку; из src\…\bin (dotnet run / IDE) — тесты не соберутся.
 $running = Get-Process -Name 'UpdateManager' -ErrorAction SilentlyContinue |
-    Where-Object { $_.Path -and $_.Path.StartsWith($ReleaseDir, [StringComparison]::OrdinalIgnoreCase) }
+    Where-Object { $_.Path -and $_.Path.StartsWith($RepoRoot, [StringComparison]::OrdinalIgnoreCase) } |
+    Where-Object { -not $SkipTests -or $_.Path.StartsWith($ReleaseDir, [StringComparison]::OrdinalIgnoreCase) }
 if ($running) {
-    throw "UpdateManager запущен из $ReleaseDir — закройте его: publish очищает эту папку."
+    $paths = ($running | ForEach-Object { "  PID $($_.Id): $($_.Path)" }) -join "`n"
+    throw "закройте UpdateManager, запущенный из репозитория, — он держит файлы сборки:`n$paths"
 }
 
 # --- 1. Тесты -----------------------------------------------------------------------------------
@@ -137,11 +150,21 @@ if ($LASTEXITCODE -ne 0) {
     throw "publish не удался. Версия в Directory.Build.props уже $nextText — после исправления запустите с -NoBump."
 }
 
-# --- 4. Сверка ----------------------------------------------------------------------------------
+# --- 4. Version holder --------------------------------------------------------------------------
+# Ровно версия, без BOM и перевода строки — так его читает движок (и VersionDetector при сборке патча).
+[IO.File]::WriteAllText($VersionHolder, $fileVersion, $Utf8NoBom)
+Write-Host ""
+Write-Host "Version holder: $VersionHolder ← $fileVersion" -ForegroundColor Green
+
+# --- 5. Сверка ----------------------------------------------------------------------------------
 if (-not (Test-Path $ReleaseExe)) { throw "после publish нет $ReleaseExe" }
 $built = (Get-Item $ReleaseExe).VersionInfo.FileVersion
 if ($built -ne $fileVersion) {
     throw "FileVersion собранного exe = $built, ожидалась $fileVersion"
+}
+$holder = [IO.File]::ReadAllText($VersionHolder)
+if ($holder -ne $fileVersion) {
+    throw "в $VersionHolder записано '$holder', ожидалась $fileVersion"
 }
 
 Write-Host ""
