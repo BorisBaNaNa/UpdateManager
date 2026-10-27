@@ -129,7 +129,7 @@ The world borrows from a record-label catalog sleeve (Saville / Factory): a matt
 
 The surface is a tool, not a showcase. Density is calm: one oversized version number per screen, one row of stage blocks, one primary ink button that names the next step, and a quiet label/value/action table under a hairline. Everything else is neutral grey on matte ground. Light and dark themes are the same world with the values inverted; stage colours are identical in both because they are code, not decoration.
 
-Scope as built: the main window (start screen and project screen) is the only surface drawn in this world. The other windows (project settings, delivery, FTP connection, FTP browser, operation log, message and prompt dialogs) still use the pre-redesign 1.x layout and only inherit the tokens (ground, hairline, square corners, Golos Text, Fluent accent). Their framed groups, `hint` opacity text and Consolas log are legacy, not rules of this system.
+Scope as built: every window is drawn in this world: the main window (start screen and project screen) and the dialogs (project settings, delivery, FTP connection, FTP browser, operation log, message and prompt), which share one dialog grammar (see Components → Dialogs).
 
 **Key Characteristics:**
 - Matte neutral ground, ink type, hairline rules; no gradients, no shadows, no rounded corners.
@@ -244,6 +244,16 @@ The world's defining component. A square rectangle, min 112px tall, padding 12px
 
 ### Label / Value / Action Table
 Under a hairline: muted label (150px), value in body text trimmed with path ellipsis and a full-text tooltip, quiet button (128px) at the end of each row («Выбрать…», «Настройки…», «Настроить…», «Открыть»).
+
+### Dialogs
+One grammar for every modal window.
+- **Body:** Ground, inset 24px (22px top). Optional Title heading (17px, 600) naming the task («Куда доставлять патч», «Проект и сервер»); a message's heading is its kind in words («Ошибка», «Подтверждение»), red only for an error.
+- **Form rows:** muted label (`field`, 140–170px column) left, stock input right, 10px row spacing; a quiet «Выбрать…» button ends a row that needs a picker. Help and derived values sit under the input as a 12px muted Detail line («Клиенты будут качать патч с …», «Итоговый путь загрузки: …»).
+- **Sections:** a hairline (`rule`) with 24px above, then a Title heading 18px below it. No framed groups.
+- **Choice of few:** a short list of options (delivery method) renders as catalog rows with a Selected Grey fill, not a dropdown; the fill bleeds 12px into the gutter so text stays on the heading's edge.
+- **Footer:** Panel Grey band under a hairline, padding 24px × 14px, buttons right-aligned: one primary naming the action («Сохранить», «Доставить», «Выбрать», «Да»), then quiet «Отмена»/«Нет» (16px × 10px, min width 96px). A secondary tool action («Проверить соединение») sits quiet on the left.
+- **Operation:** heading = operation title, state in muted words below («Выполняется · 42 %», «Готово», «Завершилось с ошибкой»), a 4px Ink-on-Hairline progress bar; on failure the bar gives way to the reason in a 2px Failure Red outline (`failure`) above the log. The log is data, so it is monospace (Cascadia Mono / Consolas, 12px) on a flat Panel Grey field. «Прервать» is quiet while running; «Закрыть» becomes primary when done.
+- **Tree (FTP folders):** stock Fluent tree with selection as Selected Grey fill; a hairline status strip above the footer shows what is loading or the selected path.
 
 ## Do's and Don'ts
 
