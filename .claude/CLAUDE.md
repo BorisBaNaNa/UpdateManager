@@ -83,8 +83,11 @@ MVVM + доменный слой, домен не знает про UI:
   `PatchVerifier`, `SelfUpdate*`) создают движковые объекты сами.
 - Версия/Product/Company — `Directory.Build.props` (по Product/Company `SelfIdentity` узнаёт себя).
 - Сборка: `dotnet build UpdateManager.sln`, `dotnet test tests/UpdateManager.Tests`; выкатка —
-  `dotnet publish src/UpdateManager.App -p:PublishProfile=win-x64` → `publish/UpdateManager/`
+  `dotnet publish src/UpdateManager.App -p:PublishProfile=win-x64` → `Release/`
   (self-contained, без single-file — движок подменяет файлы по одному).
+- Выпуск: `scripts/release.ps1 patch|minor|major|-To X.Y.Z|-NoBump` — тесты → версия в
+  `Directory.Build.props` → publish в `Release/` (папка очищается) → сверка FileVersion. Ничего не коммитит.
+  Скрипт — Windows PowerShell 5.1, сохранять в UTF-8 **с BOM** (иначе кириллица ломается).
 
 ## Осталось
 

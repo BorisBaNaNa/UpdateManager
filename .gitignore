@@ -26,5 +26,5 @@ desktop.ini
 # в папке проекта обновления, а не в дев-репо, но на случай тестовых проектов внутри репо).
 *.key
 
-# Публикация 2.0 (dotnet publish -p:PublishProfile=win-x64)
-/publish/
+# Билд для выкатки (dotnet publish -p:PublishProfile=win-x64) — из него собираются патчи
+/Release/
