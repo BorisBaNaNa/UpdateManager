@@ -204,6 +204,38 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task BrowseBuildSource_OffersSelfPresetForOwnBuildInFreshProject()
+    {
+        // Свежий проект «UpdateManager» (движок уже включил IsSelfPatchingApp) + папка с exe самого
+        // UpdateManager (apphost App копируется в bin тестов, Product/Company — из Directory.Build.props).
+        var config = new SelfUpdateConfig("http://updates.example.com/UpdateManager/VersionInfo.info", "");
+        var vm = new MainWindowViewModel(_dialogs, _service, _recent, new VersionDetector(),
+            new FtpConnectionStore(Path.Combine(_root, "ftp.xml")), config,
+            new ThemeService(Path.Combine(_root, "theme.txt")), new SelfUpdateViewModel(_dialogs, config));
+
+        _dialogs.Folders.Enqueue(ProjectDir);
+        _dialogs.Prompts.Enqueue("UpdateManager");
+        await vm.CreateProjectCommand.ExecuteAsync(null);
+        Assert.True(_service.LoadSettings(ProjectDir).IsSelfPatchingApp);
+
+        Directory.CreateDirectory(BuildDir);
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "UpdateManager.exe"), Path.Combine(BuildDir, "UpdateManager.exe"));
+        _dialogs.Folders.Enqueue(BuildDir);
+        await vm.BrowseBuildSourceCommand.ExecuteAsync(null);
+
+        Assert.Contains(_dialogs.Confirms, m => m.Contains("билд самого UpdateManager"));
+        var settings = _service.LoadSettings(ProjectDir);
+        Assert.Equal("http://updates.example.com/UpdateManager/", settings.BaseDownloadURL);
+        Assert.Contains("*.pdb", settings.IgnoredPaths);
+
+        // Пресет применён — повторный выбор той же папки больше не спрашивает.
+        _dialogs.Confirms.Clear();
+        _dialogs.Folders.Enqueue(BuildDir);
+        await vm.BrowseBuildSourceCommand.ExecuteAsync(null);
+        Assert.DoesNotContain(_dialogs.Confirms, m => m.Contains("билд самого UpdateManager"));
+    }
+
+    [Fact]
     public async Task OpenRecent_MissingFolderIsOfferedForRemoval()
     {
         var missing = Path.Combine(_root, "gone");

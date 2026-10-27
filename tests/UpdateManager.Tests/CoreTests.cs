@@ -164,6 +164,23 @@ public class SelfProjectPresetTests
     }
 
     [Fact]
+    public void IsApplied_NotWithEngineDefaults()
+    {
+        // Новый проект движка: IsSelfPatchingApp уже true, но URL пуст и масок нет — пресет нужен.
+        var fresh = new ProjectSettings { IsSelfPatchingApp = true, IgnoredPaths = { "*spt_logs.txt" } };
+        Assert.False(SelfProjectPreset.IsApplied(fresh));
+
+        // Свой URL + все маски — считаем применённым, не пристаём.
+        var custom = new ProjectSettings
+        {
+            IsSelfPatchingApp = true,
+            BaseDownloadURL = "http://test-server/UpdateManager/",
+            IgnoredPaths = { "*.pdb", "*.vshost.*", "*spt_logs.txt" }
+        };
+        Assert.True(SelfProjectPreset.IsApplied(custom));
+    }
+
+    [Fact]
     public void Apply_KeepsBaseUrlWhenConfigEmpty()
     {
         var settings = new ProjectSettings { BaseDownloadURL = "http://mine/" };
