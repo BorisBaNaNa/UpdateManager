@@ -1,0 +1,38 @@
+<v:DialogWindow xmlns="https://github.com/avaloniaui"
+                xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                xmlns:vm="using:UpdateManager.App.ViewModels"
+                xmlns:v="using:UpdateManager.App.Views"
+                x:Class="UpdateManager.App.Views.FtpBrowserWindow"
+                x:DataType="vm:FtpBrowserViewModel"
+                Title="Папка на сервере"
+                Width="400" Height="480" MinWidth="300" MinHeight="320"
+                ShowInTaskbar="False"
+                WindowStartupLocation="CenterOwner">
+
+    <DockPanel Margin="12">
+        <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,Auto" Margin="0,10,0,0">
+            <TextBlock Grid.Column="0" Text="{Binding Status}" Classes="hint"
+                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <Button Content="Выбрать" MinWidth="80" HorizontalContentAlignment="Center"
+                        IsDefault="True" Command="{Binding SelectCommand}" />
+                <Button Content="Отмена" MinWidth="80" HorizontalContentAlignment="Center"
+                        IsCancel="True" Command="{Binding CancelCommand}" />
+            </StackPanel>
+        </Grid>
+
+        <TreeView ItemsSource="{Binding Roots}" SelectedItem="{Binding Selected}"
+                  IsEnabled="{Binding !IsBusy}">
+            <TreeView.Styles>
+                <Style Selector="TreeViewItem" x:DataType="vm:FtpFolderNode">
+                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                </Style>
+            </TreeView.Styles>
+            <TreeView.ItemTemplate>
+                <TreeDataTemplate x:DataType="vm:FtpFolderNode" ItemsSource="{Binding Children}">
+                    <TextBlock Text="{Binding Name}" />
+                </TreeDataTemplate>
+            </TreeView.ItemTemplate>
+        </TreeView>
+    </DockPanel>
+</v:DialogWindow>

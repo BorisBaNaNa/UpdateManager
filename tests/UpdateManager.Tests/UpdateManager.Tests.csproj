@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\UpdateManager.Core\UpdateManager.Core.csproj" />
+    <ProjectReference Include="..\..\src\UpdateManager.App\UpdateManager.App.csproj" />
+    <!-- Ссылки по HintPath не транзитивны для компиляции — тестам нужен XMLSigner напрямую. -->
+    <Reference Include="SimplePatchTool">
+      <HintPath>..\..\lib\SimplePatchTool.dll</HintPath>
+    </Reference>
+    <Reference Include="SimplePatchToolSecurity">
+      <HintPath>..\..\lib\SimplePatchToolSecurity.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>

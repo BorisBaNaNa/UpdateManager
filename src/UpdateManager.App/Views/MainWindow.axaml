@@ -1,0 +1,115 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:UpdateManager.App.ViewModels"
+        xmlns:svc="using:UpdateManager.App.Services"
+        x:Class="UpdateManager.App.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="UpdateManager"
+        Icon="avares://UpdateManager/UpdateManagerIcon.ico"
+        Width="760" Height="520" MinWidth="640" MinHeight="440"
+        WindowStartupLocation="CenterScreen">
+
+    <DockPanel>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="Проект">
+                <MenuItem Header="Создать проект…" Command="{Binding CreateProjectCommand}" />
+                <MenuItem Header="Открыть проект…" Command="{Binding OpenProjectCommand}" />
+                <Separator />
+                <MenuItem Header="Недавние" Classes="recent" ItemsSource="{Binding RecentProjects}">
+                    <MenuItem.Styles>
+                        <Style Selector="MenuItem.recent MenuItem" x:DataType="vm:RecentProjectItem">
+                            <Setter Property="Header" Value="{Binding Path}" />
+                            <Setter Property="Command" Value="{Binding OpenCommand}" />
+                            <Setter Property="CommandParameter" Value="{Binding Path}" />
+                            <Setter Property="IsEnabled" Value="{Binding IsEnabled}" />
+                        </Style>
+                    </MenuItem.Styles>
+                </MenuItem>
+                <Separator />
+                <MenuItem Header="Выход" Command="{Binding ExitCommand}" />
+            </MenuItem>
+            <MenuItem Header="Безопасность">
+                <MenuItem Header="Сгенерировать RSA-ключи…" Command="{Binding GenerateKeysCommand}" />
+            </MenuItem>
+            <MenuItem Header="Вид">
+                <MenuItem Header="Светлая тема" ToggleType="Radio" GroupName="theme"
+                          IsChecked="{Binding IsLightTheme, Mode=OneWay}"
+                          Command="{Binding SetThemeCommand}" CommandParameter="{x:Static svc:AppTheme.Light}" />
+                <MenuItem Header="Тёмная тема" ToggleType="Radio" GroupName="theme"
+                          IsChecked="{Binding IsDarkTheme, Mode=OneWay}"
+                          Command="{Binding SetThemeCommand}" CommandParameter="{x:Static svc:AppTheme.Dark}" />
+                <MenuItem Header="Как в Windows" ToggleType="Radio" GroupName="theme"
+                          IsChecked="{Binding IsSystemTheme, Mode=OneWay}"
+                          Command="{Binding SetThemeCommand}" CommandParameter="{x:Static svc:AppTheme.System}" />
+            </MenuItem>
+            <MenuItem Header="Справка">
+                <MenuItem Header="Проверить обновления…" Command="{Binding SelfUpdate.CheckCommand}" />
+            </MenuItem>
+        </Menu>
+
+        <Grid Margin="12" RowDefinitions="Auto,*,Auto" ColumnDefinitions="*,12,340">
+
+            <!-- Заголовок проекта + действия с проектом -->
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding ProjectTitle}"
+                       FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis" />
+            <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal" Spacing="6"
+                        HorizontalAlignment="Right">
+                <Button Content="Открыть в проводнике" Command="{Binding OpenInExplorerCommand}" />
+                <Button Content="Настройки" Command="{Binding EditSettingsCommand}" />
+            </StackPanel>
+
+            <!-- Версии -->
+            <HeaderedContentControl Grid.Row="1" Grid.Column="0" Classes="group" Margin="0,12,0,12"
+                                    Header="Версии (из Versions/)">
+                <Grid RowDefinitions="Auto,*">
+                    <Grid ColumnDefinitions="*,130,130" Margin="8,0,8,4" Opacity="0.7">
+                        <TextBlock Grid.Column="0" Text="Версия" />
+                        <TextBlock Grid.Column="1" Text="Дата сборки" />
+                        <TextBlock Grid.Column="2" Text="Доставлено" />
+                    </Grid>
+                    <ListBox Grid.Row="1" ItemsSource="{Binding Versions}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:VersionRow">
+                                <Grid ColumnDefinitions="*,130,130">
+                                    <TextBlock Grid.Column="0" Text="{Binding Version}" />
+                                    <TextBlock Grid.Column="1" Text="{Binding BuildDate}" />
+                                    <TextBlock Grid.Column="2" Text="{Binding Delivered}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </HeaderedContentControl>
+
+            <!-- Источник билда и сборка -->
+            <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,12,0,0" Spacing="6">
+                <TextBlock Text="Источник билда:" />
+                <Grid ColumnDefinitions="*,6,Auto">
+                    <TextBox Grid.Column="0" Text="{Binding BuildSource}" IsReadOnly="True" />
+                    <Button Grid.Column="2" Content="…" Width="40"
+                            Command="{Binding BrowseBuildSourceCommand}" />
+                </Grid>
+                <Grid ColumnDefinitions="*,6,Auto" Margin="0,6,0,0">
+                    <TextBlock Grid.Column="0" Text="{Binding MainExecutableText}"
+                               VerticalAlignment="Center" TextWrapping="Wrap" />
+                    <Button Grid.Column="2" Content="Выбрать exe…"
+                            Command="{Binding PickMainExecutableCommand}" />
+                </Grid>
+                <Button Content="Создать патч" Height="48" Margin="0,12,0,0"
+                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                        VerticalContentAlignment="Center" FontWeight="SemiBold"
+                        Command="{Binding CreatePatchCommand}" />
+            </StackPanel>
+
+            <!-- Output и доставка -->
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding OutputText}" VerticalAlignment="Center" />
+            <StackPanel Grid.Row="2" Grid.Column="2" Orientation="Horizontal" Spacing="6"
+                        HorizontalAlignment="Right">
+                <Button Content="FTP-сервер…" Command="{Binding ConfigureFtpCommand}" />
+                <Button Content="Доставить патч" Command="{Binding DeliverCommand}" />
+                <Button Content="Проверить" Command="{Binding VerifyCommand}" />
+            </StackPanel>
+        </Grid>
+    </DockPanel>
+</Window>

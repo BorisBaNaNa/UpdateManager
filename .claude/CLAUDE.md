@@ -62,6 +62,19 @@
 
 Git инициализирован, история ведётся по шагам.
 
+## Переезд на 2.0 (Avalonia / .NET 10) — идёт
+
+Спек: `docs/superpowers/specs/2026-10-27-v2-avalonia-design.md` (там же статус по шагам).
+Рядом со старым `UpdateManager/` (1.x, WinForms) — новые проекты в том же `UpdateManager.sln`:
+`src/UpdateManager.Core` (Core 1.x почти без изменений), `src/UpdateManager.App` (Avalonia 12 +
+CommunityToolkit.Mvvm; `MainWindowViewModel` — порт `MainPresenter`, диалоги через `IDialogService`),
+`tests/UpdateManager.Tests` (xUnit v3). Экраны пока повторяют раскладку 1.x — дизайн отдельным этапом.
+
+- Сборка/тесты из CLI — по проектам: `dotnet test tests/UpdateManager.Tests`
+  (весь .sln через `dotnet build` падает на resx 1.x; из VS собирается).
+- Публикация: `dotnet publish src/UpdateManager.App -p:PublishProfile=win-x64` → `publish/UpdateManager/`.
+- Правки логики делать в 2.0; 1.x не трогать без просьбы.
+
 ## Архитектура
 
 MVP + доменный слой, инверсия зависимостей (домен не знает про WinForms):

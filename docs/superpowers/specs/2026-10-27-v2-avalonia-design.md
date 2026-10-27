@@ -1,6 +1,6 @@
-# UpdateManager 2.0 — Avalonia / .NET 8 — дизайн
+# UpdateManager 2.0 — Avalonia / .NET 10 — дизайн
 
-Статус: дизайн согласован 2026-10-27. Следующий шаг — план реализации (writing-plans).
+Статус: дизайн согласован 2026-10-27. Реализация: шаги 1, 3, 4 выполнены (см. «Порядок»).
 
 ## Цель
 
@@ -14,8 +14,8 @@
 
 | Вопрос | Решение |
 |---|---|
-| Платформа | .NET 8, `win-x64`, self-contained, **без** single-file (движок подменяет файлы по одному) |
-| UI | Avalonia 11 + Fluent, MVVM на CommunityToolkit.Mvvm |
+| Платформа | .NET 10 (`net10.0-windows`), `win-x64`, self-contained, **без** single-file (движок подменяет файлы по одному). Было .NET 8 — заменено: поддержка .NET 8 заканчивается 10.11.2026, .NET 10 — LTS до 11.2028 |
+| UI | Avalonia 12.1.2 + Fluent, MVVM на CommunityToolkit.Mvvm 8.4.1 (версии — как в соседних проектах пользователя) |
 | Репозиторий | 2.0 на `main`; 1.x — ветка `v1` + тег `v1.0.3` от `bff6795` (по команде пользователя) |
 | Самообновление в 1.x | Нет и не будет. Незакоммиченная реализация самообновления (WinForms) — исходник для переноса в 2.0 |
 | Сервер | `http://updates.borealis-soft-home/UpdateManager/VersionInfo.info` (каналы не делим — у 1.x обновлений нет) |
@@ -26,11 +26,13 @@
 
 ```
 UpdateManager.sln
-src/UpdateManager.Core/    net8.0 classlib: Project, Delivery, Operations, Versioning,
+src/UpdateManager.Core/    net10.0-windows classlib: Project, Delivery, Operations, Versioning,
                            Security, SelfUpdate, Common — перенос из 1.x
-src/UpdateManager.App/     net8.0-windows, Avalonia: Views/ (axaml), ViewModels/, Services/
-tests/UpdateManager.Tests/ xUnit: Core + ViewModel'и
-lib/                       DLL движка, FluentFTP (или FluentFTP из NuGet — решить в плане)
+src/UpdateManager.App/     net10.0-windows, Avalonia: Views/ (axaml), ViewModels/, Services/;
+                           сборка UpdateManager.exe, publish — Properties/PublishProfiles/win-x64.pubxml
+tests/UpdateManager.Tests/ xUnit v3: Core + ViewModel'и + сквозной прогон движка
+lib/                       DLL движка (HintPath). FluentFTP — из NuGet 52.1.0 (lib/FluentFTP.dll — net472 для 1.x)
+Directory.Build.props      версия 2.0.0, Product/Company (по ним SelfIdentity узнаёт себя)
 ```
 
 ## Слои / MVVM
@@ -83,9 +85,15 @@ lib/                       DLL движка, FluentFTP (или FluentFTP из Nu
 
 ## Порядок
 
-1. Спайк: движок + Security + SelfPatcher под .NET 8, включая self-patch через `file:///` в temp.
-2. git: ветка `v1` + тег `v1.0.3` от `bff6795` (по команде пользователя).
-3. Каркас солюшена, перенос Core, тесты Core.
-4. ViewModel'и + сервисы + функциональные экраны.
+1. ✅ Спайк: движок + Security под .NET 10 — `EnginePipelineTests` (создание → сборка 1.0.0 →
+   RSA-подпись → «Проверить» через `file:///` → 1.0.1 инкрементальным патчем). Не проверено:
+   self-patch (`Run(true)` → SelfPatcher.exe → перезапуск) — нужен ручной прогон на собранном exe.
+2. git: ветка `v1` + тег `v1.0.3` от `bff6795` (по команде пользователя). Пока 1.x (`UpdateManager/`)
+   лежит рядом в том же `UpdateManager.sln`; `dotnet build` всего .sln на нём падает (resx) — из VS собирается.
+3. ✅ Каркас солюшена, перенос Core, тесты Core.
+4. ✅ ViewModel'и + сервисы + функциональные экраны (раскладка как в 1.x). Отличия от 1.x в Core:
+   `appsettings.json` вместо App.config; `SelfIdentity` — entry assembly и `Environment.ProcessPath`
+   (в .NET `Assembly.Location` — это .dll); хранилища получили конструктор с путём (тесты);
+   `RemotePathsOverlap` переехал из презентера в `DownloadUrl`.
 5. Дизайн-этап → финальная вёрстка.
 6. Публикация, версия 2.0.0, первая доставка.

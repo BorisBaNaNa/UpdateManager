@@ -1,0 +1,60 @@
+<v:DialogWindow xmlns="https://github.com/avaloniaui"
+                xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                xmlns:vm="using:UpdateManager.App.ViewModels"
+                xmlns:v="using:UpdateManager.App.Views"
+                x:Class="UpdateManager.App.Views.FtpConnectionWindow"
+                x:DataType="vm:FtpConnectionViewModel"
+                Title="FTP-подключение"
+                Width="520" SizeToContent="Height"
+                CanResize="False" ShowInTaskbar="False"
+                WindowStartupLocation="CenterOwner">
+
+    <StackPanel Margin="16" Spacing="10">
+        <Grid ColumnDefinitions="130,*,6,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+              RowSpacing="8">
+            <TextBlock Grid.Row="0" Text="Хост:" VerticalAlignment="Center" />
+            <TextBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding Host}" />
+
+            <TextBlock Grid.Row="1" Text="Порт:" VerticalAlignment="Center" />
+            <NumericUpDown Grid.Row="1" Grid.Column="1" Width="140" HorizontalAlignment="Left"
+                           Minimum="1" Maximum="65535" Increment="1" FormatString="0"
+                           Value="{Binding Port}" />
+
+            <TextBlock Grid.Row="2" Text="Пользователь:" VerticalAlignment="Center" />
+            <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding Username}" />
+
+            <TextBlock Grid.Row="3" Text="Пароль:" VerticalAlignment="Center" />
+            <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding Password}"
+                     PasswordChar="●" RevealPassword="False" />
+
+            <TextBlock Grid.Row="4" Text="Папка с патчами:" VerticalAlignment="Center" />
+            <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding RemotePath}" />
+            <Button Grid.Row="4" Grid.Column="3" Content="…" Width="40"
+                    Command="{Binding BrowseRemoteCommand}" />
+
+            <TextBlock Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="3" Classes="hint"
+                       Text="{Binding ComputedPath}" />
+
+            <TextBlock Grid.Row="6" Text="Папка для ключа:" VerticalAlignment="Center" />
+            <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding PrivateKeyRemotePath}" />
+            <Button Grid.Row="6" Grid.Column="3" Content="…" Width="40"
+                    Command="{Binding BrowsePrivateKeyCommand}" />
+
+            <TextBlock Grid.Row="7" Grid.Column="1" Grid.ColumnSpan="3" Classes="hint"
+                       Text="⚠ Отдельная ЗАКРЫТАЯ папка (доступ только команде) для приватного ключа. Не должна совпадать с папкой патча — приватный ключ нельзя класть туда, откуда качают клиенты. Пусто = ключ на FTP не заливается." />
+        </Grid>
+
+        <TextBlock Classes="hint"
+                   Text="Реквизиты хранятся в профиле пользователя; пароль зашифрован (DPAPI)." />
+
+        <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,6,0,0">
+            <Button Grid.Column="0" Content="{Binding TestButtonText}" Command="{Binding TestCommand}" />
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                <Button Content="Сохранить" MinWidth="90" HorizontalContentAlignment="Center"
+                        IsDefault="True" Command="{Binding SaveCommand}" />
+                <Button Content="Отмена" MinWidth="90" HorizontalContentAlignment="Center"
+                        IsCancel="True" Command="{Binding CancelCommand}" />
+            </StackPanel>
+        </Grid>
+    </StackPanel>
+</v:DialogWindow>

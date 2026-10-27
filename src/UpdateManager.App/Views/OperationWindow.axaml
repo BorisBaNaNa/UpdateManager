@@ -1,0 +1,27 @@
+<v:DialogWindow xmlns="https://github.com/avaloniaui"
+                xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                xmlns:vm="using:UpdateManager.App.ViewModels"
+                xmlns:v="using:UpdateManager.App.Views"
+                x:Class="UpdateManager.App.Views.OperationWindow"
+                x:DataType="vm:OperationViewModel"
+                Title="{Binding Title}"
+                Width="600" Height="440" MinWidth="420" MinHeight="280"
+                ShowInTaskbar="False"
+                WindowStartupLocation="CenterOwner">
+
+    <DockPanel Margin="12">
+        <!-- Два бара вместо переключения IsIndeterminate: при смене true→false Fluent-шаблон
+             продолжал рисовать бегущую полосу. -->
+        <Panel DockPanel.Dock="Top" Height="18">
+            <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsIndeterminate}" />
+            <ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}"
+                         IsVisible="{Binding !IsIndeterminate}" />
+        </Panel>
+        <Button DockPanel.Dock="Bottom" HorizontalAlignment="Right" MinWidth="100"
+                HorizontalContentAlignment="Center" Margin="0,10,0,0"
+                Content="{Binding ButtonText}" Command="{Binding CloseOrCancelCommand}" />
+        <TextBox x:Name="LogBox" Margin="0,10,0,0" Text="{Binding LogText}" IsReadOnly="True"
+                 AcceptsReturn="True" TextWrapping="Wrap" FontFamily="Consolas,monospace"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto" />
+    </DockPanel>
+</v:DialogWindow>
