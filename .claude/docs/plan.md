@@ -63,3 +63,12 @@
 - URL/ключ — `App.config` (`SelfUpdate.VersionInfoUrl`, `SelfUpdate.PublicKey`).
 - Распознавание билда самого UpdateManager и пресет проекта.
 - Спек: `docs/superpowers/specs/2026-10-27-self-update-design.md`.
+
+## Шаг 9. CLI выпуска `umcli` (план, 2.1.0, не начато)
+
+- Вынести логику выпуска (защиты, сборка + подпись, доставка, проверка, запись и сброс этапов) из
+  `MainWindowViewModel` в Core (`Core/Release/`); окно — клиент сервиса.
+- Консольный `src/UpdateManager.Cli` → `umcli.exe` рядом с `UpdateManager.exe`: `status`, `patch`,
+  `deliver`, `verify`, `release`; вопросы окна — флаги; коды выхода; `--json`; `--dry-run` у доставки.
+- Необязательная связка с `scripts/release.ps1` (`-Publish`).
+- Спек: `docs/superpowers/specs/2026-10-28-cli-release-design.md`.

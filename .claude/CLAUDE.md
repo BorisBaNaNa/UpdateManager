@@ -121,6 +121,9 @@ MVVM + доменный слой, домен не знает про UI:
   сервер `https://updates.borealis-soft-home.duckdns.org:51943/` (только HTTPS; FTP — 192.168.0.100 в LAN).
   Роутер без NAT loopback: изнутри LAN публичный адрес недоступен (проверка/«Проверить» виснут до таймаута),
   а снаружи недоступен FTP 192.168.0.100 — HTTP-проверки делать из внешней сети.- FTPS/TLS для FTP-доставки (сейчас только обычный FTP) — при необходимости.
+- **CLI выпуска `umcli` (план, 2.1.0)** — выпуск без окна для агентов, `release.ps1` и CI: сначала вынос
+  логики выпуска из `MainWindowViewModel` в Core (`Core/Release/`), затем консольный `UpdateManager.Cli`.
+  Спек: `docs/superpowers/specs/2026-10-28-cli-release-design.md`. Не начато.
 
 ## Стек
 
