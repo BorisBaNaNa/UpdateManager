@@ -25,16 +25,26 @@
 
 ## Текущее состояние
 
-**Версия 2.0** (Avalonia / .NET 10) — функциональный паритет с 1.x; экраны пока повторяют раскладку
-1.x, новый дизайн — отдельным этапом. 1.x (WinForms, .NET Framework 4.8) живёт в ветке `v1`
-(тег `v1.0.3`), в `main` её нет. Спек 2.0 и статус по шагам:
-`docs/superpowers/specs/2026-10-27-v2-avalonia-design.md`.
+**Версия 2.0** (Avalonia / .NET 10) — функциональный паритет с 1.x. Главное окно переделано в новом
+дизайне (мир «каталог», см. `DESIGN.md`); остальные окна пока в раскладке 1.x и наследуют только токены
+темы. 1.x (WinForms, .NET Framework 4.8) живёт в ветке `v1` (тег `v1.0.3`), в `main` её нет. Спек 2.0
+и статус по шагам: `docs/superpowers/specs/2026-10-27-v2-avalonia-design.md`.
+
+**Главное окно.** Без проекта — стартовый экран: последний проект крупно (его полоса этапов, «Открыть»)
+и список недавних. С проектом — слева каталог выпусков (версия, «№ N · состояние словами», мини-полоса),
+справа выбранный выпуск: номер версии, блоки этапов Билд → Патч → Доставка → Проверка (залит — пройден,
+контур — нет, красный контур — провал) и одна главная кнопка следующего шага; ниже сведения проекта
+с действиями. Новый билд в папке-источнике (версия новее собранных) — отдельная запись «новый».
+Модель выпуска (`ViewModels/ReleaseModels.cs`: `ReleaseCatalog`, `ReleaseItem`, `PlatformTrack`,
+`StageItem`) держит несколько платформ в одном выпуске — задел под Android (без патчей: apk → файлы
+версии/лицензии → доставка → проверка). Повторные действия (пересобрать, доставить снова) — меню «Выпуск».
 
 Реализовано (перенесено из 1.x):
 
 - **Создать / открыть / недавние проекты** (как IDE). Проект = папка движка (`Settings.xml`,
   `Versions/ Output/ SelfPatcher/ Other/`) + наш `updatemanager.project.xml` (мета: главный exe,
-  последний источник билда, конфиг доставки, `LastDeliveredAt`).
+  последний источник билда, конфиг доставки, по версиям — даты сборки патча `PatchedVersions`,
+  доставки `DeliveredVersions` и итог проверки `VerifiedVersions`).
 - **Настройки проекта** — окно правки `Settings.xml` (Name, `BaseDownloadURL`, `MaintenanceCheckURL`,
   `IsSelfPatchingApp`, типы патчей, `IgnoredPaths`, `CreateAllIncrementalPatches`) + раздел
   «Дополнительно» (форматы сжатия Repair/Installer/Incremental, `BinaryDiffQuality`,
@@ -62,6 +72,8 @@
   `IgnoredPaths`). Спек: `docs/superpowers/specs/2026-10-27-self-update-design.md`.
 - **Темы** (`Services/ThemeService`) — светлая/тёмная/«как в Windows»: Fluent + `RequestedThemeVariant`.
   Режим в `%AppData%\UpdateManager\theme.txt` — тот же файл, что у 1.x (недавние и `ftp.xml` тоже совместимы).
+  Токены дизайна (фон, панель, краска, линии, цвета этапов) — `App.axaml` (ThemeDictionaries Light/Dark);
+  шрифт — Golos Text (`Assets/Fonts`, OFL), задан по умолчанию в `Program.cs`.
 
 Git инициализирован, история ведётся по шагам.
 
@@ -93,7 +105,10 @@ MVVM + доменный слой, домен не знает про UI:
 
 ## Осталось
 
-- Новый дизайн экранов (через дизайн-скилл).
+- Перевести остальные окна (настройки, доставка, FTP, лог операции, сообщения) в мир главного окна —
+  дизайн-скилл Impeccable (`.claude/skills/impeccable`, `/impeccable …`); контекст — `PRODUCT.md`,
+  `DESIGN.md`, бриф главного окна `.impeccable/surfaces/`. Скриншоты headless-обвязкой (Avalonia.Headless,
+  `CaptureRenderedFrame`), в `.impeccable/review/` (не в git).
 - Сквозной прогон самообновления 2.0 (`Run(true)` → SelfPatcher.exe → перезапуск) — тестами не покрыт;
   сервер `https://updates.borealis-soft-home.duckdns.org:51943/` (только HTTPS; FTP — 192.168.0.100 в LAN).
   Роутер без NAT loopback: изнутри LAN публичный адрес недоступен (проверка/«Проверить» виснут до таймаута),
@@ -104,19 +119,18 @@ MVVM + доменный слой, домен не знает про UI:
 
 ## Стек
 
-- C# / .NET 10 (`net10.0-windows`), SDK-style проекты; UI — Avalonia 12.1.2 (Fluent), CommunityToolkit.Mvvm.
+- C# / .NET 10 (`net10.0-windows`), SDK-style проекты; UI — Avalonia 12.1.2 (Fluent), CommunityToolkit.Mvvm;
+  шрифт Golos Text.
 - Движок патчей: SimplePatchTool (`lib/`, CLR 2.0, HintPath). Подпись — `System.Security.Cryptography.Xml`.
 - FTP: FluentFTP 52.1.0 (NuGet). Шифрование секретов: DPAPI (`System.Security.Cryptography.ProtectedData`).
 - Тесты: xUnit v3.
 
 ## Документация
 
-- [docs/idea.md](docs/idea.md) — полная идея, мотивация, открытые вопросы.
-- [docs/engine-reference.md](docs/engine-reference.md) — API SimplePatchTool: `PatchCreator`,
-  `PatchUpdater`, security, формат сервера, консольные команды.
-- [docs/plan.md](docs/plan.md) — предлагаемый план реализации по шагам (исторический, для 1.x).
-- [docs/source-project-context.md](docs/source-project-context.md) — как патчи устроены в
-  проекте-доноре Interactive Book (пример интеграции: `ConnectionSettings`, build-хук, layout сервера).
+- [PRODUCT.md](../PRODUCT.md) — продукт для дизайн-скилла: пользователи, сценарий, принципы, планы (Android).
+- [DESIGN.md](../DESIGN.md) — дизайн-система главного окна (мир «каталог»): токены, типографика, компоненты.
+- [docs/superpowers/specs/](../docs/superpowers/specs/) — спеки 2.0 (переезд на Avalonia) и самообновления.
+- `lib/README` — откуда DLL движка. Справочника по API SimplePatchTool в репозитории нет.
 
 ## Правила работы (от пользователя)
 
