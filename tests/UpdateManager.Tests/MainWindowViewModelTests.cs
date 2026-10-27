@@ -62,12 +62,18 @@ public sealed class MainWindowViewModelTests : IDisposable
     public async Task StartsWithoutProject()
     {
         Assert.False(_vm.HasProject);
+        Assert.True(_vm.IsStartScreen);
         Assert.False(_vm.CreatePatchCommand.CanExecute(null));
-        Assert.Equal("Проект: (не открыт)", _vm.ProjectTitle);
+        Assert.Equal("UpdateManager", _vm.WindowTitle);
         Assert.Single(_vm.RecentProjects);
         Assert.False(_vm.RecentProjects[0].IsEnabled);
+        Assert.Empty(_vm.RecentCards);
         await Task.CompletedTask;
     }
+
+    // Стадия выпуска по типу (полоса Windows: Билд, Патч, Доставка, Проверка).
+    private StageItem Stage(string version, StageKind kind) =>
+        _vm.Releases.Single(r => r.Version == version).Platforms[0].Stages.Single(s => s.Kind == kind);
 
     [Fact]
     public async Task CreateProject_OpensAndRemembersIt()
@@ -76,7 +82,7 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         Assert.True(_vm.HasProject);
         Assert.True(_vm.HasBuildSource);
-        Assert.Equal("Проект: TestApp", _vm.ProjectTitle);
+        Assert.Equal("TestApp", _vm.ProjectName);
         Assert.Equal(BuildDir, _vm.BuildSource);
         Assert.Equal(ProjectDir, _recent.Load()[0]);
         Assert.Equal(ProjectDir, _vm.RecentProjects[0].Path);
@@ -92,8 +98,9 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         Assert.Empty(_dialogs.Errors);
         Assert.True(_dialogs.Operations.Single().Succeeded);
-        Assert.Equal("1.0.0", _vm.Versions.Single().Version);
-        Assert.Equal("Output/: патч готов", _vm.OutputText);
+        Assert.Equal("1.0.0", _vm.Releases.Single().Version);
+        Assert.Equal(StageState.Done, Stage("1.0.0", StageKind.Patch).State);
+        Assert.Equal("Доставить", _vm.NextStepText);
         Assert.NotEmpty(ProjectMeta.Load(ProjectDir).LastBuiltSettings);
 
         var target = Path.Combine(_root, "server");
@@ -102,8 +109,70 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         Assert.Empty(_dialogs.Errors);
         Assert.True(File.Exists(Path.Combine(target, "VersionInfo.info")));
-        Assert.NotEqual("—", _vm.Versions.Single().Delivered);
+        Assert.Equal(StageState.Done, Stage("1.0.0", StageKind.Delivery).State);
         Assert.Equal(target, ProjectMeta.Load(ProjectDir).Delivery.Path);
+        Assert.Equal("Проверить", _vm.NextStepText);
+    }
+
+    [Fact]
+    public async Task Verify_RecordsResultAndCompletesRelease()
+    {
+        // BaseDownloadURL указывает на Output (file:///) — проверка качает патч прямо оттуда.
+        await CreateProjectWithBuild();
+        _dialogs.Prompts.Enqueue("1.0.0");
+        await _vm.CreatePatchCommand.ExecuteAsync(null);
+        _dialogs.DeliveryAnswer = _ => new DeliveryConfig { Method = DeliveryMethods.Folder, Path = Path.Combine(_root, "server") };
+        await _vm.DeliverCommand.ExecuteAsync(null);
+
+        await _vm.NextStepCommand.ExecuteAsync(null); // «Проверить»
+
+        Assert.True(ProjectMeta.Load(ProjectDir).VerifiedVersions["1.0.0"].Succeeded);
+        Assert.Equal(StageState.Done, Stage("1.0.0", StageKind.Verify).State);
+        Assert.False(_vm.HasNextStep);
+    }
+
+    [Fact]
+    public async Task Verify_FailureIsRecordedWithReason()
+    {
+        await CreateProjectWithBuild();
+        _dialogs.Prompts.Enqueue("1.0.0");
+        await _vm.CreatePatchCommand.ExecuteAsync(null);
+
+        // Сервер «переехал»: по новому адресу патча нет.
+        var settings = _service.LoadSettings(ProjectDir);
+        settings.BaseDownloadURL = new Uri(Path.Combine(_root, "nowhere")).AbsoluteUri + "/";
+        _service.SaveSettings(ProjectDir, settings);
+        await _vm.VerifyCommand.ExecuteAsync(null);
+
+        var result = ProjectMeta.Load(ProjectDir).VerifiedVersions["1.0.0"];
+        Assert.False(result.Succeeded);
+        Assert.NotEmpty(result.Details);
+        Assert.Equal(StageState.Failed, Stage("1.0.0", StageKind.Verify).State);
+    }
+
+    [Fact]
+    public async Task NewBuildInSource_IsNextReleaseWithCreatePatchStep()
+    {
+        await CreateProjectWithBuild();
+        _dialogs.Prompts.Enqueue("1.0.0");
+        await _vm.CreatePatchCommand.ExecuteAsync(null);
+
+        // В папке билда появилась версия новее собранной (version holder + главный exe).
+        File.WriteAllText(Path.Combine(BuildDir, "TestApp.exe"), "");
+        File.WriteAllText(Path.Combine(BuildDir, "TestApp_vers.sptv"), "1.0.1");
+        _dialogs.Folders.Enqueue(BuildDir);
+        await _vm.BrowseBuildSourceCommand.ExecuteAsync(null);
+
+        var latest = _vm.Releases[0];
+        Assert.True(latest.IsNew);
+        Assert.Equal("1.0.1", latest.Version);
+        Assert.Equal(2, latest.Number);
+        Assert.Same(latest, _vm.SelectedRelease);
+        Assert.Equal("Создать патч", _vm.NextStepText);
+
+        // Старый выпуск — архивный: следующего шага у него нет.
+        _vm.SelectedRelease = _vm.Releases[1];
+        Assert.False(_vm.HasNextStep);
     }
 
     [Fact]
@@ -251,7 +320,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         File.WriteAllText(Path.Combine(BuildDir, "app.txt"), "v2");
         _dialogs.Prompts.Enqueue("1.0.1");
         await _vm.CreatePatchCommand.ExecuteAsync(null);
-        Assert.Equal("—", _vm.Versions.Single(v => v.Version == "1.0.1").Delivered); // собрана, но не доставлена
+        Assert.Equal(StageState.Pending, Stage("1.0.1", StageKind.Delivery).State); // собрана, но не доставлена
 
         await _vm.DeliverCommand.ExecuteAsync(null);
 
@@ -287,7 +356,7 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         await _vm.EditSettingsCommand.ExecuteAsync(null);
 
-        Assert.Equal("Проект: Renamed", _vm.ProjectTitle);
+        Assert.Equal("Renamed", _vm.ProjectName);
         Assert.Equal("http://host/dir/", _service.LoadSettings(ProjectDir).BaseDownloadURL);
     }
 }

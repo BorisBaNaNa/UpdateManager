@@ -62,23 +62,45 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     // --- состояние для отрисовки ---
 
-    public ObservableCollection<VersionRow> Versions { get; } = new();
+    /// <summary>Каталог выпусков открытого проекта, от нового к старому.</summary>
+    public ObservableCollection<ReleaseItem> Releases { get; } = new();
+
+    /// <summary>Пункты меню «Недавние».</summary>
     public ObservableCollection<RecentProjectItem> RecentProjects { get; } = new();
 
-    [ObservableProperty] private string _projectTitle = "";
+    /// <summary>Недавние проекты на стартовом экране (проект не открыт).</summary>
+    public ObservableCollection<RecentProjectCard> RecentCards { get; } = new();
+
+    [ObservableProperty] private string _windowTitle = "UpdateManager";
+    [ObservableProperty] private string _projectName = "";
+    [ObservableProperty] private string _projectPath = "";
     [ObservableProperty] private string _mainExecutableText = "";
     [ObservableProperty] private string _buildSource = "";
-    [ObservableProperty] private string _outputText = "";
+    [ObservableProperty] private string _serverText = "";
+    [ObservableProperty] private string _deliveryText = "";
+
+    [ObservableProperty] private ReleaseItem? _selectedRelease;
+
+    // Следующий шаг выбранного выпуска: одна главная кнопка вместо ряда равноправных.
+    [ObservableProperty] private string _nextStepText = "";
+    [ObservableProperty] private string _statusText = "";
+    [ObservableProperty] private bool _hasNextStep;
+    private NextStepKind _nextStep;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(BrowseBuildSourceCommand), nameof(OpenInExplorerCommand),
         nameof(EditSettingsCommand), nameof(DeliverCommand), nameof(VerifyCommand),
         nameof(ConfigureFtpCommand), nameof(GenerateKeysCommand))]
+    [NotifyPropertyChangedFor(nameof(IsStartScreen))]
     private bool _hasProject;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(CreatePatchCommand), nameof(PickMainExecutableCommand))]
     private bool _hasBuildSource;
+
+    public bool IsStartScreen => !HasProject;
+    public bool HasRecentCards => RecentCards.Count > 0;
+    public bool HasReleases => Releases.Count > 0;
 
     public bool IsLightTheme => _theme.Mode == AppTheme.Light;
     public bool IsDarkTheme => _theme.Mode == AppTheme.Dark;
@@ -315,6 +337,30 @@ public sealed partial class MainWindowViewModel : ObservableObject
         return directory;
     }
 
+    // Главная кнопка: выполняет следующий шаг выбранного выпуска.
+    [RelayCommand]
+    private async Task NextStep()
+    {
+        switch (_nextStep)
+        {
+            case NextStepKind.PickBuild:
+                await BrowseBuildSourceCommand.ExecuteAsync(null);
+                break;
+            case NextStepKind.PickExecutable:
+                await PickMainExecutableCommand.ExecuteAsync(null);
+                break;
+            case NextStepKind.CreatePatch:
+                await CreatePatchCommand.ExecuteAsync(null);
+                break;
+            case NextStepKind.Deliver:
+                await DeliverCommand.ExecuteAsync(null);
+                break;
+            case NextStepKind.Verify:
+                await VerifyCommand.ExecuteAsync(null);
+                break;
+        }
+    }
+
     // Отмечаем факт доставки за самой новой собранной версией: Output всегда содержит патч до неё.
     private void MarkDelivered()
     {
@@ -500,7 +546,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         try
         {
             Directory.CreateDirectory(tempDir);
-            await _dialogs.ShowOperationAsync(new PatchVerifier(tempDir, versionInfoUrl));
+            var verifier = new PatchVerifier(tempDir, versionInfoUrl);
+            await _dialogs.ShowOperationAsync(verifier);
+            MarkVerified(verifier);
         }
         finally
         {
@@ -514,6 +562,21 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 // не критично, если временную папку не удалить
             }
         }
+    }
+
+    // Итог проверки — за самой новой собранной версией: на сервере лежит патч до неё.
+    private void MarkVerified(IEngineOperation verifier)
+    {
+        var version = _service.GetMaxVersion(_project!.RootPath);
+        if (version == null)
+            return;
+
+        var details = verifier.Succeeded ? "" : verifier.ResultDetails;
+        if (!verifier.Succeeded && string.IsNullOrWhiteSpace(details))
+            details = "проверка прервана";
+        _project.Meta.VerifiedVersions[version] = new VerificationResult(DateTime.Now, verifier.Succeeded, details);
+        _project.Meta.Save(_project.RootPath);
+        ShowProject();
     }
 
     // --- настройки ---
@@ -710,6 +773,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             }
 
             _project.Meta.LastBuiltSettings = _service.BuildSettingsFingerprint(_project.RootPath);
+            _project.Meta.PatchedVersions[version] = DateTime.Now;
             _project.Meta.Save(_project.RootPath);
         }
 
@@ -790,102 +854,194 @@ public sealed partial class MainWindowViewModel : ObservableObject
         return Path.GetFileName(fullPath); // выбрали вне папки билда — берём только имя
     }
 
-    // Запомнить папку-источник (опц. сохранить в файл проекта), определить версию и показать.
+    // Запомнить папку-источник (опц. сохранить в файл проекта) и показать проект заново.
     private void ApplyBuildSource(string folder, bool persist)
     {
         _project!.Meta.LastBuildSource = folder;
         if (persist)
             _project.Meta.Save(_project.RootPath);
 
-        var build = _detector.Detect(folder, _project.Name, _project.Meta.MainExecutable);
-        RenderBuildSource(folder, build.ExecutableName, build.Version);
+        ShowProject();
     }
 
     private void RefreshRecent()
     {
         RecentProjects.Clear();
+        RecentCards.Clear();
         var paths = _recent.Load();
         if (paths.Count == 0)
-        {
             RecentProjects.Add(RecentProjectItem.Empty);
-            return;
-        }
 
         foreach (var path in paths)
-            RecentProjects.Add(new RecentProjectItem(path, OpenRecentCommand));
-    }
-
-    // Показать текущий проект: отрисовать + подхватить запомненный источник билда (с версией).
-    private void ShowProject()
-    {
-        RenderProject(_project!);
-        if (!string.IsNullOrEmpty(_project!.Meta.LastBuildSource))
-            ApplyBuildSource(_project.Meta.LastBuildSource, persist: false);
-    }
-
-    // --- отрисовка (бывшие методы IMainView) ---
-
-    private void RenderProject(UpdateProject project)
-    {
-        ProjectTitle = "Проект: " + project.Name;
-        MainExecutableText = "Главный exe: " +
-            (string.IsNullOrEmpty(project.Meta.MainExecutable) ? "—" : project.Meta.MainExecutable);
-        BuildSource = project.Meta.LastBuildSource ?? "";
-        HasProject = true;
-        HasBuildSource = !string.IsNullOrEmpty(project.Meta.LastBuildSource);
-        OutputText = project.OutputReady ? "Output/: патч готов" : "Output/: пусто";
-
-        var delivered = DeliveredDates(project);
-        Versions.Clear();
-        foreach (var v in project.Versions)
         {
-            Versions.Add(new VersionRow(
-                v.Version,
-                v.BuildDate.ToString("yyyy-MM-dd HH:mm"),
-                delivered.TryGetValue(v.Version, out var at) ? at.ToString("yyyy-MM-dd HH:mm") : "—"));
+            RecentProjects.Add(new RecentProjectItem(path, OpenRecentCommand));
+            RecentCards.Add(LoadRecentCard(path));
+        }
+        OnPropertyChanged(nameof(HasRecentCards));
+    }
+
+    // Карточка для стартового экрана: имя и последний выпуск. Битый/пропавший проект — не повод падать.
+    private RecentProjectCard LoadRecentCard(string path)
+    {
+        if (!_service.IsProjectFolder(path))
+            return new RecentProjectCard(path, null, null, OpenRecentCommand);
+
+        try
+        {
+            var project = _service.Open(path);
+            var releases = ReleaseCatalog.Build(project, null);
+            return new RecentProjectCard(path, project.Name, releases.FirstOrDefault(), OpenRecentCommand);
+        }
+        catch
+        {
+            return new RecentProjectCard(path, null, null, OpenRecentCommand);
         }
     }
 
-    // Даты доставки по версиям. Проекты без них (1.x и ранние 2.0) знают только время последней
-    // доставки — относим его к самой новой версии, собранной до неё, а не ко всем сразу.
-    private static Dictionary<string, DateTime> DeliveredDates(UpdateProject project)
-    {
-        var meta = project.Meta;
-        if (meta.DeliveredVersions.Count > 0 || !meta.LastDeliveredAt.HasValue)
-            return meta.DeliveredVersions;
+    // --- отрисовка ---
 
-        var legacy = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
-        var last = project.Versions.LastOrDefault(v => v.BuildDate <= meta.LastDeliveredAt.Value);
-        if (last != null)
-            legacy[last.Version] = meta.LastDeliveredAt.Value;
-        return legacy;
+    // Показать текущий проект: шапка, сведения, каталог выпусков (с новым билдом из папки-источника).
+    private void ShowProject()
+    {
+        var project = _project!;
+        var settings = _service.LoadSettings(project.RootPath);
+
+        ProjectName = project.Name;
+        ProjectPath = project.RootPath;
+        WindowTitle = "UpdateManager — " + project.Name;
+        HasProject = true;
+
+        var baseUrl = (settings.BaseDownloadURL ?? "").Trim();
+        ServerText = baseUrl.Length > 0 ? baseUrl : "не задан — укажите в настройках проекта";
+        DeliveryText = DescribeDelivery(project);
+
+        string? newVersion = null;
+        var newDetail = "";
+        var source = project.Meta.LastBuildSource ?? "";
+        HasBuildSource = source.Length > 0;
+        if (HasBuildSource)
+        {
+            BuildSource = source;
+            var build = _detector.Detect(source, project.Name, project.Meta.MainExecutable);
+            MainExecutableText = build.ExecutableName == null
+                ? "не найден — выберите вручную"
+                : build.ExecutableName + (build.Version != null ? " · " + build.Version : "");
+
+            // В папке билда версия новее собранных → это следующий выпуск, ещё без патча.
+            if (build.Version != null && VersionRules.IsValid(build.Version) &&
+                !_service.VersionExists(project.RootPath, build.Version) &&
+                !_service.IsBelowMaxVersion(project.RootPath, build.Version, out _))
+            {
+                newVersion = build.Version;
+                newDetail = Path.GetFileName(source.TrimEnd('\\', '/')) + "\\ · " + (build.ExecutableName ?? "");
+            }
+        }
+        else
+        {
+            BuildSource = "не выбран";
+            MainExecutableText = "—";
+        }
+
+        // Выбран архивный выпуск — остаёмся на нём; выбран последний — следуем за новым последним.
+        var keep = SelectedRelease is { IsLatest: false } ? SelectedRelease.Version : null;
+        Releases.Clear();
+        foreach (var release in ReleaseCatalog.Build(project, newVersion, newDetail))
+            Releases.Add(release);
+        OnPropertyChanged(nameof(HasReleases));
+
+        SelectedRelease = Releases.FirstOrDefault(r => r.Version == keep) ?? Releases.FirstOrDefault();
+        UpdateNextStep();
+    }
+
+    private string DescribeDelivery(UpdateProject project)
+    {
+        var delivery = project.Meta.Delivery;
+        if (delivery.Method != DeliveryMethods.Ftp)
+            return delivery.Path.Length > 0 ? "папка · " + delivery.Path : "не настроена";
+
+        var conn = _ftpStore.Load(project.RootPath);
+        if (conn == null || conn.Host.Length == 0)
+            return "FTP · сервер не задан";
+
+        return "FTP · " + conn.Host + DownloadUrl.CombineRemote(conn.RemotePath, GetUploadDirectory());
+    }
+
+    partial void OnSelectedReleaseChanged(ReleaseItem? value) => UpdateNextStep();
+
+    // Главная кнопка и строка состояния для выбранного выпуска.
+    private void UpdateNextStep()
+    {
+        var release = SelectedRelease;
+        _nextStep = NextStepKind.None;
+        StatusText = "";
+
+        if (!HasProject)
+        {
+        }
+        else if (release == null)
+        {
+            _nextStep = HasBuildSource ? NextStepKind.PickExecutable : NextStepKind.PickBuild;
+            StatusText = HasBuildSource
+                ? "Версия билда не определилась — укажите главный exe."
+                : "Версий пока нет. Начните с папки билда приложения.";
+        }
+        else if (!release.IsLatest)
+        {
+            StatusText = "Архивный выпуск: клиенты получают патч до более новой версии.";
+        }
+        else
+        {
+            var next = release.Platforms[0].NextStage;
+            if (next == null)
+            {
+                StatusText = "Выпуск собран, доставлен и проверен.";
+            }
+            else
+            {
+                (_nextStep, StatusText) = next.Kind switch
+                {
+                    StageKind.Build => (NextStepKind.PickBuild, "Выберите папку билда."),
+                    StageKind.Patch => (NextStepKind.CreatePatch, "Билд готов — соберите патч."),
+                    StageKind.Delivery => (NextStepKind.Deliver, "Патч собран — доставьте его на сервер."),
+                    _ => (NextStepKind.Verify, next.IsFailed
+                        ? "Проверка не прошла. Исправьте причину и проверьте снова."
+                        : "Патч на сервере — проверьте, что клиент его скачает.")
+                };
+            }
+        }
+
+        NextStepText = _nextStep switch
+        {
+            NextStepKind.PickBuild => "Выбрать папку билда…",
+            NextStepKind.PickExecutable => "Выбрать главный exe…",
+            NextStepKind.CreatePatch => "Создать патч",
+            NextStepKind.Deliver => "Доставить",
+            NextStepKind.Verify => release?.Platforms[0].NextStage?.IsFailed == true ? "Проверить снова" : "Проверить",
+            _ => ""
+        };
+        HasNextStep = _nextStep != NextStepKind.None;
     }
 
     private void RenderNoProject()
     {
-        ProjectTitle = "Проект: (не открыт)";
-        MainExecutableText = "Главный exe: —";
+        WindowTitle = "UpdateManager";
+        ProjectName = "";
+        ProjectPath = "";
+        MainExecutableText = "";
         BuildSource = "";
-        OutputText = "Output/: —";
-        Versions.Clear();
+        ServerText = "";
+        DeliveryText = "";
+        Releases.Clear();
+        OnPropertyChanged(nameof(HasReleases));
+        SelectedRelease = null;
         HasProject = false;
         HasBuildSource = false;
-    }
-
-    private void RenderBuildSource(string sourcePath, string? mainExecutable, string? version)
-    {
-        BuildSource = sourcePath ?? "";
-
-        MainExecutableText = mainExecutable == null
-            ? "Главный exe: не найден"
-            : "Главный exe: " + mainExecutable + (version != null ? " (" + version + ")" : "");
-
-        HasBuildSource = !string.IsNullOrEmpty(sourcePath);
+        UpdateNextStep();
     }
 }
 
-/// <summary>Строка списка версий.</summary>
-public sealed record VersionRow(string Version, string BuildDate, string Delivered);
+/// <summary>Что делает главная кнопка.</summary>
+public enum NextStepKind { None, PickBuild, PickExecutable, CreatePatch, Deliver, Verify }
 
 /// <summary>Пункт меню «Недавние». Пустой список — один неактивный пункт «(пусто)».</summary>
 public sealed class RecentProjectItem

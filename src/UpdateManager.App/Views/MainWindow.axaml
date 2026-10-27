@@ -2,12 +2,36 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:UpdateManager.App.ViewModels"
         xmlns:svc="using:UpdateManager.App.Services"
+        xmlns:views="using:UpdateManager.App.Views"
         x:Class="UpdateManager.App.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Title="UpdateManager"
+        Title="{Binding WindowTitle}"
         Icon="avares://UpdateManager/UpdateManagerIcon.ico"
-        Width="760" Height="520" MinWidth="640" MinHeight="440"
+        Width="1100" Height="700" MinWidth="720" MinHeight="520"
         WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <!-- Мини-полоса этапов одной платформы (каталог, недавние проекты). -->
+        <DataTemplate x:Key="ChipStrip" x:DataType="vm:PlatformTrack">
+            <ItemsControl ItemsSource="{Binding Stages}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="3" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:StageItem">
+                        <Border Classes="chip"
+                                Classes.build="{Binding IsBuild}" Classes.patch="{Binding IsPatch}"
+                                Classes.files="{Binding IsFiles}" Classes.delivery="{Binding IsDelivery}"
+                                Classes.verify="{Binding IsVerify}"
+                                Classes.done="{Binding IsDone}" Classes.failed="{Binding IsFailed}"
+                                ToolTip.Tip="{Binding ToolTipText}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </DataTemplate>
+    </Window.Resources>
 
     <DockPanel>
         <Menu DockPanel.Dock="Top">
@@ -26,7 +50,20 @@
                     </MenuItem.Styles>
                 </MenuItem>
                 <Separator />
+                <MenuItem Header="Настройки проекта…" Command="{Binding EditSettingsCommand}" />
+                <MenuItem Header="Открыть в проводнике" Command="{Binding OpenInExplorerCommand}" />
+                <Separator />
                 <MenuItem Header="Выход" Command="{Binding ExitCommand}" />
+            </MenuItem>
+            <MenuItem Header="Выпуск">
+                <MenuItem Header="Папка билда…" Command="{Binding BrowseBuildSourceCommand}" />
+                <MenuItem Header="Главный exe…" Command="{Binding PickMainExecutableCommand}" />
+                <Separator />
+                <MenuItem Header="Создать патч" Command="{Binding CreatePatchCommand}" />
+                <MenuItem Header="Доставить" Command="{Binding DeliverCommand}" />
+                <MenuItem Header="Проверить" Command="{Binding VerifyCommand}" />
+                <Separator />
+                <MenuItem Header="FTP-сервер…" Command="{Binding ConfigureFtpCommand}" />
             </MenuItem>
             <MenuItem Header="Безопасность">
                 <MenuItem Header="Сгенерировать RSA-ключи…" Command="{Binding GenerateKeysCommand}" />
@@ -47,69 +84,191 @@
             </MenuItem>
         </Menu>
 
-        <Grid Margin="12" RowDefinitions="Auto,*,Auto" ColumnDefinitions="*,12,340">
+        <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource HairlineBrush}" />
 
-            <!-- Заголовок проекта + действия с проектом -->
-            <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding ProjectTitle}"
-                       FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"
-                       TextTrimming="CharacterEllipsis" />
-            <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal" Spacing="6"
-                        HorizontalAlignment="Right">
-                <Button Content="Открыть в проводнике" Command="{Binding OpenInExplorerCommand}" />
-                <Button Content="Настройки" Command="{Binding EditSettingsCommand}" />
-            </StackPanel>
+        <Panel>
+            <!-- ===== Стартовый экран: проект не открыт ===== -->
+            <Grid ColumnDefinitions="340,*" IsVisible="{Binding IsStartScreen}">
+                <Border Grid.Column="0" Background="{DynamicResource PanelBrush}"
+                        BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,1,0">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Classes="caps" Text="НЕДАВНИЕ ПРОЕКТЫ" Margin="20,24,20,12" />
+                        <TextBlock DockPanel.Dock="Top" Classes="muted" TextWrapping="Wrap" Margin="20,0"
+                                   IsVisible="{Binding !HasRecentCards}"
+                                   Text="Здесь появятся проекты, которые вы создали или открыли." />
+                        <ListBox Classes="catalog" ItemsSource="{Binding RecentCards}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:RecentProjectCard">
+                                    <Button Background="Transparent" BorderThickness="0" Padding="0"
+                                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                            Command="{Binding OpenCommand}" CommandParameter="{Binding Path}"
+                                            ToolTip.Tip="{Binding Path}">
+                                        <StackPanel Spacing="3">
+                                            <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="SemiBold" />
+                                            <TextBlock Classes="muted" FontSize="12" Text="{Binding Path}"
+                                                       TextTrimming="PathSegmentEllipsis" />
+                                            <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                                                <TextBlock Grid.Column="0" Classes="muted number" FontSize="12"
+                                                           Text="{Binding Summary}" />
+                                                <ItemsControl Grid.Column="1" VerticalAlignment="Center"
+                                                              ItemsSource="{Binding LastRelease.Platforms, FallbackValue={x:Null}}"
+                                                              ItemTemplate="{StaticResource ChipStrip}" />
+                                            </Grid>
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+                </Border>
 
-            <!-- Версии -->
-            <HeaderedContentControl Grid.Row="1" Grid.Column="0" Classes="group" Margin="0,12,0,12"
-                                    Header="Версии (из Versions/)">
-                <Grid RowDefinitions="Auto,*">
-                    <Grid ColumnDefinitions="*,130,130" Margin="8,0,8,4" Opacity="0.7">
-                        <TextBlock Grid.Column="0" Text="Версия" />
-                        <TextBlock Grid.Column="1" Text="Дата сборки" />
-                        <TextBlock Grid.Column="2" Text="Доставлено" />
-                    </Grid>
-                    <ListBox Grid.Row="1" ItemsSource="{Binding Versions}">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:VersionRow">
-                                <Grid ColumnDefinitions="*,130,130">
-                                    <TextBlock Grid.Column="0" Text="{Binding Version}" />
-                                    <TextBlock Grid.Column="1" Text="{Binding BuildDate}" />
-                                    <TextBlock Grid.Column="2" Text="{Binding Delivered}" />
-                                </Grid>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </Grid>
-            </HeaderedContentControl>
+                <StackPanel Grid.Column="1" Margin="56,0" VerticalAlignment="Center" Spacing="8">
+                    <TextBlock Text="UpdateManager" FontSize="56" LetterSpacing="-1.5" />
+                    <TextBlock Classes="muted" FontSize="15" TextWrapping="Wrap" MaxWidth="460"
+                               HorizontalAlignment="Left"
+                               Text="Билд превращается в патч, патч — в обновление на сервере, а проверка подтверждает, что клиенты его скачают." />
+                    <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,28,0,0">
+                        <Button Classes="primary" Content="Создать проект…" Command="{Binding CreateProjectCommand}" />
+                        <Button Classes="quiet" Padding="18,10" FontSize="15" Content="Открыть проект…"
+                                Command="{Binding OpenProjectCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
 
-            <!-- Источник билда и сборка -->
-            <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,12,0,0" Spacing="6">
-                <TextBlock Text="Источник билда:" />
-                <Grid ColumnDefinitions="*,6,Auto">
-                    <TextBox Grid.Column="0" Text="{Binding BuildSource}" IsReadOnly="True" />
-                    <Button Grid.Column="2" Content="…" Width="40"
-                            Command="{Binding BrowseBuildSourceCommand}" />
-                </Grid>
-                <Grid ColumnDefinitions="*,6,Auto" Margin="0,6,0,0">
-                    <TextBlock Grid.Column="0" Text="{Binding MainExecutableText}"
-                               VerticalAlignment="Center" TextWrapping="Wrap" />
-                    <Button Grid.Column="2" Content="Выбрать exe…"
-                            Command="{Binding PickMainExecutableCommand}" />
-                </Grid>
-                <Button Content="Создать патч" Height="48" Margin="0,12,0,0"
-                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                        VerticalContentAlignment="Center" FontWeight="SemiBold"
-                        Command="{Binding CreatePatchCommand}" />
-            </StackPanel>
+            <!-- ===== Проект открыт: каталог выпусков + выбранный выпуск ===== -->
+            <Grid ColumnDefinitions="280,*" IsVisible="{Binding HasProject}">
+                <Border Grid.Column="0" Background="{DynamicResource PanelBrush}"
+                        BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,0,1,0">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top" Margin="20,22,20,14" Spacing="2">
+                            <TextBlock Text="{Binding ProjectName}" FontSize="17" FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Classes="muted" FontSize="12" Text="{Binding ProjectPath}"
+                                       TextTrimming="PathSegmentEllipsis" ToolTip.Tip="{Binding ProjectPath}" />
+                        </StackPanel>
+                        <TextBlock DockPanel.Dock="Top" Classes="caps" Text="ВЫПУСКИ" Margin="20,10,20,8" />
+                        <TextBlock DockPanel.Dock="Top" Classes="muted" Margin="20,4" TextWrapping="Wrap"
+                                   IsVisible="{Binding !HasReleases}" Text="Пока пусто." />
+                        <ListBox Classes="catalog" ItemsSource="{Binding Releases}"
+                                 SelectedItem="{Binding SelectedRelease}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ReleaseItem">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <StackPanel Grid.Column="0" Spacing="1">
+                                            <TextBlock Classes="number" Text="{Binding Version}" FontSize="15" />
+                                            <TextBlock Classes="muted number" FontSize="12" Text="{Binding NumberText}" />
+                                        </StackPanel>
+                                        <ItemsControl Grid.Column="1" VerticalAlignment="Center"
+                                                      ItemsSource="{Binding Platforms}"
+                                                      ItemTemplate="{StaticResource ChipStrip}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+                </Border>
 
-            <!-- Output и доставка -->
-            <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding OutputText}" VerticalAlignment="Center" />
-            <StackPanel Grid.Row="2" Grid.Column="2" Orientation="Horizontal" Spacing="6"
-                        HorizontalAlignment="Right">
-                <Button Content="FTP-сервер…" Command="{Binding ConfigureFtpCommand}" />
-                <Button Content="Доставить патч" Command="{Binding DeliverCommand}" />
-                <Button Content="Проверить" Command="{Binding VerifyCommand}" />
-            </StackPanel>
-        </Grid>
+                <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="44,32,44,36" Spacing="0" MaxWidth="980" HorizontalAlignment="Left">
+
+                        <!-- Номер версии — единственный заголовок; платформа и номер выпуска — сбоку. -->
+                        <WrapPanel IsVisible="{Binding HasReleases}">
+                            <TextBlock Classes="number" Text="{Binding SelectedRelease.Version, FallbackValue=''}"
+                                       FontSize="72" LetterSpacing="-2" Margin="0,0,20,0" />
+                            <TextBlock Classes="muted" FontSize="14" VerticalAlignment="Bottom" Margin="0,0,0,14"
+                                       Text="{Binding SelectedRelease.Kicker, FallbackValue=''}" />
+                        </WrapPanel>
+                        <TextBlock IsVisible="{Binding !HasReleases}" Text="Первый выпуск" FontSize="56"
+                                   LetterSpacing="-1.5" />
+
+                        <!-- Полосы этапов: по одной на платформу выпуска. -->
+                        <ItemsControl ItemsSource="{Binding SelectedRelease.Platforms, FallbackValue={x:Null}}"
+                                      Margin="0,24,0,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:PlatformTrack">
+                                    <ItemsControl ItemsSource="{Binding Stages}" Margin="0,0,0,8">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <views:StageGrid />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:StageItem">
+                                                <Border Classes="stage" Margin="0,0,6,6" Padding="14,12" MinHeight="112"
+                                                        Classes.build="{Binding IsBuild}" Classes.patch="{Binding IsPatch}"
+                                                        Classes.files="{Binding IsFiles}" Classes.delivery="{Binding IsDelivery}"
+                                                        Classes.verify="{Binding IsVerify}"
+                                                        Classes.done="{Binding IsDone}" Classes.failed="{Binding IsFailed}"
+                                                        ToolTip.Tip="{Binding ToolTipText}">
+                                                    <StackPanel Spacing="6">
+                                                        <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="SemiBold" />
+                                                        <TextBlock Classes="number" Text="{Binding Detail}" FontSize="12"
+                                                                   TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Следующий шаг -->
+                        <WrapPanel Margin="0,20,0,0">
+                            <Button Classes="primary" Content="{Binding NextStepText}" Margin="0,0,18,0"
+                                    IsVisible="{Binding HasNextStep}" Command="{Binding NextStepCommand}" />
+                            <TextBlock Classes="muted" FontSize="14" VerticalAlignment="Center" TextWrapping="Wrap"
+                                       Text="{Binding StatusText}" />
+                        </WrapPanel>
+
+                        <!-- Сведения о проекте: подпись · значение · действие -->
+                        <Border Height="1" Background="{DynamicResource HairlineBrush}" Margin="0,32,0,6" />
+                        <Grid ColumnDefinitions="150,*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                            <Grid.Styles>
+                                <Style Selector="Grid > TextBlock">
+                                    <Setter Property="Margin" Value="0,11" />
+                                    <Setter Property="VerticalAlignment" Value="Center" />
+                                </Style>
+                                <Style Selector="Grid > TextBlock.value">
+                                    <Setter Property="TextTrimming" Value="PathSegmentEllipsis" />
+                                    <Setter Property="Margin" Value="0,11,16,11" />
+                                    <Setter Property="ToolTip.Tip" Value="{Binding $self.Text}" />
+                                </Style>
+                                <Style Selector="Grid > Button">
+                                    <Setter Property="HorizontalAlignment" Value="Stretch" />
+                                    <Setter Property="HorizontalContentAlignment" Value="Center" />
+                                </Style>
+                            </Grid.Styles>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Classes="muted" Text="Папка билда" />
+                            <TextBlock Grid.Row="0" Grid.Column="1" Classes="value" Text="{Binding BuildSource}" />
+                            <Button Grid.Row="0" Grid.Column="2" Classes="quiet" Content="Выбрать…"
+                                    Command="{Binding BrowseBuildSourceCommand}" />
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Classes="muted" Text="Главный exe" />
+                            <TextBlock Grid.Row="1" Grid.Column="1" Classes="value number" Text="{Binding MainExecutableText}" />
+                            <Button Grid.Row="1" Grid.Column="2" Classes="quiet" Content="Выбрать…"
+                                    Command="{Binding PickMainExecutableCommand}" />
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Classes="muted" Text="Сервер" />
+                            <TextBlock Grid.Row="2" Grid.Column="1" Classes="value" Text="{Binding ServerText}"
+                                       TextTrimming="CharacterEllipsis" />
+                            <Button Grid.Row="2" Grid.Column="2" Classes="quiet" Content="Настройки…"
+                                    Command="{Binding EditSettingsCommand}" />
+
+                            <TextBlock Grid.Row="3" Grid.Column="0" Classes="muted" Text="Доставка" />
+                            <TextBlock Grid.Row="3" Grid.Column="1" Classes="value" Text="{Binding DeliveryText}" />
+                            <Button Grid.Row="3" Grid.Column="2" Classes="quiet" Content="FTP-сервер…"
+                                    Command="{Binding ConfigureFtpCommand}" />
+
+                            <TextBlock Grid.Row="4" Grid.Column="0" Classes="muted" Text="Папка проекта" />
+                            <TextBlock Grid.Row="4" Grid.Column="1" Classes="value" Text="{Binding ProjectPath}" />
+                            <Button Grid.Row="4" Grid.Column="2" Classes="quiet" Content="Открыть"
+                                    Command="{Binding OpenInExplorerCommand}" />
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Panel>
     </DockPanel>
 </Window>

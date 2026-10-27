@@ -3,16 +3,63 @@
              x:Class="UpdateManager.App.App"
              RequestedThemeVariant="Default">
 
-    <!-- Функциональная вёрстка (паритет с 1.x). Новый дизайн — отдельным этапом. -->
-    <Application.Styles>
-        <FluentTheme />
+    <!-- Дизайн «каталог»: матовая основа, тонкие линии, цвет — только у этапов выпуска.
+         Токены темы — здесь; цвета этапов одинаковы в обеих темах (это код, а не оформление). -->
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="GroundBrush" Color="#EFEFED" />
+                    <SolidColorBrush x:Key="PanelBrush" Color="#E5E5E3" />
+                    <SolidColorBrush x:Key="SelectedBrush" Color="#D6D6D3" />
+                    <SolidColorBrush x:Key="InkBrush" Color="#111111" />
+                    <SolidColorBrush x:Key="InkInverseBrush" Color="#F4F4F2" />
+                    <SolidColorBrush x:Key="MutedBrush" Color="#595957" />
+                    <SolidColorBrush x:Key="HairlineBrush" Color="#C9C9C6" />
+                    <SolidColorBrush x:Key="PendingBrush" Color="#9C9C99" />
+                    <SolidColorBrush x:Key="FailedBrush" Color="#C8262B" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="GroundBrush" Color="#111111" />
+                    <SolidColorBrush x:Key="PanelBrush" Color="#161616" />
+                    <SolidColorBrush x:Key="SelectedBrush" Color="#242424" />
+                    <SolidColorBrush x:Key="InkBrush" Color="#F2F2F0" />
+                    <SolidColorBrush x:Key="InkInverseBrush" Color="#111111" />
+                    <SolidColorBrush x:Key="MutedBrush" Color="#9B9B98" />
+                    <SolidColorBrush x:Key="HairlineBrush" Color="#2C2C2C" />
+                    <SolidColorBrush x:Key="PendingBrush" Color="#4D4D4B" />
+                    <SolidColorBrush x:Key="FailedBrush" Color="#FF5A4F" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
 
-        <!-- Рамка-группа вместо WinForms GroupBox. -->
+            <SolidColorBrush x:Key="StageBuildBrush" Color="#2E86AB" />
+            <SolidColorBrush x:Key="StagePatchBrush" Color="#F3B61F" />
+            <SolidColorBrush x:Key="StageFilesBrush" Color="#9B5DE5" />
+            <SolidColorBrush x:Key="StageDeliveryBrush" Color="#1FA39A" />
+            <SolidColorBrush x:Key="StageVerifyBrush" Color="#76B041" />
+            <!-- Текст на залитом блоке этапа: тёмный в обеих темах (цвета этапов светлые). -->
+            <SolidColorBrush x:Key="StageInkBrush" Color="#111111" />
+        </ResourceDictionary>
+    </Application.Resources>
+
+    <Application.Styles>
+        <FluentTheme>
+            <FluentTheme.Palettes>
+                <ColorPaletteResources x:Key="Light" Accent="#2E86AB" RegionColor="#EFEFED" />
+                <ColorPaletteResources x:Key="Dark" Accent="#2E86AB" RegionColor="#111111" />
+            </FluentTheme.Palettes>
+        </FluentTheme>
+
+        <Style Selector="Window">
+            <Setter Property="Background" Value="{DynamicResource GroundBrush}" />
+        </Style>
+
+        <!-- Рамка-группа вместо WinForms GroupBox (окна настроек/доставки). -->
         <Style Selector="HeaderedContentControl.group">
             <Setter Property="Template">
                 <ControlTemplate>
-                    <Border BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
-                            BorderThickness="1" CornerRadius="4" Padding="8">
+                    <Border BorderBrush="{DynamicResource HairlineBrush}"
+                            BorderThickness="1" Padding="8">
                         <DockPanel>
                             <TextBlock DockPanel.Dock="Top" Text="{TemplateBinding Header}"
                                        FontWeight="SemiBold" Margin="0,0,0,6" />
@@ -26,6 +73,138 @@
         <Style Selector="TextBlock.hint">
             <Setter Property="Opacity" Value="0.7" />
             <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+
+        <!-- Текст -->
+        <Style Selector="TextBlock.muted">
+            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+        </Style>
+        <Style Selector="TextBlock.caps">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="Medium" />
+            <Setter Property="LetterSpacing" Value="1.6" />
+            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+        </Style>
+        <Style Selector="TextBlock.number">
+            <Setter Property="FontFeatures" Value="+tnum" />
+        </Style>
+
+        <!-- Кнопки: прямые углы; главная — залитая краской, остальные — тонкий контур. -->
+        <Style Selector="Button">
+            <Setter Property="CornerRadius" Value="0" />
+        </Style>
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="{DynamicResource InkBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource InkInverseBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="Padding" Value="22,11" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style Selector="Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource InkBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource InkInverseBrush}" />
+            <Setter Property="Opacity" Value="0.86" />
+        </Style>
+        <Style Selector="Button.primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource InkBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource InkInverseBrush}" />
+            <Setter Property="Opacity" Value="0.72" />
+        </Style>
+        <Style Selector="Button.quiet">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="12,5" />
+        </Style>
+        <Style Selector="Button.quiet:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource PendingBrush}" />
+        </Style>
+        <Style Selector="Button.quiet:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource PendingBrush}" />
+        </Style>
+
+        <!-- Каталог: выделение — подложка, без цветных полос. -->
+        <Style Selector="ListBox.catalog">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style Selector="ListBox.catalog ListBoxItem">
+            <Setter Property="Padding" Value="20,11" />
+            <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}" />
+            <Setter Property="BorderThickness" Value="0,1,0,0" />
+        </Style>
+        <Style Selector="ListBox.catalog ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+        </Style>
+        <Style Selector="ListBox.catalog ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
+        </Style>
+
+        <!-- Блок этапа: цвет — этап, заливка — пройден, контур — ещё нет, красный контур — провал. -->
+        <Style Selector="Border.stage">
+            <Setter Property="BorderBrush" Value="{DynamicResource PendingBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="TextElement.Foreground" Value="{DynamicResource MutedBrush}" />
+        </Style>
+        <Style Selector="Border.stage.done">
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="TextElement.Foreground" Value="{StaticResource StageInkBrush}" />
+        </Style>
+        <Style Selector="Border.stage.done.build">
+            <Setter Property="Background" Value="{StaticResource StageBuildBrush}" />
+        </Style>
+        <Style Selector="Border.stage.done.patch">
+            <Setter Property="Background" Value="{StaticResource StagePatchBrush}" />
+        </Style>
+        <Style Selector="Border.stage.done.files">
+            <Setter Property="Background" Value="{StaticResource StageFilesBrush}" />
+        </Style>
+        <Style Selector="Border.stage.done.delivery">
+            <Setter Property="Background" Value="{StaticResource StageDeliveryBrush}" />
+        </Style>
+        <Style Selector="Border.stage.done.verify">
+            <Setter Property="Background" Value="{StaticResource StageVerifyBrush}" />
+        </Style>
+        <Style Selector="Border.stage.failed">
+            <Setter Property="BorderBrush" Value="{DynamicResource FailedBrush}" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="TextElement.Foreground" Value="{DynamicResource FailedBrush}" />
+        </Style>
+
+        <!-- Мини-полоса в каталоге: тот же код, без текста. -->
+        <Style Selector="Border.chip">
+            <Setter Property="Width" Value="14" />
+            <Setter Property="Height" Value="8" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="{DynamicResource PendingBrush}" />
+        </Style>
+        <Style Selector="Border.chip.done">
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style Selector="Border.chip.done.build">
+            <Setter Property="Background" Value="{StaticResource StageBuildBrush}" />
+        </Style>
+        <Style Selector="Border.chip.done.patch">
+            <Setter Property="Background" Value="{StaticResource StagePatchBrush}" />
+        </Style>
+        <Style Selector="Border.chip.done.files">
+            <Setter Property="Background" Value="{StaticResource StageFilesBrush}" />
+        </Style>
+        <Style Selector="Border.chip.done.delivery">
+            <Setter Property="Background" Value="{StaticResource StageDeliveryBrush}" />
+        </Style>
+        <Style Selector="Border.chip.done.verify">
+            <Setter Property="Background" Value="{StaticResource StageVerifyBrush}" />
+        </Style>
+        <Style Selector="Border.chip.failed">
+            <Setter Property="BorderBrush" Value="{DynamicResource FailedBrush}" />
+            <Setter Property="BorderThickness" Value="2" />
         </Style>
     </Application.Styles>
 </Application>
