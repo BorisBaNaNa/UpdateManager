@@ -28,7 +28,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var config = new SelfUpdateConfig("", "");
         _vm = new MainWindowViewModel(_dialogs, _service, _recent, new VersionDetector(),
             new FtpConnectionStore(Path.Combine(_root, "ftp.xml")), config,
-            new ThemeService(Path.Combine(_root, "theme.txt")), new SelfUpdateViewModel(_dialogs, config));
+            new ThemeService(Path.Combine(_root, "theme.txt")), NewSelfUpdate(config));
     }
 
     public void Dispose()
@@ -72,6 +72,9 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     // Стадия выпуска по типу (полоса Windows: Билд, Патч, Доставка, Проверка).
+    private SelfUpdateViewModel NewSelfUpdate(SelfUpdateConfig config) =>
+        new(_dialogs, config, new ReleaseNotesService(Path.Combine(_root, "whatsnew.txt"), () => Array.Empty<ReleaseNote>()));
+
     private StageItem Stage(string version, StageKind kind) =>
         _vm.Releases.Single(r => r.Version == version).Platforms[0].Stages.Single(s => s.Kind == kind);
 
@@ -280,7 +283,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var config = new SelfUpdateConfig("http://updates.example.com/UpdateManager/VersionInfo.info", "");
         var vm = new MainWindowViewModel(_dialogs, _service, _recent, new VersionDetector(),
             new FtpConnectionStore(Path.Combine(_root, "ftp.xml")), config,
-            new ThemeService(Path.Combine(_root, "theme.txt")), new SelfUpdateViewModel(_dialogs, config));
+            new ThemeService(Path.Combine(_root, "theme.txt")), NewSelfUpdate(config));
 
         _dialogs.Folders.Enqueue(ProjectDir);
         _dialogs.Prompts.Enqueue("UpdateManager");

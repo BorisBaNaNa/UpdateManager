@@ -8,17 +8,20 @@ namespace UpdateManager.App.ViewModels;
 
 /// <summary>
 /// Самообновление UpdateManager (порт SelfUpdatePresenter из 1.x): тихая проверка при старте +
-/// ручная из меню, скачивание в окне прогресса и перезапуск через self-patcher.
+/// ручная из меню, скачивание в окне прогресса и перезапуск через self-patcher. После обновления —
+/// один раз окно «Что нового» (и по «Справка → Что нового…»).
 /// </summary>
 public sealed partial class SelfUpdateViewModel : ObservableObject
 {
     private readonly IDialogService _dialogs;
     private readonly SelfUpdateConfig _config;
+    private readonly ReleaseNotesService _notes;
 
-    public SelfUpdateViewModel(IDialogService dialogs, SelfUpdateConfig config)
+    public SelfUpdateViewModel(IDialogService dialogs, SelfUpdateConfig config, ReleaseNotesService notes)
     {
         _dialogs = dialogs;
         _config = config;
+        _notes = notes;
     }
 
     /// <summary>Скачано и запущен self-patcher — приложение должно выйти, чтобы он подменил файлы.</summary>
@@ -32,12 +35,39 @@ public sealed partial class SelfUpdateViewModel : ObservableObject
     // Пользователь нажал «Проверить обновления…», пока шла фоновая проверка, — показать её итог.
     private bool _reportRunningCheck;
 
-    /// <summary>Окно впервые показано — время фоновой проверки.</summary>
-    public void OnStartup()
+    /// <summary>Окно впервые показано — «Что нового» (если версия новая), затем фоновая проверка.</summary>
+    public void OnStartup() => _ = StartupAsync();
+
+    private async Task StartupAsync()
     {
-        // Под отладчиком не проверяем сами: иначе обновление перезатрёт bin\Debug.
-        if (_config.IsEnabled && !Debugger.IsAttached)
-            _ = RunCheck(manual: false);
+        // Под отладчиком не показываем и не проверяем сами: отметка «показано» общая с установленной
+        // программой (в %AppData%), а обновление перезатёрло бы bin\Debug.
+        if (Debugger.IsAttached)
+            return;
+
+        await ShowWhatsNewIfUpdated(SelfIdentity.Version);
+        if (_config.IsEnabled)
+            await RunCheck(manual: false);
+    }
+
+    /// <summary>Заметки выпусков, которых эта установка ещё не показывала, — один раз.</summary>
+    public async Task ShowWhatsNewIfUpdated(string currentVersion)
+    {
+        var unseen = _notes.UnseenFor(currentVersion);
+        _notes.MarkSeen(currentVersion);
+        if (unseen.Count > 0)
+            await _dialogs.ShowReleaseNotesAsync(unseen, "Обновлено до " + VersionText(currentVersion));
+    }
+
+    // «Справка → Что нового…» — все заметки.
+    [RelayCommand]
+    private Task ShowReleaseNotes() =>
+        _dialogs.ShowReleaseNotesAsync(_notes.All(), "Версия " + VersionText(SelfIdentity.Version));
+
+    private static string VersionText(string version)
+    {
+        var v = ReleaseNotesService.Normalize(version);
+        return v == null ? version : $"{v.Major}.{v.Minor}.{v.Build}";
     }
 
     private bool CanCheck() => _config.IsEnabled;

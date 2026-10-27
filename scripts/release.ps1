@@ -3,6 +3,7 @@
   Выпуск новой версии UpdateManager: тесты → подъём версии → publish в Release/.
 
 .DESCRIPTION
+  0. Требует заметки выпуска docs/releases/X.Y.Z.md — они вшиваются в окно «Что нового» и идут в GitHub Release.
   1. Прогоняет тесты (до правки файлов — красные тесты ничего не меняют).
   2. Поднимает версию в Directory.Build.props: <Version> X.Y.Z и <FileVersion> X.Y.Z.0
      (FileVersion главного exe читает UpdateManager при сборке патча).
@@ -105,6 +106,12 @@ $nextText = Format-Version $next
 $fileVersion = "$nextText.0"
 Write-Host "текущая: $(Format-Version $current)" -ForegroundColor Cyan
 Write-Host "выпуск:  $nextText (FileVersion $fileVersion)" -ForegroundColor Cyan
+
+# Заметки выпуска вшиваются в программу (окно «Что нового») и идут в GitHub Release — пишутся ДО сборки.
+$NotesFile = Join-Path $RepoRoot "docs\releases\$nextText.md"
+if (-not (Test-Path $NotesFile)) {
+    throw "нет заметок выпуска $NotesFile — напишите их до сборки (формат — как docs\releases\2.0.0.md): они вшиваются в окно «Что нового» и идут в GitHub Release"
+}
 
 if ($DryRun) {
     Write-Host ""

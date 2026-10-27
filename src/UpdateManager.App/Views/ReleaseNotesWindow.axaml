@@ -1,0 +1,42 @@
+<v:DialogWindow xmlns="https://github.com/avaloniaui"
+                xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                xmlns:vm="using:UpdateManager.App.ViewModels"
+                xmlns:v="using:UpdateManager.App.Views"
+                xmlns:svc="using:UpdateManager.App.Services"
+                x:Class="UpdateManager.App.Views.ReleaseNotesWindow"
+                x:DataType="vm:ReleaseNotesViewModel"
+                Title="Что нового"
+                Width="680" Height="640" MinWidth="460" MinHeight="360"
+                ShowInTaskbar="False"
+                WindowStartupLocation="CenterOwner">
+
+    <DockPanel>
+        <Border DockPanel.Dock="Bottom" Classes="footer">
+            <Button Classes="primary" HorizontalAlignment="Right" Content="Закрыть"
+                    IsDefault="True" IsCancel="True" Command="{Binding DismissCommand}" />
+        </Border>
+
+        <StackPanel DockPanel.Dock="Top" Margin="32,24,32,0" Spacing="4">
+            <TextBlock Classes="heading" Text="Что нового" />
+            <TextBlock Classes="muted number" Text="{Binding Subtitle}" />
+            <Border Classes="rule" Margin="0,16,0,0" />
+        </StackPanel>
+
+        <!-- Выпуски от новых к старым, между ними — тонкая линия. Ширина строки ограничена для чтения. -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="32,22,32,28" MaxWidth="640" HorizontalAlignment="Left">
+                <TextBlock Classes="muted" IsVisible="{Binding IsEmpty}"
+                           Text="Заметок к выпускам пока нет." />
+                <ItemsControl ItemsSource="{Binding Notes}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="svc:ReleaseNote">
+                            <Border Classes="note">
+                                <v:MarkdownView Markdown="{Binding Markdown}" />
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</v:DialogWindow>

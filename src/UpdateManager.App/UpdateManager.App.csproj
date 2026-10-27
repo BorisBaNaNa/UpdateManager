@@ -34,6 +34,8 @@
     <AvaloniaResource Include="UpdateManagerIcon.ico" />
     <!-- Golos Text (SIL OFL 1.1, Assets/Fonts/OFL.txt): статические начертания 400/500/600 из вариативного. -->
     <AvaloniaResource Include="Assets\Fonts\*.ttf" />
+    <!-- Заметки выпусков (тот же текст, что в GitHub Release) — окно «Что нового» (ReleaseNotesService). -->
+    <EmbeddedResource Include="..\..\docs\releases\*.md" LogicalName="ReleaseNotes.%(Filename)%(Extension)" />
     <Content Include="Assets\Fonts\OFL.txt" Link="licenses\GolosText-OFL.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

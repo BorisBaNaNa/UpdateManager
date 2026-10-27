@@ -35,5 +35,8 @@ public interface IDialogService
     /// <summary>Выбор папки на FTP-сервере по реквизитам. null = отмена.</summary>
     Task<string?> BrowseFtpFolderAsync(FtpConnection connection);
 
+    /// <summary>Окно «Что нового»: заметки выпусков (от новых к старым) и строка под заголовком.</summary>
+    Task ShowReleaseNotesAsync(IReadOnlyList<ReleaseNote> notes, string subtitle);
+
     void OpenInExplorer(string path);
 }

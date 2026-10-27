@@ -101,6 +101,22 @@
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="TextWrapping" Value="Wrap" />
         </Style>
+        <!-- Номер версии в окне «Что нового»: крупно, но меньше номера выпуска главного окна. -->
+        <Style Selector="TextBlock.noteversion">
+            <Setter Property="FontSize" Value="32" />
+            <Setter Property="LetterSpacing" Value="-0.8" />
+        </Style>
+        <!-- Выпуски в «Что нового»: между соседними — тонкая линия. -->
+        <Style Selector="Border.note">
+            <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+            <Setter Property="Padding" Value="0,0,0,18" />
+            <Setter Property="Margin" Value="0,0,0,24" />
+        </Style>
+        <Style Selector="ItemsControl ContentPresenter:nth-last-child(1) Border.note">
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Margin" Value="0" />
+        </Style>
         <Style Selector="TextBlock.heading.failed">
             <Setter Property="Foreground" Value="{DynamicResource FailedBrush}" />
         </Style>

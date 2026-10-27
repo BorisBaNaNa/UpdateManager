@@ -22,6 +22,13 @@ public sealed class FakeDialogService : IDialogService
     public List<string> Errors { get; } = new();
     public List<string> Infos { get; } = new();
     public List<IEngineOperation> Operations { get; } = new();
+    public List<(IReadOnlyList<ReleaseNote> Notes, string Subtitle)> ReleaseNotes { get; } = new();
+
+    public Task ShowReleaseNotesAsync(IReadOnlyList<ReleaseNote> notes, string subtitle)
+    {
+        ReleaseNotes.Add((notes, subtitle));
+        return Task.CompletedTask;
+    }
 
     public bool IsBusy => false;
 

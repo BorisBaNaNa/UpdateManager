@@ -40,6 +40,7 @@ public partial class App : Application
 
         services.AddSingleton<IDialogService>(_ => new DialogService(mainWindow));
         services.AddSingleton<ThemeService>();
+        services.AddSingleton<ReleaseNotesService>();
         services.AddSingleton(_ => SelfUpdateConfig.Load());
 
         services.AddSingleton<ProjectService>();

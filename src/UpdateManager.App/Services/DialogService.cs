@@ -155,6 +155,9 @@ public sealed class DialogService : IDialogService
         return await ShowAsync(window) ? vm.SelectedPath : null;
     }
 
+    public Task ShowReleaseNotesAsync(IReadOnlyList<ReleaseNote> notes, string subtitle) =>
+        ShowAsync(new ReleaseNotesWindow { DataContext = new ReleaseNotesViewModel(notes, subtitle) });
+
     public void OpenInExplorer(string path)
     {
         Process.Start(new ProcessStartInfo("explorer.exe") { ArgumentList = { path } });
