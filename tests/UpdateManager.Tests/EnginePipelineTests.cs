@@ -79,6 +79,43 @@ public sealed class EnginePipelineTests : IDisposable
         Assert.True(reopened.OutputReady);
     }
 
+    // release.ps1 кладёт self-patcher в Release/SPPatcher — туда же его кладёт движок для self-patching
+    // приложения. Билд с такой папкой собирается, а клиент получает self-patcher проекта.
+    [Fact]
+    public void SelfPatchingBuildWithSelfPatcherFolder_BuildsAndDelivers()
+    {
+        var service = new ProjectService();
+        var projectDir = Path.Combine(_root, "project");
+        var buildDir = Path.Combine(_root, "build");
+        var clientDir = Path.Combine(_root, "client");
+        Directory.CreateDirectory(clientDir);
+
+        service.Create(projectDir, "TestApp");
+        var output = service.GetOutputPath(projectDir);
+        var settings = service.LoadSettings(projectDir);
+        settings.BaseDownloadURL = new Uri(output).AbsoluteUri;
+        settings.IsSelfPatchingApp = true;
+        service.SaveSettings(projectDir, settings);
+
+        var projectSelfPatcher = Path.Combine(projectDir, ProjectService.SelfPatcherFolder);
+        WriteBuild(buildDir, "first");
+        var buildSelfPatcher = Path.Combine(buildDir, "SPPatcher");
+        Directory.CreateDirectory(buildSelfPatcher);
+        foreach (var file in Directory.GetFiles(projectSelfPatcher))
+            File.Copy(file, Path.Combine(buildSelfPatcher, Path.GetFileName(file)));
+        // Даже если в билде self-patcher другой, движок кладёт в версию self-patcher проекта.
+        File.WriteAllText(Path.Combine(buildSelfPatcher, "SelfPatcher.exe"), "stale");
+
+        service.StageBuild(projectDir, buildDir, "1.0.0");
+        RunToEnd(new PatchBuilder(projectDir));
+
+        var versionInfoUrl = service.BuildVersionInfoUrl(service.LoadSettings(projectDir).BaseDownloadURL);
+        RunToEnd(new PatchVerifier(clientDir, versionInfoUrl));
+        foreach (var file in Directory.GetFiles(projectSelfPatcher))
+            Assert.Equal(File.ReadAllBytes(file),
+                File.ReadAllBytes(Path.Combine(clientDir, "SPPatcher", Path.GetFileName(file))));
+    }
+
     private static void WriteBuild(string dir, string marker)
     {
         if (Directory.Exists(dir))
