@@ -78,6 +78,12 @@
   `appsettings.json` (секция `SelfUpdate`). Билд самого UpdateManager распознаётся по
   ProductName/CompanyName (`SelfIdentity`) → предложение пресета (`IsSelfPatchingApp`, `BaseDownloadURL`,
   `IgnoredPaths`). Спек: `docs/superpowers/specs/2026-10-27-self-update-design.md`.
+- **Что нового** — заметки выпусков `docs/releases/X.Y.Z.md` (тот же текст, что в GitHub Release) вшиты
+  в exe (EmbeddedResource `ReleaseNotes.X.Y.Z.md`, `Services/ReleaseNotesService`). Окно `ReleaseNotesWindow`
+  (свой мини-рендер Markdown `Views/MarkdownView`: `##`, `###`, `- `, абзацы, `**жирный**`, `` `код` ``)
+  открывается само один раз после обновления — версии новее последней показанной
+  (`%AppData%\UpdateManager\whatsnew.txt`; нет файла — всё до текущей), затем идёт тихая проверка обновлений;
+  под отладчиком не показывается. И всегда — «Справка → Что нового…».
 - **Темы** (`Services/ThemeService`) — светлая/тёмная/«как в Windows»: Fluent + `RequestedThemeVariant`.
   Режим в `%AppData%\UpdateManager\theme.txt` — тот же файл, что у 1.x (недавние и `ftp.xml` тоже совместимы).
   Токены дизайна (фон, панель, краска, линии, цвета этапов) — `App.axaml` (ThemeDictionaries Light/Dark);
@@ -105,7 +111,8 @@ MVVM + доменный слой, домен не знает про UI:
 - Сборка: `dotnet build UpdateManager.sln`, `dotnet test tests/UpdateManager.Tests`; выкатка —
   `dotnet publish src/UpdateManager.App -p:PublishProfile=win-x64` → `Release/`
   (self-contained, без single-file — движок подменяет файлы по одному).
-- Выпуск: `scripts/release.ps1 patch|minor|major|-To X.Y.Z|-NoBump` — тесты → версия в
+- Выпуск: `scripts/release.ps1 patch|minor|major|-To X.Y.Z|-NoBump` — заметки `docs/releases/X.Y.Z.md`
+  обязательны (пишутся до сборки, иначе скрипт останавливается) → тесты → версия в
   `Directory.Build.props` → publish в `Release/` (папка очищается) → `Release/<Product>_vers.sptv` с версией
   X.Y.Z.0 (version holder движка: клиентский `CheckForUpdates(true)` и наш `VersionDetector`) → сверка FileVersion
   и наличия `Release/SPPatcher/SelfPatcher.exe`.
@@ -113,7 +120,7 @@ MVVM + доменный слой, домен не знает про UI:
 - **Каждый выпуск сопровождается тегом git**: когда патч собран, доставлен и проверен — коммит подъёма версии,
   затем аннотированный тег `vX.Y.Z` на коммите, из которого собран `Release/`
   (`git tag -a vX.Y.Z -m "UpdateManager X.Y.Z"`); по тегу пользователь публикует GitHub Release
-  (заголовок «UpdateManager vX.Y.Z.0», заметки — по темам, как у `v1.0.3`). Тег ставит Claude, push — пользователь.
+  (заголовок «UpdateManager vX.Y.Z.0», текст — `docs/releases/X.Y.Z.md`, по темам, как у `v1.0.3`). Тег ставит Claude, push — пользователь.
   Схема версий — SemVer из трёх чисел: новая возможность → minor, иначе patch.
   Скрипт — Windows PowerShell 5.1, сохранять в UTF-8 **с BOM** (иначе кириллица ломается).
 

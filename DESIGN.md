@@ -257,6 +257,9 @@ One grammar for every modal window.
 - **Operation:** heading = operation title, state in muted words below («Выполняется · 42 %», «Готово», «Завершилось с ошибкой»), a 4px Ink-on-Hairline progress bar; on failure the bar gives way to the reason in a 2px Failure Red outline (`failure`) above the log. The log is data, so it is monospace (Cascadia Mono / Consolas, 12px) on a flat Panel Grey field. «Прервать» is quiet while running; «Закрыть» becomes primary when done.
 - **Tree (FTP folders):** stock Fluent tree with selection as Selected Grey fill; a hairline status strip above the footer shows what is loading or the selected path.
 
+### Release Notes («Что нового»)
+A reading surface inside the dialog grammar: Title heading «Что нового» with a muted line under it («Обновлено до 2.0.1» / «Версия 2.0.1»), a hairline, then releases newest first, separated by hairlines. Each release opens with its version at 32px regular, tabular, -0.8 tracking (a smaller echo of the display number, never larger); `###` sections use the Title heading; bullets are an en dash in Muted in an 18px column; inline code is Cascadia Mono 13px. Text column capped at 640px for reading. One primary «Закрыть» in the footer.
+
 ### Stock Chrome
 The parts Fluent draws itself carry the palette too (overridden by resource key in `App.axaml`, per theme):
 - **Focus ring:** keyboard focus only; a 2px Ink outline with a 1px Ground gap inside (`SystemControlFocusVisualPrimaryBrush` / `SecondaryBrush`), square.
