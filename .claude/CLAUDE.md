@@ -143,7 +143,8 @@ MVVM + доменный слой, домен не знает про UI:
 
 - [PRODUCT.md](../PRODUCT.md) — продукт для дизайн-скилла: пользователи, сценарий, принципы, планы (Android).
 - [DESIGN.md](../DESIGN.md) — дизайн-система (мир «каталог»): токены, типографика, компоненты, диалоги.
-- [docs/superpowers/specs/](../docs/superpowers/specs/) — спеки 2.0 (переезд на Avalonia) и самообновления.
+- [docs/plan.md](docs/plan.md) — план: что дальше (самообновление, CLI, Android, FTPS), что сделано, от чего отказались.
+- [docs/superpowers/specs/](../docs/superpowers/specs/) — спеки 2.0 (переезд на Avalonia), самообновления и CLI выпуска.
 - `lib/README` — откуда DLL движка. Справочника по API SimplePatchTool в репозитории нет.
 
 ## Правила работы (от пользователя)
