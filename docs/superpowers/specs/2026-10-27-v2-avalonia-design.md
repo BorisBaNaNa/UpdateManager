@@ -1,6 +1,6 @@
 # UpdateManager 2.0 — Avalonia / .NET 10 — дизайн
 
-Статус: дизайн согласован 2026-10-27. Реализация: шаги 1, 3, 4 выполнены (см. «Порядок»).
+Статус: дизайн согласован 2026-10-27. Реализация: шаги 1–4 выполнены (см. «Порядок»).
 
 ## Цель
 
@@ -88,8 +88,7 @@ Directory.Build.props      версия 2.0.0, Product/Company (по ним Self
 1. ✅ Спайк: движок + Security под .NET 10 — `EnginePipelineTests` (создание → сборка 1.0.0 →
    RSA-подпись → «Проверить» через `file:///` → 1.0.1 инкрементальным патчем). Не проверено:
    self-patch (`Run(true)` → SelfPatcher.exe → перезапуск) — нужен ручной прогон на собранном exe.
-2. git: ветка `v1` + тег `v1.0.3` от `bff6795` (по команде пользователя). Пока 1.x (`UpdateManager/`)
-   лежит рядом в том же `UpdateManager.sln`; `dotnet build` всего .sln на нём падает (resx) — из VS собирается.
+2. ✅ git: ветка `v1` + тег `v1.0.3` от `bff6795`. 1.x (`UpdateManager/`, `lib/FluentFTP.dll`) удалён из `main`.
 3. ✅ Каркас солюшена, перенос Core, тесты Core.
 4. ✅ ViewModel'и + сервисы + функциональные экраны (раскладка как в 1.x). Отличия от 1.x в Core:
    `appsettings.json` вместо App.config; `SelfIdentity` — entry assembly и `Environment.ProcessPath`

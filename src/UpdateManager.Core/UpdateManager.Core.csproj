@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <!-- Доменный слой: проекты, сборка/проверка патча, доставка, подпись, самообновление.
-         Про UI не знает. Перенесён из 1.x (UpdateManager/Core) почти без изменений.
+         Про UI не знает. Перенесён из 1.x (ветка v1, UpdateManager/Core) почти без изменений.
          -windows: инструмент только под Windows (DPAPI, SelfPatcher.exe). -->
     <TargetFramework>net10.0-windows</TargetFramework>
     <RootNamespace>UpdateManager.Core</RootNamespace>
@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- lib/FluentFTP.dll — сборка под net472 для 1.x; здесь та же версия из NuGet. -->
+    <!-- Та же версия, что была вендорена в 1.x (lib/FluentFTP.dll под net472). -->
     <PackageReference Include="FluentFTP" Version="52.1.0" />
     <!-- DPAPI (SecretProtector): ftp.xml от 1.x читается как есть. -->
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.14" />

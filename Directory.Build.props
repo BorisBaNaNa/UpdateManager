@@ -1,6 +1,5 @@
 <Project>
-  <!-- Общие свойства 2.0 (src/ и tests/). Старый WinForms-проект UpdateManager/ — классический csproj
-       без генерации AssemblyInfo, эти свойства на него не влияют.
+  <!-- Общие свойства всех проектов (src/ и tests/).
 
        Product/Company — по ним SelfIdentity узнаёт билд самого UpdateManager (FileVersionInfo
        exe в папке билда) и предлагает пресет самообновления. Совпадают с 1.x. -->

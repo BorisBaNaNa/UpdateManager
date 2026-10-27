@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.36518.9
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UpdateManager", "UpdateManager\UpdateManager.csproj", "{B4478D0B-58D3-4C05-8C52-3063176C260E}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UpdateManager.Core", "src\UpdateManager.Core\UpdateManager.Core.csproj", "{F2AD29B2-3182-4454-82D0-04012EED118F}"
@@ -25,18 +23,6 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{B4478D0B-58D3-4C05-8C52-3063176C260E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B4478D0B-58D3-4C05-8C52-3063176C260E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B4478D0B-58D3-4C05-8C52-3063176C260E}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{B4478D0B-58D3-4C05-8C52-3063176C260E}.Debug|x64.Build.0 = Debug|Any CPU
-		{B4478D0B-58D3-4C05-8C52-3063176C260E}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{B4478D0B-58D3-4C05-8C52-3063176C260E}.Debug|x86.Build.0 = Debug|Any CPU
-		{B4478D0B-58D3-4C05-8C52-3063176C260E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B4478D0B-58D3-4C05-8C52-3063176C260E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B4478D0B-58D3-4C05-8C52-3063176C260E}.Release|x64.ActiveCfg = Release|Any CPU
-		{B4478D0B-58D3-4C05-8C52-3063176C260E}.Release|x64.Build.0 = Release|Any CPU
-		{B4478D0B-58D3-4C05-8C52-3063176C260E}.Release|x86.ActiveCfg = Release|Any CPU
-		{B4478D0B-58D3-4C05-8C52-3063176C260E}.Release|x86.Build.0 = Release|Any CPU
 		{F2AD29B2-3182-4454-82D0-04012EED118F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F2AD29B2-3182-4454-82D0-04012EED118F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F2AD29B2-3182-4454-82D0-04012EED118F}.Debug|x64.ActiveCfg = Debug|Any CPU

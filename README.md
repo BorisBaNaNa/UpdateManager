@@ -1,4 +1,4 @@
-﻿# UpdateManager
+# UpdateManager
 
 **UpdateManager** — Windows-утилита для создания и доставки патчей приложения с помощью **SimplePatchTool** и встроенного **SelfPatcher**.
 
@@ -23,14 +23,12 @@
 
 ## Требования
 
-* Windows.
-* .NET Framework 4.8.
-* Visual Studio с поддержкой проектов .NET Framework.
-* Для сборки проекта должны быть доступны библиотеки из папки `lib`:
+* Windows 10/11 x64. Готовая сборка self-contained — .NET ставить не нужно.
+* Для сборки из исходников: .NET SDK 10.
+* Библиотеки движка в папке `lib` (`SimplePatchTool.dll`, `SimplePatchToolSecurity.dll`);
+  остальные зависимости (Avalonia, FluentFTP, …) подтягиваются из NuGet.
 
-  * `SimplePatchTool.dll`
-  * `SimplePatchToolSecurity.dll`
-  * `FluentFTP.dll`
+Версия 1.x (WinForms, .NET Framework 4.8) — ветка `v1`, тег `v1.0.3`.
 
 ## Сборка проекта
 
@@ -40,26 +38,34 @@
 git clone https://github.com/BorisBaNaNa/UpdateManager.git
 ```
 
-2. Откройте решение:
+2. Соберите и запустите тесты (или откройте `UpdateManager.sln` в Rider / Visual Studio):
 
-```text
-UpdateManager.sln
+```bash
+dotnet build UpdateManager.sln
+dotnet test tests/UpdateManager.Tests
 ```
 
-3. Убедитесь, что папка `lib` находится рядом с папкой `UpdateManager`.
+3. Запуск из исходников:
 
-4. Соберите проект в конфигурации `Debug` или `Release`.
-
-После сборки исполняемый файл будет находиться в:
-
-```text
-UpdateManager/bin/Debug/
+```bash
+dotnet run --project src/UpdateManager.App
 ```
 
-или
+4. Сборка для выкатки (self-contained, win-x64):
+
+```bash
+dotnet publish src/UpdateManager.App -p:PublishProfile=win-x64
+```
+
+Результат — в `publish/UpdateManager/` (`UpdateManager.exe` + DLL + рантайм + `SelfPatcher/`).
+
+Структура репозитория:
 
 ```text
-UpdateManager/bin/Release/
+src/UpdateManager.Core/    доменный слой: проекты, сборка/проверка, доставка, подпись, самообновление
+src/UpdateManager.App/     UI на Avalonia (Views / ViewModels / Services)
+tests/UpdateManager.Tests/ тесты xUnit
+lib/                       DLL движка SimplePatchTool
 ```
 
 ## Основной сценарий использования
@@ -116,7 +122,7 @@ https://example.com/patches/MyApp/
 
 При создании проекта UpdateManager автоматически копирует встроенный `SelfPatcher` в папку проекта `SelfPatcher/`.
 
-Если в качестве билда выбран сам UpdateManager (совпали `ProductName` и `CompanyName` главного `.exe`), программа предложит применить настройки самообновления: включить `IsSelfPatchingApp`, взять `BaseDownloadURL` из своего `App.config` и добавить в `IgnoredPaths` `*.pdb`, `*.vshost.*` и логи движка.
+Если в качестве билда выбран сам UpdateManager (совпали `ProductName` и `CompanyName` главного `.exe`), программа предложит применить настройки самообновления: включить `IsSelfPatchingApp`, взять `BaseDownloadURL` из своего `appsettings.json` и добавить в `IgnoredPaths` `*.pdb`, `*.vshost.*` и логи движка.
 
 ## 3. Выбор папки билда
 
@@ -252,19 +258,21 @@ UpdateManager умеет обновлять сам себя тем же движ
 * Вручную: **Справка → Проверить обновления…** — всегда покажет результат или ошибку.
 * Если есть новая версия, программа предложит обновиться, скачает патч в окне прогресса и предложит перезапуск. Файлы подменяет `SelfPatcher` после закрытия программы, затем запускает её снова.
 
-Настройки — в `UpdateManager.exe.config`:
+Настройки — в `appsettings.json` рядом с `UpdateManager.exe`:
 
-```xml
-<appSettings>
-  <add key="SelfUpdate.VersionInfoUrl" value="http://updates.borealis-soft-home/UpdateManager/VersionInfo.info" />
-  <add key="SelfUpdate.PublicKey" value="" />
-</appSettings>
+```json
+{
+  "SelfUpdate": {
+    "VersionInfoUrl": "http://updates.borealis-soft-home/UpdateManager/VersionInfo.info",
+    "PublicKey": ""
+  }
+}
 ```
 
-* Пустой `SelfUpdate.VersionInfoUrl` — самообновление выключено.
-* `SelfUpdate.PublicKey` — содержимое `public.key` проекта; если задан, неподписанный или подделанный патч будет отвергнут.
+* Пустой `VersionInfoUrl` — самообновление выключено.
+* `PublicKey` — содержимое `public.key` проекта; если задан, неподписанный или подделанный патч будет отвергнут.
 
-Чтобы выпустить новую версию самого UpdateManager: создайте для него проект обновлений, примите предложенный пресет, соберите и доставьте патч в папку, на которую указывает `SelfUpdate.VersionInfoUrl`.
+Чтобы выпустить новую версию самого UpdateManager: создайте для него проект обновлений, примите предложенный пресет, соберите и доставьте патч в папку, на которую указывает `VersionInfoUrl`.
 
 ## Рекомендуемый порядок работы
 

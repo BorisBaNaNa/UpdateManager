@@ -4,7 +4,7 @@
 
 ## Что это
 
-**UpdateManager** — самостоятельное Windows-приложение (WinForms, .NET Framework 4.8) для
+**UpdateManager** — самостоятельное Windows-приложение (Avalonia, .NET 10) для
 **сборки патчей и заливки их на сервер обновлений**. Инструмент **универсальный**: он не привязан
 к конкретному приложению и должен уметь собирать патчи для любого проекта (указал папку билда →
 собрал патч → залил на сервер).
@@ -25,8 +25,12 @@
 
 ## Текущее состояние
 
-Рабочее приложение, сквозной цикл закрыт на догфуде (инструмент собирает патчи сам для себя в
-тестовом проекте). Реализовано:
+**Версия 2.0** (Avalonia / .NET 10) — функциональный паритет с 1.x; экраны пока повторяют раскладку
+1.x, новый дизайн — отдельным этапом. 1.x (WinForms, .NET Framework 4.8) живёт в ветке `v1`
+(тег `v1.0.3`), в `main` её нет. Спек 2.0 и статус по шагам:
+`docs/superpowers/specs/2026-10-27-v2-avalonia-design.md`.
+
+Реализовано (перенесено из 1.x):
 
 - **Создать / открыть / недавние проекты** (как IDE). Проект = папка движка (`Settings.xml`,
   `Versions/ Output/ SelfPatcher/ Other/`) + наш `updatemanager.project.xml` (мета: главный exe,
@@ -46,66 +50,63 @@
 - **Проверить** — клиентский `SimplePatchTool.Run()` реально качает патч во временную папку; ловит
   неверный/пустой `BaseDownloadURL`.
 - Защиты `BaseDownloadURL`: блок сборки при пустом; авто-добавление `/` при сохранении (движок клеит
-  ссылки без слеша). Встроенный self-patcher (`UpdateManager/SelfPatcher/`, Content → bin) кладётся в
-  каждый новый проект.
+  ссылки без слеша). Встроенный self-patcher (`src/UpdateManager.App/SelfPatcher/`, Content → bin)
+  кладётся в каждый новый проект.
 - **RSA-подпись** (`Core/Security/`) — «Безопасность → Сгенерировать RSA-ключи…»; `public.key`/`private.key`
   в корне проекта (не в `Output/`); при `SignPatch` манифесты подписываются после сборки (`PatchSigner`);
   приватный ключ можно залить коллегам в отдельную FTP-папку (`FtpKeyUploader`).
-- **Самообновление** (`Core/SelfUpdate/`, `SelfUpdatePresenter`) — тихая проверка при старте +
+- **Самообновление** (`Core/SelfUpdate/`, `SelfUpdateViewModel`) — тихая проверка при старте +
   «Справка → Проверить обновления…»; `Run(true)` в кэш → `ApplySelfPatch` → выход. URL и RSA-ключ —
-  `App.config` (`SelfUpdate.*`). Билд самого UpdateManager распознаётся по ProductName/CompanyName
-  (`SelfIdentity`) → предложение пресета (`IsSelfPatchingApp`, `BaseDownloadURL`, `IgnoredPaths`).
-  Спек: `docs/superpowers/specs/2026-10-27-self-update-design.md`.
-- **Темы** (`Forms/Theming/`) — светлая/тёмная/«как в Windows» (через реестр). Ручная темизация
-  WinForms: `ThemeManager.Apply` рекурсивно по контролам, меню через `ThemedToolStripRenderer`,
-  тёмная рамка окна через DWM, disabled-текст кнопок дорисовывается. Режим в `%AppData%\...\theme.txt`.
+  `appsettings.json` (секция `SelfUpdate`). Билд самого UpdateManager распознаётся по
+  ProductName/CompanyName (`SelfIdentity`) → предложение пресета (`IsSelfPatchingApp`, `BaseDownloadURL`,
+  `IgnoredPaths`). Спек: `docs/superpowers/specs/2026-10-27-self-update-design.md`.
+- **Темы** (`Services/ThemeService`) — светлая/тёмная/«как в Windows»: Fluent + `RequestedThemeVariant`.
+  Режим в `%AppData%\UpdateManager\theme.txt` — тот же файл, что у 1.x (недавние и `ftp.xml` тоже совместимы).
 
 Git инициализирован, история ведётся по шагам.
 
-## Переезд на 2.0 (Avalonia / .NET 10) — идёт
-
-Спек: `docs/superpowers/specs/2026-10-27-v2-avalonia-design.md` (там же статус по шагам).
-Рядом со старым `UpdateManager/` (1.x, WinForms) — новые проекты в том же `UpdateManager.sln`:
-`src/UpdateManager.Core` (Core 1.x почти без изменений), `src/UpdateManager.App` (Avalonia 12 +
-CommunityToolkit.Mvvm; `MainWindowViewModel` — порт `MainPresenter`, диалоги через `IDialogService`),
-`tests/UpdateManager.Tests` (xUnit v3). Экраны пока повторяют раскладку 1.x — дизайн отдельным этапом.
-
-- Сборка/тесты из CLI — по проектам: `dotnet test tests/UpdateManager.Tests`
-  (весь .sln через `dotnet build` падает на resx 1.x; из VS собирается).
-- Публикация: `dotnet publish src/UpdateManager.App -p:PublishProfile=win-x64` → `publish/UpdateManager/`.
-- Правки логики делать в 2.0; 1.x не трогать без просьбы.
-
 ## Архитектура
 
-MVP + доменный слой, инверсия зависимостей (домен не знает про WinForms):
+MVVM + доменный слой, домен не знает про UI:
 
-- `Forms/` — UI (реализуют `Views/IMainView`); `Presenters/MainPresenter` — логика окна; композиция
-  собирается в `Program.Main`.
-- `Core/` по подпапкам со строгими namespace'ами `UpdateManager.Core.*`: `Project/`, `Delivery/`,
-  `Operations/` (`IEngineOperation`, `PatchBuilder`, `PatchVerifier`), `Versioning/`, `Common/`,
-  `Security/`, `SelfUpdate/`.
+- `src/UpdateManager.Core` (`net10.0-windows`) — подпапки со строгими namespace'ами `UpdateManager.Core.*`:
+  `Project/`, `Delivery/`, `Operations/` (`IEngineOperation`, `PatchBuilder`, `PatchVerifier`),
+  `Versioning/`, `Common/`, `Security/`, `SelfUpdate/`. Код перенесён из 1.x почти без изменений
+  (блочные namespace, без nullable) — правя его, держать этот стиль.
+- `src/UpdateManager.App` (сборка `UpdateManager.exe`) — Avalonia 12 + CommunityToolkit.Mvvm:
+  `ViewModels/` (`MainWindowViewModel` — логика главного окна, `SelfUpdateViewModel`, VM диалогов на базе
+  `DialogViewModel`), `Views/` (окна на базе `DialogWindow`), `Services/` (`IDialogService` — все диалоги
+  для VM, `ThemeService`). Композиция — `App.axaml.cs` (Microsoft.Extensions.DependencyInjection).
+- `tests/UpdateManager.Tests` — xUnit v3: Core, VM с `FakeDialogService` и настоящим Core,
+  `EnginePipelineTests` — сквозной прогон движка (сборка → подпись → «Проверить» через `file:///`).
 - Настройки проекта движка правит только `Core/Project/ProjectService`; операции (`PatchBuilder`,
   `PatchVerifier`, `SelfUpdate*`) создают движковые объекты сами.
+- Версия/Product/Company — `Directory.Build.props` (по Product/Company `SelfIdentity` узнаёт себя).
+- Сборка: `dotnet build UpdateManager.sln`, `dotnet test tests/UpdateManager.Tests`; выкатка —
+  `dotnet publish src/UpdateManager.App -p:PublishProfile=win-x64` → `publish/UpdateManager/`
+  (self-contained, без single-file — движок подменяет файлы по одному).
 
 ## Осталось
 
-- Сквозной прогон самообновления (1.0.3 → 1.0.4 через `updates.borealis-soft-home`) — сервер пока
-  недоступен; заодно уточнить, где движок держит self-patcher на клиенте (`SPPatcher\` или наш `SelfPatcher\`).
+- Новый дизайн экранов (через дизайн-скилл).
+- Сквозной прогон самообновления 2.0 (`Run(true)` → SelfPatcher.exe → перезапуск) — тестами не покрыт;
+  сервер `updates.borealis-soft-home` пока недоступен; заодно уточнить, где движок держит self-patcher
+  на клиенте (`SPPatcher\` или наш `SelfPatcher\`).
 - FTPS/TLS для FTP-доставки (сейчас только обычный FTP) — при необходимости.
 
 ## Стек
 
-- C# / WinForms / .NET Framework 4.8 (классический `.csproj`, не SDK-style).
-- Движок патчей: SimplePatchTool (`SimplePatchToolCore`, `SimplePatchToolSecurity`).
-- FTP: **FluentFTP** (вендорится в `lib/FluentFTP.dll`, ссылка по HintPath — как DLL движка;
-  под net48 без доп. зависимостей). Шифрование секретов: DPAPI (`System.Security`).
+- C# / .NET 10 (`net10.0-windows`), SDK-style проекты; UI — Avalonia 12.1.2 (Fluent), CommunityToolkit.Mvvm.
+- Движок патчей: SimplePatchTool (`lib/`, CLR 2.0, HintPath). Подпись — `System.Security.Cryptography.Xml`.
+- FTP: FluentFTP 52.1.0 (NuGet). Шифрование секретов: DPAPI (`System.Security.Cryptography.ProtectedData`).
+- Тесты: xUnit v3.
 
 ## Документация
 
 - [docs/idea.md](docs/idea.md) — полная идея, мотивация, открытые вопросы.
 - [docs/engine-reference.md](docs/engine-reference.md) — API SimplePatchTool: `PatchCreator`,
   `PatchUpdater`, security, формат сервера, консольные команды.
-- [docs/plan.md](docs/plan.md) — предлагаемый план реализации по шагам.
+- [docs/plan.md](docs/plan.md) — предлагаемый план реализации по шагам (исторический, для 1.x).
 - [docs/source-project-context.md](docs/source-project-context.md) — как патчи устроены в
   проекте-доноре Interactive Book (пример интеграции: `ConnectionSettings`, build-хук, layout сервера).
 
