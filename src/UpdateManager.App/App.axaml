@@ -16,7 +16,7 @@
                     <SolidColorBrush x:Key="InkInverseBrush" Color="#F4F4F2" />
                     <SolidColorBrush x:Key="MutedBrush" Color="#595957" />
                     <SolidColorBrush x:Key="HairlineBrush" Color="#C9C9C6" />
-                    <SolidColorBrush x:Key="PendingBrush" Color="#9C9C99" />
+                    <SolidColorBrush x:Key="PendingBrush" Color="#8A8A87" />
                     <SolidColorBrush x:Key="FailedBrush" Color="#C8262B" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
@@ -27,7 +27,7 @@
                     <SolidColorBrush x:Key="InkInverseBrush" Color="#111111" />
                     <SolidColorBrush x:Key="MutedBrush" Color="#9B9B98" />
                     <SolidColorBrush x:Key="HairlineBrush" Color="#2C2C2C" />
-                    <SolidColorBrush x:Key="PendingBrush" Color="#4D4D4B" />
+                    <SolidColorBrush x:Key="PendingBrush" Color="#686866" />
                     <SolidColorBrush x:Key="FailedBrush" Color="#FF5A4F" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
@@ -39,6 +39,10 @@
             <SolidColorBrush x:Key="StageVerifyBrush" Color="#76B041" />
             <!-- Текст на залитом блоке этапа: тёмный в обеих темах (цвета этапов светлые). -->
             <SolidColorBrush x:Key="StageInkBrush" Color="#111111" />
+
+            <!-- Прямые углы и у стандартных элементов Fluent (меню, подсказки, поля). -->
+            <CornerRadius x:Key="ControlCornerRadius">0</CornerRadius>
+            <CornerRadius x:Key="OverlayCornerRadius">0</CornerRadius>
         </ResourceDictionary>
     </Application.Resources>
 
@@ -143,6 +147,11 @@
         <Style Selector="ListBox.catalog ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
+        </Style>
+
+        <!-- Недавний проект, чья папка пропала: приглушён, клик предлагает убрать из списка. -->
+        <Style Selector="Button.missing">
+            <Setter Property="Opacity" Value="0.55" />
         </Style>
 
         <!-- Блок этапа: цвет — этап, заливка — пройден, контур — ещё нет, красный контур — провал. -->

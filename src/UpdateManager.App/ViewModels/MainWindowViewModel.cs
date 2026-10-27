@@ -79,6 +79,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string _serverText = "";
     [ObservableProperty] private string _deliveryText = "";
 
+    /// <summary>Самый свежий из живых недавних проектов — главный элемент стартового экрана.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasFeaturedRecent))]
+    private RecentProjectCard? _featuredRecent;
+
+    public bool HasFeaturedRecent => FeaturedRecent != null;
+
     [ObservableProperty] private ReleaseItem? _selectedRelease;
 
     // Следующий шаг выбранного выпуска: одна главная кнопка вместо ряда равноправных.
@@ -90,7 +97,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(BrowseBuildSourceCommand), nameof(OpenInExplorerCommand),
         nameof(EditSettingsCommand), nameof(DeliverCommand), nameof(VerifyCommand),
-        nameof(ConfigureFtpCommand), nameof(GenerateKeysCommand))]
+        nameof(ConfigureFtpCommand), nameof(ConfigureDeliveryCommand), nameof(GenerateKeysCommand))]
     [NotifyPropertyChangedFor(nameof(IsStartScreen))]
     private bool _hasProject;
 
@@ -370,6 +377,34 @@ public sealed partial class MainWindowViewModel : ObservableObject
         if (version != null)
             _project.Meta.DeliveredVersions[version] = now;
         _project.Meta.Save(_project.RootPath);
+        ShowProject();
+    }
+
+    // «Настроить…» в строке доставки: метод и путь без самой доставки; для FTP — сразу реквизиты.
+    [RelayCommand(CanExecute = nameof(HasProject))]
+    private async Task ConfigureDelivery()
+    {
+        if (_project == null)
+            return;
+
+        var config = await _dialogs.ConfigureDeliveryAsync(_project.Meta.Delivery);
+        if (config == null)
+            return; // отмена
+
+        _project.Meta.Delivery = config;
+        _project.Meta.Save(_project.RootPath);
+
+        if (config.Method == DeliveryMethods.Ftp)
+        {
+            var conn = _ftpStore.Load(_project.RootPath);
+            if (conn == null || !conn.IsComplete() || conn.PasswordDecryptFailed)
+            {
+                await WarnIfPasswordUndecryptable(conn);
+                conn = await _dialogs.ConfigureFtpAsync(conn ?? new FtpConnection(), GetUploadDirectory());
+                if (conn != null)
+                    _ftpStore.Save(_project.RootPath, conn);
+            }
+        }
         ShowProject();
     }
 
@@ -878,6 +913,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             RecentCards.Add(LoadRecentCard(path));
         }
         OnPropertyChanged(nameof(HasRecentCards));
+        FeaturedRecent = RecentCards.FirstOrDefault(c => !c.IsMissing);
     }
 
     // Карточка для стартового экрана: имя и последний выпуск. Битый/пропавший проект — не повод падать.
@@ -938,7 +974,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
         else
         {
-            BuildSource = "не выбран";
+            BuildSource = "не выбрана";
             MainExecutableText = "—";
         }
 
@@ -1004,7 +1040,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
                     StageKind.Patch => (NextStepKind.CreatePatch, "Билд готов — соберите патч."),
                     StageKind.Delivery => (NextStepKind.Deliver, "Патч собран — доставьте его на сервер."),
                     _ => (NextStepKind.Verify, next.IsFailed
-                        ? "Проверка не прошла. Исправьте причину и проверьте снова."
+                        ? "Проверка не прошла: " + string.Join(" ", next.Reason.Split('\n',
+                              StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)).TrimEnd('.') + ".\n" +
+                          "Проверьте адрес сервера в настройках и что патч доставлен, затем проверьте снова."
                         : "Патч на сервере — проверьте, что клиент его скачает.")
                 };
             }

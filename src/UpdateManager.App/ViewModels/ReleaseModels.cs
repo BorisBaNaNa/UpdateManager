@@ -11,16 +11,20 @@ public enum StageState { Pending, Done, Failed }
 /// <summary>Один блок полосы этапов: что за этап, пройден ли и короткая подпись к нему.</summary>
 public sealed class StageItem
 {
-    public StageItem(StageKind kind, StageState state, string detail, string fullDetail = "")
+    public StageItem(StageKind kind, StageState state, string detail, string fullDetail = "", string reason = "")
     {
         Kind = kind;
         State = state;
         Detail = detail;
         FullDetail = fullDetail.Length > 0 ? fullDetail : detail;
+        Reason = reason;
     }
 
     public StageKind Kind { get; }
     public StageState State { get; }
+
+    /// <summary>Причина провала целиком (пусто, если этап не провален).</summary>
+    public string Reason { get; }
 
     /// <summary>Короткая подпись в блоке: дата или причина в одну строку.</summary>
     public string Detail { get; }
@@ -63,6 +67,18 @@ public sealed class PlatformTrack
 
     /// <summary>Первый непройденный этап (null — выпуск по этой платформе завершён).</summary>
     public StageItem? NextStage => Stages.FirstOrDefault(s => s.State != StageState.Done);
+
+    /// <summary>Состояние словами — цвет полосы никогда не единственный носитель.</summary>
+    public string StateText => NextStage switch
+    {
+        null => "проверен",
+        { Kind: StageKind.Build } => "нет билда",
+        { Kind: StageKind.Patch } => "патч не собран",
+        { Kind: StageKind.Files } => "файлы не созданы",
+        { Kind: StageKind.Delivery } => "не доставлен",
+        { IsFailed: true } => "проверка не прошла",
+        _ => "не проверялся"
+    };
 }
 
 /// <summary>Запись каталога: выпуск (версия) со своим номером и полосами этапов по платформам.</summary>
@@ -90,6 +106,14 @@ public sealed class ReleaseItem
 
     public string NumberText => IsNew ? "новый" : "№ " + Number;
 
+    /// <summary>Состояние выпуска словами; при нескольких платформах — по каждой.</summary>
+    public string StateText => Platforms.Count == 1
+        ? Platforms[0].StateText
+        : string.Join(", ", Platforms.Select(p => p.Platform + ": " + p.StateText));
+
+    /// <summary>Вторая строка записи каталога: «№ 5 · проверка не прошла».</summary>
+    public string CatalogLine => NumberText + " · " + StateText;
+
     public string Kicker => string.Join(" · ", Platforms.Select(p => p.Platform)) +
         (IsNew ? " · новый билд" : " · выпуск " + Number);
 }
@@ -115,9 +139,9 @@ public sealed class RecentProjectCard
     public bool IsMissing { get; }
 
     public string Title => Name.Length > 0 ? Name : System.IO.Path.GetFileName(Path.TrimEnd('\\', '/'));
-    public string Summary => IsMissing ? "папка не найдена"
+    public string Summary => IsMissing ? "папка не найдена — нажмите, чтобы убрать из списка"
         : LastRelease == null ? "версий пока нет"
-        : LastRelease.Version + " · " + string.Join(", ", LastRelease.Platforms.Select(p => p.Platform));
+        : LastRelease.Version + " · " + LastRelease.StateText;
 }
 
 /// <summary>
@@ -171,7 +195,7 @@ public static class ReleaseCatalog
                 stages.Add(check.Succeeded
                     ? new StageItem(StageKind.Verify, StageState.Done, "прошла " + Stamp(check.At))
                     : new StageItem(StageKind.Verify, StageState.Failed, "не прошла " + Stamp(check.At) + "\n" + FirstLine(check.Details),
-                        "не прошла " + Stamp(check.At) + "\n" + check.Details));
+                        "не прошла " + Stamp(check.At) + "\n" + check.Details, check.Details.Trim()));
             }
             else
             {

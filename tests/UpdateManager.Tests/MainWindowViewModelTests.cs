@@ -331,6 +331,20 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task ConfigureDelivery_SavesMethodWithoutDelivering()
+    {
+        await CreateProjectWithBuild();
+        var target = Path.Combine(_root, "server");
+        _dialogs.DeliveryAnswer = _ => new DeliveryConfig { Method = DeliveryMethods.Folder, Path = target };
+
+        await _vm.ConfigureDeliveryCommand.ExecuteAsync(null);
+
+        Assert.Equal(target, ProjectMeta.Load(ProjectDir).Delivery.Path);
+        Assert.False(Directory.Exists(target)); // только настройка, без доставки
+        Assert.Equal("папка · " + target, _vm.DeliveryText);
+    }
+
+    [Fact]
     public async Task OpenRecent_MissingFolderIsOfferedForRemoval()
     {
         var missing = Path.Combine(_root, "gone");
