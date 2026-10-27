@@ -18,7 +18,7 @@
 | UI | Avalonia 12.1.2 + Fluent, MVVM на CommunityToolkit.Mvvm 8.4.1 (версии — как в соседних проектах пользователя) |
 | Репозиторий | 2.0 на `main`; 1.x — ветка `v1` + тег `v1.0.3` от `bff6795` (по команде пользователя) |
 | Самообновление в 1.x | Нет и не будет. Незакоммиченная реализация самообновления (WinForms) — исходник для переноса в 2.0 |
-| Сервер | `http://updates.borealis-soft-home/UpdateManager/VersionInfo.info` (каналы не делим — у 1.x обновлений нет) |
+| Сервер | `https://updates.borealis-soft-home.duckdns.org:51943/UpdateManager/VersionInfo.info` — только HTTPS (на `http://` порт отвечает 400); каналы не делим — у 1.x обновлений нет |
 | Объём | Паритет + xUnit-тесты + новый дизайн отдельным этапом через дизайн-скилл |
 | Движок | SimplePatchTool остаётся (DLL под CLR 2.0, `lib/`, HintPath) |
 

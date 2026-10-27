@@ -274,7 +274,7 @@ UpdateManager умеет обновлять сам себя тем же движ
 ```json
 {
   "SelfUpdate": {
-    "VersionInfoUrl": "http://updates.borealis-soft-home/UpdateManager/VersionInfo.info",
+    "VersionInfoUrl": "https://updates.borealis-soft-home.duckdns.org:51943/UpdateManager/VersionInfo.info",
     "PublicKey": ""
   }
 }
