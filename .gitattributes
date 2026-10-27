@@ -1,0 +1,2 @@
+# sh-лаунчер Impeccable: с CRLF (core.autocrlf=true) он не запустится в sh/Git Bash
+.claude/skills/impeccable/scripts/impeccable text eol=lf
