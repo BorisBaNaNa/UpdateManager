@@ -1,10 +1,11 @@
-using System;
+﻿using System;
 using System.IO;
 using UpdateManager.Core.Common;
 using UpdateManager.Core.Delivery;
 using UpdateManager.Core.Operations;
 using UpdateManager.Core.Project;
 using UpdateManager.Core.Security;
+using UpdateManager.Core.SelfUpdate;
 using UpdateManager.Core.Versioning;
 using UpdateManager.Views;
 
@@ -21,6 +22,7 @@ namespace UpdateManager.Presenters
         private readonly RecentProjectsStore _recent;
         private readonly VersionDetector _detector;
         private readonly FtpConnectionStore _ftpStore;
+        private readonly SelfUpdateConfig _selfUpdateConfig;
 
         // Помощники подписи RSA — без состояния/конфига, создаём на месте (как PatchBuilder и пр.).
         private readonly RsaKeyManager _keys = new RsaKeyManager();
@@ -35,13 +37,14 @@ namespace UpdateManager.Presenters
             "Выберите отдельную папку с билдом приложения.";
 
         public MainPresenter(IMainView view, ProjectService service, RecentProjectsStore recent,
-            VersionDetector detector, FtpConnectionStore ftpStore)
+            VersionDetector detector, FtpConnectionStore ftpStore, SelfUpdateConfig selfUpdateConfig)
         {
             _view = view;
             _service = service;
             _recent = recent;
             _detector = detector;
             _ftpStore = ftpStore;
+            _selfUpdateConfig = selfUpdateConfig;
 
             _view.CreateProjectRequested += OnCreateProject;
             _view.OpenProjectRequested += OnOpenProject;
@@ -523,6 +526,7 @@ namespace UpdateManager.Presenters
                 _project.Meta.MainExecutable = "";
 
             ApplyBuildSource(folder, persist: true);
+            OfferSelfPreset(folder);
         }
 
         private void OnCreatePatch(object sender, EventArgs e)
@@ -555,6 +559,15 @@ namespace UpdateManager.Presenters
                     "Укажите его в настройках проекта и соберите снова.");
                 return;
             }
+
+            // Защита: билд самого UpdateManager без self-patching-режима — клиент попытается
+            // перезаписать собственный запущенный exe, и самообновление сломается.
+            if (!settings.IsSelfPatchingApp && IsSelfBuild(source) &&
+                !_view.Confirm("Это билд самого UpdateManager, но IsSelfPatchingApp выключен.\n" +
+                    "Без него клиент попытается перезаписать запущенный exe — самообновление не сработает.\n" +
+                    "Включите его в настройках проекта.\n\n" +
+                    "Всё равно собрать?"))
+                return;
 
             // Защита: снят каждый тип патча — собирать нечего, патч бесполезен (клиент не обновится).
             if (!settings.CreateRepairPatch && !settings.CreateInstallerPatch && !settings.CreateIncrementalPatch)
@@ -682,6 +695,44 @@ namespace UpdateManager.Presenters
 
             // Переопределяем версию с выбранным главным exe.
             ApplyBuildSource(folder, persist: false);
+            OfferSelfPreset(folder);
+        }
+
+        // Билд — это сам UpdateManager, а проект ещё не настроен на самообновление? Предложить пресет.
+        // Только с согласия: тихо настройки не меняем.
+        private void OfferSelfPreset(string buildFolder)
+        {
+            if (!IsSelfBuild(buildFolder))
+                return;
+
+            var settings = _service.LoadSettings(_project.RootPath);
+            if (SelfProjectPreset.IsApplied(settings))
+                return;
+
+            var baseUrl = _selfUpdateConfig.BaseDownloadUrl.Length > 0 ? _selfUpdateConfig.BaseDownloadUrl : "(не меняется)";
+            if (!_view.Confirm("Похоже, это билд самого UpdateManager.\n" +
+                "Применить настройки самообновления?\n\n" +
+                "• IsSelfPatchingApp — включить\n" +
+                "• BaseDownloadURL — " + baseUrl + "\n" +
+                "• IgnoredPaths — добавить *.pdb, *.vshost.*, логи движка"))
+                return;
+
+            SelfProjectPreset.Apply(settings, _selfUpdateConfig);
+            try
+            {
+                _service.SaveSettings(_project.RootPath, settings);
+            }
+            catch (Exception ex)
+            {
+                _view.ShowError("Не удалось сохранить настройки:\n" + ex.Message);
+            }
+        }
+
+        private bool IsSelfBuild(string buildFolder)
+        {
+            var build = _detector.Detect(buildFolder, _project.Name, _project.Meta.MainExecutable);
+            return build.ExecutableName != null &&
+                SelfIdentity.IsSelf(Path.Combine(buildFolder, build.ExecutableName));
         }
 
         private static string MakeRelativeToBuild(string buildFolder, string fullPath)

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Windows.Forms;
@@ -14,7 +14,7 @@ namespace UpdateManager.Forms
     /// Главное окно. Реализует IMainView: пробрасывает действия пользователя в события
     /// и умеет отрисовать состояние. Вся логика — в презентере, форма "тупая".
     /// </summary>
-    public partial class MainForm : Form, IMainView
+    public partial class MainForm : Form, IMainView, ISelfUpdateView
     {
         public MainForm()
         {
@@ -34,6 +34,8 @@ namespace UpdateManager.Forms
             btnVerify.Click += (s, e) => VerifyRequested?.Invoke(this, EventArgs.Empty);
             btnFtpServer.Click += (s, e) => ConfigureFtpRequested?.Invoke(this, EventArgs.Empty);
             generateKeysMenuItem.Click += (s, e) => GenerateKeysRequested?.Invoke(this, EventArgs.Empty);
+            checkUpdatesMenuItem.Click += (s, e) => CheckSelfUpdateRequested?.Invoke(this, EventArgs.Empty);
+            Shown += (s, e) => ViewShown?.Invoke(this, EventArgs.Empty);
 
             ThemeManager.Register(this);
             themeLightItem.Click += (s, e) => SetTheme(AppTheme.Light);
@@ -69,6 +71,26 @@ namespace UpdateManager.Forms
         public event EventHandler VerifyRequested;
         public event EventHandler ConfigureFtpRequested;
         public event EventHandler GenerateKeysRequested;
+        public event EventHandler ViewShown;
+        public event EventHandler CheckSelfUpdateRequested;
+
+        // --- ISelfUpdateView ---
+
+        // Модальный диалог (MessageBox/ShowDialog) отключает окно-владельца — по этому и узнаём.
+        public bool IsBusy
+        {
+            get { return !CanFocus; }
+        }
+
+        public void SetSelfUpdateAvailable(bool available)
+        {
+            checkUpdatesMenuItem.Enabled = available;
+        }
+
+        public void CloseApplication()
+        {
+            Close();
+        }
 
         // --- IMainView: отрисовка ---
 

@@ -1,4 +1,4 @@
-namespace UpdateManager.Forms
+﻿namespace UpdateManager.Forms
 {
     partial class MainForm
     {
@@ -43,6 +43,8 @@ namespace UpdateManager.Forms
             this.themeLightItem = new System.Windows.Forms.ToolStripMenuItem();
             this.themeDarkItem = new System.Windows.Forms.ToolStripMenuItem();
             this.themeSystemItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.helpMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.checkUpdatesMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.lblProjectTitle = new System.Windows.Forms.Label();
             this.grpVersions = new System.Windows.Forms.GroupBox();
             this.listViewVersions = new System.Windows.Forms.ListView();
@@ -70,7 +72,8 @@ namespace UpdateManager.Forms
             this.menuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.projectMenuItem,
             this.securityMenuItem,
-            this.viewMenuItem});
+            this.viewMenuItem,
+            this.helpMenuItem});
             this.menuStrip.Location = new System.Drawing.Point(0, 0);
             this.menuStrip.Name = "menuStrip";
             this.menuStrip.Size = new System.Drawing.Size(724, 24);
@@ -165,6 +168,21 @@ namespace UpdateManager.Forms
             this.themeSystemItem.Name = "themeSystemItem";
             this.themeSystemItem.Size = new System.Drawing.Size(154, 22);
             this.themeSystemItem.Text = "Как в Windows";
+            // 
+            // helpMenuItem
+            // 
+            this.helpMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.checkUpdatesMenuItem});
+            this.helpMenuItem.Name = "helpMenuItem";
+            this.helpMenuItem.Size = new System.Drawing.Size(65, 20);
+            this.helpMenuItem.Text = "Справка";
+            // 
+            // checkUpdatesMenuItem
+            // 
+            this.checkUpdatesMenuItem.Enabled = false;
+            this.checkUpdatesMenuItem.Name = "checkUpdatesMenuItem";
+            this.checkUpdatesMenuItem.Size = new System.Drawing.Size(230, 22);
+            this.checkUpdatesMenuItem.Text = "Проверить обновления…";
             // 
             // lblProjectTitle
             // 
@@ -396,6 +414,8 @@ namespace UpdateManager.Forms
         private System.Windows.Forms.ToolStripMenuItem themeLightItem;
         private System.Windows.Forms.ToolStripMenuItem themeDarkItem;
         private System.Windows.Forms.ToolStripMenuItem themeSystemItem;
+        private System.Windows.Forms.ToolStripMenuItem helpMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem checkUpdatesMenuItem;
         private System.Windows.Forms.Label lblProjectTitle;
         private System.Windows.Forms.GroupBox grpVersions;
         private System.Windows.Forms.ListView listViewVersions;
