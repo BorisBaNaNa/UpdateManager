@@ -265,6 +265,8 @@ public sealed class StoresTests : IDisposable
             LastBuiltSettings = "abc",
             SignPatch = true
         };
+        meta.DeliveredVersions["1.0.0"] = new DateTime(2026, 10, 27, 10, 0, 0);
+        meta.DeliveredVersions["1.0.1"] = new DateTime(2026, 10, 27, 11, 0, 0);
         meta.Save(_root);
 
         var loaded = ProjectMeta.Load(_root);
@@ -274,6 +276,8 @@ public sealed class StoresTests : IDisposable
         Assert.Equal(meta.LastDeliveredAt, loaded.LastDeliveredAt);
         Assert.Equal("abc", loaded.LastBuiltSettings);
         Assert.True(loaded.SignPatch);
+        Assert.Equal(new DateTime(2026, 10, 27, 10, 0, 0), loaded.DeliveredVersions["1.0.0"]);
+        Assert.Equal(new DateTime(2026, 10, 27, 11, 0, 0), loaded.DeliveredVersions["1.0.1"]);
     }
 }
 

@@ -315,10 +315,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
         return directory;
     }
 
-    // Отмечаем факт доставки — отсюда считается «Доставлено» по версиям.
+    // Отмечаем факт доставки за самой новой собранной версией: Output всегда содержит патч до неё.
     private void MarkDelivered()
     {
-        _project!.Meta.LastDeliveredAt = DateTime.Now;
+        var now = DateTime.Now;
+        _project!.Meta.LastDeliveredAt = now;
+        var version = _service.GetMaxVersion(_project.RootPath);
+        if (version != null)
+            _project.Meta.DeliveredVersions[version] = now;
         _project.Meta.Save(_project.RootPath);
         ShowProject();
     }
@@ -831,17 +835,30 @@ public sealed partial class MainWindowViewModel : ObservableObject
         HasBuildSource = !string.IsNullOrEmpty(project.Meta.LastBuildSource);
         OutputText = project.OutputReady ? "Output/: патч готов" : "Output/: пусто";
 
-        var deliveredAt = project.Meta.LastDeliveredAt;
+        var delivered = DeliveredDates(project);
         Versions.Clear();
         foreach (var v in project.Versions)
         {
-            // Версия считается доставленной, если была в Output на момент последней доставки.
-            bool delivered = deliveredAt.HasValue && v.BuildDate <= deliveredAt.Value;
             Versions.Add(new VersionRow(
                 v.Version,
                 v.BuildDate.ToString("yyyy-MM-dd HH:mm"),
-                delivered ? deliveredAt!.Value.ToString("yyyy-MM-dd HH:mm") : "—"));
+                delivered.TryGetValue(v.Version, out var at) ? at.ToString("yyyy-MM-dd HH:mm") : "—"));
         }
+    }
+
+    // Даты доставки по версиям. Проекты без них (1.x и ранние 2.0) знают только время последней
+    // доставки — относим его к самой новой версии, собранной до неё, а не ко всем сразу.
+    private static Dictionary<string, DateTime> DeliveredDates(UpdateProject project)
+    {
+        var meta = project.Meta;
+        if (meta.DeliveredVersions.Count > 0 || !meta.LastDeliveredAt.HasValue)
+            return meta.DeliveredVersions;
+
+        var legacy = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
+        var last = project.Versions.LastOrDefault(v => v.BuildDate <= meta.LastDeliveredAt.Value);
+        if (last != null)
+            legacy[last.Version] = meta.LastDeliveredAt.Value;
+        return legacy;
     }
 
     private void RenderNoProject()

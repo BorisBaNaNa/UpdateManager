@@ -236,6 +236,32 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task Deliver_RecordsTimePerVersion()
+    {
+        await CreateProjectWithBuild();
+        var target = Path.Combine(_root, "server");
+        _dialogs.DeliveryAnswer = _ => new DeliveryConfig { Method = DeliveryMethods.Folder, Path = target };
+
+        _dialogs.Prompts.Enqueue("1.0.0");
+        await _vm.CreatePatchCommand.ExecuteAsync(null);
+        await _vm.DeliverCommand.ExecuteAsync(null);
+        var first = ProjectMeta.Load(ProjectDir).DeliveredVersions["1.0.0"];
+
+        Thread.Sleep(20);
+        File.WriteAllText(Path.Combine(BuildDir, "app.txt"), "v2");
+        _dialogs.Prompts.Enqueue("1.0.1");
+        await _vm.CreatePatchCommand.ExecuteAsync(null);
+        Assert.Equal("—", _vm.Versions.Single(v => v.Version == "1.0.1").Delivered); // собрана, но не доставлена
+
+        await _vm.DeliverCommand.ExecuteAsync(null);
+
+        var delivered = ProjectMeta.Load(ProjectDir).DeliveredVersions;
+        Assert.Equal(first, delivered["1.0.0"]); // доставка 1.0.1 не переписала дату 1.0.0
+        Assert.True(delivered["1.0.1"] > first);
+        Assert.Empty(_dialogs.Errors);
+    }
+
+    [Fact]
     public async Task OpenRecent_MissingFolderIsOfferedForRemoval()
     {
         var missing = Path.Combine(_root, "gone");

@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Xml.Linq;
 using UpdateManager.Core.Delivery;
 
@@ -29,6 +31,10 @@ namespace UpdateManager.Core.Project
         private const string LastDeliveredAtElement = "LastDeliveredAt";
         private const string LastBuiltSettingsElement = "LastBuiltSettings";
         private const string SignPatchElement = "SignPatch";
+        private const string DeliveredVersionsElement = "DeliveredVersions";
+        private const string DeliveredVersionElement = "Version";
+        private const string DeliveredVersionIdAttribute = "id";
+        private const string DeliveredVersionAtAttribute = "at";
 
         /// <summary>Версия схемы этого файла — чтобы в будущем безболезненно менять формат.</summary>
         public int SchemaVersion { get; set; } = CurrentSchemaVersion;
@@ -44,6 +50,13 @@ namespace UpdateManager.Core.Project
 
         /// <summary>Когда патч последний раз доставляли (null = ещё не доставляли).</summary>
         public DateTime? LastDeliveredAt { get; set; }
+
+        /// <summary>
+        /// Когда доставляли каждую версию (версия → время последней доставки). Output всегда содержит
+        /// патч до самой новой собранной версии — доставка отмечается за ней.
+        /// </summary>
+        public Dictionary<string, DateTime> DeliveredVersions { get; set; } =
+            new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// Отпечаток настроек на момент последней успешной сборки патча (пусто = ещё не собирали).
@@ -87,6 +100,19 @@ namespace UpdateManager.Core.Project
                 DateTime.TryParse(deliveredAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out parsed))
                 meta.LastDeliveredAt = parsed;
 
+            var versions = root.Element(DeliveredVersionsElement);
+            if (versions != null)
+            {
+                foreach (var item in versions.Elements(DeliveredVersionElement))
+                {
+                    var id = (string)item.Attribute(DeliveredVersionIdAttribute);
+                    if (!string.IsNullOrEmpty(id) &&
+                        DateTime.TryParse((string)item.Attribute(DeliveredVersionAtAttribute), CultureInfo.InvariantCulture,
+                            DateTimeStyles.RoundtripKind, out parsed))
+                        meta.DeliveredVersions[id] = parsed;
+                }
+            }
+
             return meta;
         }
 
@@ -103,6 +129,12 @@ namespace UpdateManager.Core.Project
                         new XElement(DeliveryPathElement, Delivery.Path ?? "")),
                     LastDeliveredAt.HasValue
                         ? new XElement(LastDeliveredAtElement, LastDeliveredAt.Value.ToString("o", CultureInfo.InvariantCulture))
+                        : null,
+                    DeliveredVersions.Count > 0
+                        ? new XElement(DeliveredVersionsElement,
+                            DeliveredVersions.Select(pair => new XElement(DeliveredVersionElement,
+                                new XAttribute(DeliveredVersionIdAttribute, pair.Key),
+                                new XAttribute(DeliveredVersionAtAttribute, pair.Value.ToString("o", CultureInfo.InvariantCulture)))))
                         : null,
                     new XElement(LastBuiltSettingsElement, LastBuiltSettings ?? ""),
                     new XElement(SignPatchElement, SignPatch)
