@@ -39,6 +39,7 @@ A universal, standalone front end for the SimplePatchTool engine: works for any 
 - RSA signing (key generation, signing manifests, uploading the private key to colleagues over FTP).
 - Self-update of UpdateManager.
 - Light, dark and "as in Windows" theme.
+- Planned (not built yet): Android projects. No patches for them: the pipeline is build (apk) → generate server files (version file, license) → deliver to the server → verify. The release pipeline is therefore per platform with a variable set of stages; Windows keeps build → patch → deliver → verify.
 - Terminology stays the engine's and the team's: патч, билд, версия, доставка, проверка, `BaseDownloadURL`, repair/installer/incremental.
 
 ## Brand Commitments
