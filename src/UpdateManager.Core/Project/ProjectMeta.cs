@@ -35,6 +35,10 @@ namespace UpdateManager.Core.Project
         private const string DeliveredVersionElement = "Version";
         private const string DeliveredVersionIdAttribute = "id";
         private const string DeliveredVersionAtAttribute = "at";
+        private const string PatchedVersionsElement = "PatchedVersions";
+        private const string VerifiedVersionsElement = "VerifiedVersions";
+        private const string VerifiedOkAttribute = "ok";
+        private const string VerifiedDetailsAttribute = "details";
 
         /// <summary>Версия схемы этого файла — чтобы в будущем безболезненно менять формат.</summary>
         public int SchemaVersion { get; set; } = CurrentSchemaVersion;
@@ -57,6 +61,17 @@ namespace UpdateManager.Core.Project
         /// </summary>
         public Dictionary<string, DateTime> DeliveredVersions { get; set; } =
             new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>Когда для каждой версии последний раз успешно собрали патч (версия → время).</summary>
+        public Dictionary<string, DateTime> PatchedVersions { get; set; } =
+            new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Итог последней проверки («Проверить») по версиям: проверка качает то, что лежит на сервере,
+        /// а там патч до самой новой собранной версии — итог отмечается за ней.
+        /// </summary>
+        public Dictionary<string, VerificationResult> VerifiedVersions { get; set; } =
+            new Dictionary<string, VerificationResult>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// Отпечаток настроек на момент последней успешной сборки патча (пусто = ещё не собирали).
@@ -100,20 +115,55 @@ namespace UpdateManager.Core.Project
                 DateTime.TryParse(deliveredAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out parsed))
                 meta.LastDeliveredAt = parsed;
 
-            var versions = root.Element(DeliveredVersionsElement);
-            if (versions != null)
+            LoadVersionDates(root.Element(DeliveredVersionsElement), meta.DeliveredVersions);
+            LoadVersionDates(root.Element(PatchedVersionsElement), meta.PatchedVersions);
+
+            var verified = root.Element(VerifiedVersionsElement);
+            if (verified != null)
             {
-                foreach (var item in versions.Elements(DeliveredVersionElement))
+                foreach (var item in verified.Elements(DeliveredVersionElement))
                 {
                     var id = (string)item.Attribute(DeliveredVersionIdAttribute);
-                    if (!string.IsNullOrEmpty(id) &&
-                        DateTime.TryParse((string)item.Attribute(DeliveredVersionAtAttribute), CultureInfo.InvariantCulture,
-                            DateTimeStyles.RoundtripKind, out parsed))
-                        meta.DeliveredVersions[id] = parsed;
+                    if (!string.IsNullOrEmpty(id) && TryParseAt(item, out parsed))
+                        meta.VerifiedVersions[id] = new VerificationResult(parsed,
+                            (bool?)item.Attribute(VerifiedOkAttribute) ?? false,
+                            (string)item.Attribute(VerifiedDetailsAttribute) ?? "");
                 }
             }
 
             return meta;
+        }
+
+        // <X><Version id="1.0.0" at="…"/></X> → словарь версия → время.
+        private static void LoadVersionDates(XElement container, Dictionary<string, DateTime> target)
+        {
+            if (container == null)
+                return;
+
+            foreach (var item in container.Elements(DeliveredVersionElement))
+            {
+                var id = (string)item.Attribute(DeliveredVersionIdAttribute);
+                DateTime parsed;
+                if (!string.IsNullOrEmpty(id) && TryParseAt(item, out parsed))
+                    target[id] = parsed;
+            }
+        }
+
+        private static bool TryParseAt(XElement item, out DateTime value)
+        {
+            return DateTime.TryParse((string)item.Attribute(DeliveredVersionAtAttribute), CultureInfo.InvariantCulture,
+                DateTimeStyles.RoundtripKind, out value);
+        }
+
+        private static XElement SaveVersionDates(string name, Dictionary<string, DateTime> source)
+        {
+            if (source.Count == 0)
+                return null;
+
+            return new XElement(name,
+                source.Select(pair => new XElement(DeliveredVersionElement,
+                    new XAttribute(DeliveredVersionIdAttribute, pair.Key),
+                    new XAttribute(DeliveredVersionAtAttribute, pair.Value.ToString("o", CultureInfo.InvariantCulture)))));
         }
 
         /// <summary>Записать наш файл в корень проекта.</summary>
@@ -130,11 +180,15 @@ namespace UpdateManager.Core.Project
                     LastDeliveredAt.HasValue
                         ? new XElement(LastDeliveredAtElement, LastDeliveredAt.Value.ToString("o", CultureInfo.InvariantCulture))
                         : null,
-                    DeliveredVersions.Count > 0
-                        ? new XElement(DeliveredVersionsElement,
-                            DeliveredVersions.Select(pair => new XElement(DeliveredVersionElement,
+                    SaveVersionDates(DeliveredVersionsElement, DeliveredVersions),
+                    SaveVersionDates(PatchedVersionsElement, PatchedVersions),
+                    VerifiedVersions.Count > 0
+                        ? new XElement(VerifiedVersionsElement,
+                            VerifiedVersions.Select(pair => new XElement(DeliveredVersionElement,
                                 new XAttribute(DeliveredVersionIdAttribute, pair.Key),
-                                new XAttribute(DeliveredVersionAtAttribute, pair.Value.ToString("o", CultureInfo.InvariantCulture)))))
+                                new XAttribute(DeliveredVersionAtAttribute, pair.Value.At.ToString("o", CultureInfo.InvariantCulture)),
+                                new XAttribute(VerifiedOkAttribute, pair.Value.Succeeded),
+                                new XAttribute(VerifiedDetailsAttribute, pair.Value.Details ?? ""))))
                         : null,
                     new XElement(LastBuiltSettingsElement, LastBuiltSettings ?? ""),
                     new XElement(SignPatchElement, SignPatch)

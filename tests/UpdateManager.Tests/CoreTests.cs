@@ -287,6 +287,9 @@ public sealed class StoresTests : IDisposable
         };
         meta.DeliveredVersions["1.0.0"] = new DateTime(2026, 10, 27, 10, 0, 0);
         meta.DeliveredVersions["1.0.1"] = new DateTime(2026, 10, 27, 11, 0, 0);
+        meta.PatchedVersions["1.0.1"] = new DateTime(2026, 10, 27, 10, 50, 0);
+        meta.VerifiedVersions["1.0.0"] = new VerificationResult(new DateTime(2026, 10, 27, 10, 5, 0), true, "");
+        meta.VerifiedVersions["1.0.1"] = new VerificationResult(new DateTime(2026, 10, 27, 11, 5, 0), false, "timeout \"30 s\"");
         meta.Save(_root);
 
         var loaded = ProjectMeta.Load(_root);
@@ -298,6 +301,12 @@ public sealed class StoresTests : IDisposable
         Assert.True(loaded.SignPatch);
         Assert.Equal(new DateTime(2026, 10, 27, 10, 0, 0), loaded.DeliveredVersions["1.0.0"]);
         Assert.Equal(new DateTime(2026, 10, 27, 11, 0, 0), loaded.DeliveredVersions["1.0.1"]);
+        Assert.Equal(new DateTime(2026, 10, 27, 10, 50, 0), loaded.PatchedVersions["1.0.1"]);
+        Assert.True(loaded.VerifiedVersions["1.0.0"].Succeeded);
+        var failed = loaded.VerifiedVersions["1.0.1"];
+        Assert.False(failed.Succeeded);
+        Assert.Equal(new DateTime(2026, 10, 27, 11, 5, 0), failed.At);
+        Assert.Equal("timeout \"30 s\"", failed.Details);
     }
 }
 
