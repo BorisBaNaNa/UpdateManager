@@ -295,7 +295,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ResetDeliveryOfMaxVersion();
         try
         {
-            DeliveryFactory.Create(config).Deliver(outputDir);
+            DeliveryFactory.Create(config).Deliver(outputDir, WindowsKeepNames());
         }
         catch (Exception ex)
         {
@@ -331,7 +331,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         // Окно операции модальное: после его закрытия op.Succeeded уже валиден.
         ResetDeliveryOfMaxVersion();
-        var op = new FtpUploadOperation(conn, outputDir, remotePath);
+        var op = new FtpUploadOperation(conn, outputDir, remotePath, WindowsKeepNames());
         await _dialogs.ShowOperationAsync(op);
 
         if (op.Succeeded)
@@ -351,6 +351,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
         var version = _service.GetMaxVersion(_project!.RootPath);
         if (version != null)
             ResetStagesFrom(version, StageKind.Delivery);
+    }
+
+    // Доставка Windows удаляет старое в папке патча, кроме папки канала Android — она наша и выкладывается
+    // отдельно. Сохраняем её всегда, даже при выключенном Android: выключение не должно стирать канал.
+    private string[] WindowsKeepNames()
+    {
+        var channel = (_project!.Meta.Android.Channel ?? "").Trim().Trim('/');
+        return channel.Length > 0 ? new[] { channel.Split('/')[0] } : Array.Empty<string>();
     }
 
     // Директория загрузки проекта = хвост BaseDownloadURL (общий и для URL, и для пути на FTP).

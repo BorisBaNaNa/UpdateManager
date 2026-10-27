@@ -1,6 +1,8 @@
 using System.Security.Cryptography;
 using System.Text;
 using UpdateManager.Core.Common;
+using UpdateManager.Core.Delivery;
+using UpdateManager.Core.Operations;
 using UpdateManager.Core.Security;
 
 namespace UpdateManager.Tests;
@@ -87,6 +89,81 @@ public sealed class AndroidTests : IDisposable
             new FileSigner().Sign(_build, new[] { "latest.json", "missing/*.json" }, PrivateKey, PublicKey));
 
         Assert.Contains("missing/*.json", ex.Message);
+    }
+
+    [Fact]
+    public void Package_ExcludesMasksAndForeignSignatures()
+    {
+        File.WriteAllText(Path.Combine(_build, "AlmaProfile.apk.sig"), "старый чужой"); // apk не подписывается
+        new FileSigner().Sign(_build, new[] { "latest.json" }, PrivateKey, PublicKey);
+
+        var files = AndroidPackage.Files(_build, new[] { "latest.json" }, new[] { "AlmaProfile-x86_64.apk" });
+
+        Assert.Equal(new[] { "AlmaProfile.apk", "latest.json", "latest.json.sig", "manifests/extra.json" }, files);
+        Assert.Equal(new[] { "latest.json" }, AndroidPackage.SignedFiles(files, new[] { "latest.json" }));
+    }
+
+    [Fact]
+    public void FolderDelivery_MirrorsAndKeepsChannel()
+    {
+        var server = Path.Combine(_root, "server");
+        Directory.CreateDirectory(Path.Combine(server, "AndroidPatch"));
+        File.WriteAllText(Path.Combine(server, "AndroidPatch", "latest.json"), "android");
+        File.WriteAllText(Path.Combine(server, "old.lzdat"), "старый патч");
+        Directory.CreateDirectory(Path.Combine(server, "OldFolder"));
+        var output = Path.Combine(_root, "output");
+        Directory.CreateDirectory(output);
+        File.WriteAllText(Path.Combine(output, "VersionInfo.info"), "new");
+
+        new FolderDeliveryTarget(server).Deliver(output, new[] { "AndroidPatch" });
+
+        Assert.True(File.Exists(Path.Combine(server, "VersionInfo.info")));
+        Assert.False(File.Exists(Path.Combine(server, "old.lzdat")));
+        Assert.False(Directory.Exists(Path.Combine(server, "OldFolder")));
+        Assert.Equal("android", File.ReadAllText(Path.Combine(server, "AndroidPatch", "latest.json")));
+    }
+
+    [Fact]
+    public void FolderDelivery_RefusesDriveRoot()
+    {
+        Assert.Throws<InvalidOperationException>(() =>
+            new FolderDeliveryTarget(Path.GetPathRoot(_root)!).Deliver(_build, Array.Empty<string>()));
+    }
+
+    [Fact]
+    public void ChannelVerifier_PassesOnPublishedChannel_FailsOnForeignSig()
+    {
+        var signMasks = new[] { "latest.json" };
+        new FileSigner().Sign(_build, signMasks, PrivateKey, PublicKey);
+        var files = AndroidPackage.Files(_build, signMasks, new[] { "AlmaProfile-x86_64.apk" });
+        var channel = Path.Combine(_root, "server", "AndroidPatch");
+        new FolderDeliveryTarget(channel).Deliver(AndroidPackage.Stage(_build, files), Array.Empty<string>());
+        var url = new Uri(channel + Path.DirectorySeparatorChar).AbsoluteUri;
+
+        var ok = new AndroidChannelVerifier(url, _build, files, AndroidPackage.SignedFiles(files, signMasks), PublicKey);
+        RunToEnd(ok);
+        Assert.True(ok.Succeeded, ok.ResultDetails);
+
+        // На сервере остался .sig от другого ключа — клиент счёл бы это подделкой.
+        var other = Path.Combine(_root, "other");
+        Directory.CreateDirectory(other);
+        new RsaKeyManager().Generate(other);
+        var bad = new AndroidChannelVerifier(url, _build, files, AndroidPackage.SignedFiles(files, signMasks),
+            File.ReadAllText(Path.Combine(other, RsaKeyManager.PublicKeyFileName)));
+        RunToEnd(bad);
+        Assert.False(bad.Succeeded);
+        Assert.Contains("не сходится", bad.ResultDetails);
+    }
+
+    private static void RunToEnd(UpdateManager.Core.Operations.IEngineOperation op)
+    {
+        Assert.True(op.Start());
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        while (op.IsRunning)
+        {
+            Assert.True(timer.Elapsed < TimeSpan.FromSeconds(30));
+            Thread.Sleep(20);
+        }
     }
 
     [Fact]

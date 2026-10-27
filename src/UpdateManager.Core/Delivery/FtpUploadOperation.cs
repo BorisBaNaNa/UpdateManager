@@ -8,15 +8,17 @@ using UpdateManager.Core.Operations;
 namespace UpdateManager.Core.Delivery
 {
     /// <summary>
-    /// Заливка содержимого Output/ на FTP через FluentFTP. Работает как фоновая операция движка
-    /// (IEngineOperation): тот же UI прогресса, что у сборки/проверки. Передача в Binary-режиме —
-    /// файлы патча (.lzdat) бинарные, ASCII их повредит.
+    /// Заливка папки (Output/ патча или набор файлов Android) на FTP через FluentFTP. Работает как фоновая
+    /// операция движка (IEngineOperation): тот же UI прогресса, что у сборки/проверки. Передача в
+    /// Binary-режиме — файлы патча (.lzdat) и apk бинарные, ASCII их повредит.
     /// </summary>
     public class FtpUploadOperation : IEngineOperation
     {
         private readonly FtpConnection _conn;
         private readonly string _localDir;
         private readonly string _remotePath;
+        private readonly HashSet<string> _keepNames;
+        private readonly string _title;
 
         private readonly Queue<string> _log = new Queue<string>();
         private readonly object _logLock = new object();
@@ -38,14 +40,19 @@ namespace UpdateManager.Core.Delivery
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "UpdateManager", "logs", "ftp-last-error.log");
 
-        public FtpUploadOperation(FtpConnection conn, string localDir, string remotePath)
+        /// <param name="keepNames">Записи верхнего уровня боевой папки, которые сохраняются при замене
+        /// (папка канала Android внутри папки патча). Всё остальное старое удаляется.</param>
+        public FtpUploadOperation(FtpConnection conn, string localDir, string remotePath,
+            IEnumerable<string> keepNames = null, string title = "Заливка на FTP")
         {
             _conn = conn;
             _localDir = localDir;
             _remotePath = remotePath;
+            _keepNames = new HashSet<string>(keepNames ?? new string[0], StringComparer.OrdinalIgnoreCase);
+            _title = title;
         }
 
-        public string Title { get { return "Заливка на FTP"; } }
+        public string Title { get { return _title; } }
 
         public bool Start()
         {
@@ -120,15 +127,14 @@ namespace UpdateManager.Core.Delivery
         }
 
         /// <summary>
-        /// Атомарная публикация С СОХРАНЕНИЕМ неотслеживаемых файлов/папок. Льём патч в target_new и
-        /// только после успешной заливки подменяем боевую папку переименованием (старый патч цел, если
-        /// заливка оборвётся; на сервере не остаётся «полупатча»). При этом всё, что лежит в боевой папке,
-        /// но НЕ входит в новый патч (напр. вручную созданная AndroidPatch — apk + latest.json), переносится
-        /// в новую папку, а не удаляется вместе со старым патчем.
+        /// Атомарная публикация. Льём всё в target_new и только после успешной заливки подменяем боевую
+        /// папку переименованием (старое цело, если заливка оборвётся; на сервере не остаётся «полупатча»,
+        /// а у Android подписанный манифест и его .sig появляются разом с остальными файлами). Старое
+        /// содержимое боевой папки удаляется — кроме записей из keepNames (папка канала Android внутри папки
+        /// патча): они переносятся в новую папку.
         ///
-        /// Крах-безопасно: неотслеживаемое всегда либо в боевой папке, либо в резерве (target_old). В начале
-        /// <see cref="RecoverFromInterruptedRun"/> сверяет резерв прошлого оборванного запуска с боевой папкой
-        /// и возвращает недостающее — поэтому обрыв в момент подмены неотслеживаемое не теряет.
+        /// Крах-безопасно: сохраняемое всегда либо в боевой папке, либо в резерве (target_old). В начале
+        /// <see cref="RecoverFromInterruptedRun"/> возвращает его из резерва прошлого оборванного запуска.
         /// </summary>
         private void PublishAtomically(FtpClient client, string target)
         {
@@ -171,11 +177,11 @@ namespace UpdateManager.Core.Delivery
                 return;
             }
 
-            // Что в боевой папке НЕ относится к новому патчу — сохраняем (перенесём после подмены из резерва).
+            // Что сохранить из боевой папки (папка канала Android), если новая выкладка не принесла своё.
             var patchNames = TopLevelNames(client, staging);
-            var untracked = UntrackedEntries(client, target, patchNames);
+            var untracked = KeptEntries(client, target, patchNames);
 
-            // Подмена. Сначала уводим боевую папку в резерв (в нём цело и неотслеживаемое), затем staging → боевая.
+            // Подмена. Сначала уводим боевую папку в резерв (в нём цело и сохраняемое), затем staging → боевая.
             if (client.DirectoryExists(backup))
                 client.DeleteDirectory(backup);
             AppendLog("Замена: " + target + " → " + backup);
@@ -190,25 +196,25 @@ namespace UpdateManager.Core.Delivery
                 throw new FtpDeliveryException("Не удалось переименовать " + staging + " в " + target + ".");
             }
 
-            // Возвращаем неотслеживаемое из резерва в новую боевую папку (переименованием — быстро, без пере-заливки).
+            // Возвращаем сохраняемое из резерва в новую боевую папку (переименованием — быстро, без пере-заливки).
             foreach (var item in untracked)
             {
                 AppendLog("Сохраняю: " + item.Name);
                 MoveEntry(client, item, backup + "/" + item.Name, target + "/" + item.Name);
             }
 
-            // Остаток резерва — только старые файлы патча.
+            // Остаток резерва — старое содержимое: удаляется.
             if (client.DirectoryExists(backup))
             {
-                AppendLog("Удаляю старый патч: " + backup);
+                AppendLog("Удаляю старое: " + backup);
                 client.DeleteDirectory(backup);
             }
         }
 
         /// <summary>
         /// Восстановление после оборванного прошлого запуска: резерв (target_old) существует, только если
-        /// прошлый запуск ушёл в подмену, но не завершил её. Возвращаем в боевую папку то, чего в ней нет
-        /// (неотслеживаемое цело), затем убираем резерв — начинаем с чистого состояния.
+        /// прошлый запуск ушёл в подмену, но не завершил её. Возвращаем в боевую папку сохраняемое, которого
+        /// в ней нет, затем убираем резерв — начинаем с чистого состояния.
         /// </summary>
         private void RecoverFromInterruptedRun(FtpClient client, string target, string backup)
         {
@@ -223,15 +229,10 @@ namespace UpdateManager.Core.Delivery
                 return;
             }
 
-            // Боевая папка уже новая (крах после подмены, до возврата неотслеживаемого): вернём из резерва
-            // лишь то, чего в ней нет (напр. AndroidPatch). Совпавшие по имени — устаревшие файлы патча, их не трогаем.
-            var targetNames = TopLevelNames(client, target);
-            foreach (var item in client.GetListing(backup))
-            {
-                if (targetNames.Contains(item.Name))
-                    continue;
+            // Боевая папка уже новая (крах после подмены, до возврата сохраняемого): вернём из резерва
+            // сохраняемое (напр. AndroidPatch), которого в ней нет. Прочее в резерве — старое, удаляется.
+            foreach (var item in KeptEntries(client, backup, TopLevelNames(client, target)))
                 MoveEntry(client, item, backup + "/" + item.Name, target + "/" + item.Name);
-            }
             client.DeleteDirectory(backup);
         }
 
@@ -254,12 +255,12 @@ namespace UpdateManager.Core.Delivery
             return set;
         }
 
-        // Записи боевой папки, которых нет в новом патче, — их и сохраняем (неотслеживаемое).
-        private static List<FtpListItem> UntrackedEntries(FtpClient client, string target, HashSet<string> patchNames)
+        // Записи папки из keepNames, которых нет в новой выкладке, — их и сохраняем.
+        private List<FtpListItem> KeptEntries(FtpClient client, string dir, HashSet<string> newNames)
         {
             var result = new List<FtpListItem>();
-            foreach (var item in client.GetListing(target))
-                if (!patchNames.Contains(item.Name))
+            foreach (var item in client.GetListing(dir))
+                if (_keepNames.Contains(item.Name) && !newNames.Contains(item.Name))
                     result.Add(item);
             return result;
         }
