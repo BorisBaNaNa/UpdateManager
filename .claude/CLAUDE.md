@@ -102,7 +102,8 @@ MVVM + доменный слой, домен не знает про UI:
   `dotnet publish src/UpdateManager.App -p:PublishProfile=win-x64` → `Release/`
   (self-contained, без single-file — движок подменяет файлы по одному).
 - Выпуск: `scripts/release.ps1 patch|minor|major|-To X.Y.Z|-NoBump` — тесты → версия в
-  `Directory.Build.props` → publish в `Release/` (папка очищается) → `Release/<Product>_vers.sptv` с версией
+  `Directory.Build.props` → publish в `Release/` (папка очищается) → копия `SelfPatcher\` в `Release/SPPatcher\`
+  (туда self-patcher кладёт движок в патче; без неё свежий выпуск сразу «обновляется» ради него) → `Release/<Product>_vers.sptv` с версией
   X.Y.Z.0 (version holder движка: клиентский `CheckForUpdates(true)` и наш `VersionDetector`) → сверка FileVersion.
   Ничего не коммитит; при запущенном из репозитория UpdateManager останавливается с понятной ошибкой.
   Скрипт — Windows PowerShell 5.1, сохранять в UTF-8 **с BOM** (иначе кириллица ломается).
@@ -115,9 +116,8 @@ MVVM + доменный слой, домен не знает про UI:
 - Сквозной прогон самообновления 2.0 (`Run(true)` → SelfPatcher.exe → перезапуск) — тестами не покрыт;
   сервер `https://updates.borealis-soft-home.duckdns.org:51943/` (только HTTPS; FTP — 192.168.0.100 в LAN).
   Роутер без NAT loopback: изнутри LAN публичный адрес недоступен (проверка/«Проверить» виснут до таймаута),
-  а снаружи недоступен FTP 192.168.0.100 — HTTP-проверки делать из внешней сети;
-  заодно уточнить, где движок держит self-patcher
-  на клиенте (`SPPatcher\` или наш `SelfPatcher\`).
+  а снаружи недоступен FTP 192.168.0.100 — HTTP-проверки делать из внешней сети.
+  На клиенте движок держит self-patcher в `SPPatcher\` (наш `SelfPatcher\` — запасной путь `FindSelfPatcher`).
 - FTPS/TLS для FTP-доставки (сейчас только обычный FTP) — при необходимости.
 
 ## Стек

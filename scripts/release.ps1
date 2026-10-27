@@ -7,10 +7,12 @@
   2. Поднимает версию в Directory.Build.props: <Version> X.Y.Z и <FileVersion> X.Y.Z.0
      (FileVersion главного exe читает UpdateManager при сборке патча).
   3. Делает self-contained publish в Release/ (папка очищается — см. win-x64.pubxml).
-  4. Пишет version holder Release/<Product>_vers.sptv с версией X.Y.Z.0: по нему клиент движка
+  4. Копирует встроенный self-patcher в Release/SPPatcher — туда же его кладёт движок в патче,
+     поэтому только что выпущенная версия не скачивает его при первой проверке.
+  5. Пишет version holder Release/<Product>_vers.sptv с версией X.Y.Z.0: по нему клиент движка
      проверяет обновления только по версии (CheckForUpdates(true)), не сверяя файлы, а UpdateManager
      берёт из него версию патча. Файл входит в патч — у клиентов он обновляется вместе с версией.
-  5. Сверяет FileVersion собранного UpdateManager.exe и печатает следующие шаги.
+  6. Сверяет FileVersion собранного UpdateManager.exe и печатает следующие шаги.
 
   Схема версий — SemVer из трёх чисел: появилась новая возможность → minor, иначе patch.
   Скрипт НИЧЕГО не коммитит и не заливает — патч собирается и доставляется в самом UpdateManager.
@@ -111,6 +113,7 @@ if ($DryRun) {
     if (-not $SkipTests) { Write-Host "  dotnet test $TestsProject" }
     if (-not $NoBump) { Write-Host "  Directory.Build.props: Version $nextText, FileVersion $fileVersion" }
     Write-Host "  dotnet publish $AppProject -p:PublishProfile=win-x64 → $ReleaseDir (папка очищается)"
+    Write-Host "  $ReleaseDir\SelfPatcher\* → $ReleaseDir\SPPatcher\"
     Write-Host "  $VersionHolder ← $fileVersion"
     return
 }
@@ -149,6 +152,19 @@ Write-Host "== Publish → $ReleaseDir" -ForegroundColor Cyan
 if ($LASTEXITCODE -ne 0) {
     throw "publish не удался. Версия в Directory.Build.props уже $nextText — после исправления запустите с -NoBump."
 }
+
+# --- 3a. Self-patcher в SPPatcher\ --------------------------------------------------------------
+# Движок кладёт self-patcher в патч под SPPatcher\ (PatchParameters.SELF_PATCHER_DIRECTORY). Без этой
+# папки в выпуске свежая установка при первой проверке «обновляется» на те же 2.0.0 ради self-patcher'а.
+$BundledSelfPatcher = Join-Path $ReleaseDir 'SelfPatcher'
+$ClientSelfPatcher = Join-Path $ReleaseDir 'SPPatcher'
+if (-not (Test-Path (Join-Path $BundledSelfPatcher 'SelfPatcher.exe'))) {
+    throw "после publish нет $BundledSelfPatcher\SelfPatcher.exe"
+}
+New-Item -ItemType Directory -Force -Path $ClientSelfPatcher | Out-Null
+Copy-Item -Path (Join-Path $BundledSelfPatcher '*') -Destination $ClientSelfPatcher -Recurse -Force
+Write-Host ""
+Write-Host "Self-patcher: $ClientSelfPatcher" -ForegroundColor Green
 
 # --- 4. Version holder --------------------------------------------------------------------------
 # Ровно версия, без BOM и перевода строки — так его читает движок (и VersionDetector при сборке патча).
