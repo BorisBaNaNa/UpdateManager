@@ -1019,18 +1019,105 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private RecentProjectCard LoadRecentCard(string path)
     {
         if (!_service.IsProjectFolder(path))
-            return new RecentProjectCard(path, null, null, OpenRecentCommand);
+            return Card(path, null, null);
 
         try
         {
             var project = _service.Open(path);
             var releases = ReleaseCatalog.Build(project, null);
-            return new RecentProjectCard(path, project.Name, releases.FirstOrDefault(), OpenRecentCommand);
+            return Card(path, project.Name, releases.FirstOrDefault());
         }
         catch
         {
-            return new RecentProjectCard(path, null, null, OpenRecentCommand);
+            return Card(path, null, null);
         }
+    }
+
+    private RecentProjectCard Card(string path, string? name, ReleaseItem? lastRelease) =>
+        new(path, name, lastRelease, OpenRecentCommand, RemoveFromRecentCommand, DeleteProjectCommand);
+
+    // --- убрать из списка / удалить проект ---
+
+    // «Убрать из списка» — только из показа: проект остаётся на диске. Открытый — закрывается.
+    // path = null — открытый проект (меню «Проект»).
+    [RelayCommand]
+    private void RemoveFromRecent(string? path)
+    {
+        path ??= _project?.RootPath;
+        if (path == null)
+            return;
+
+        _recent.Remove(path);
+        if (IsOpenProject(path))
+            CloseProject();
+        RefreshRecent();
+    }
+
+    // «Удалить проект…» — папка проекта целиком в Корзину (версии, Output, ключи), после подтверждения.
+    [RelayCommand]
+    private async Task DeleteProject(string? path)
+    {
+        path ??= _project?.RootPath;
+        if (path == null)
+            return;
+
+        if (!_service.IsProjectFolder(path))
+        {
+            await _dialogs.ShowErrorAsync("Проект не найден — папку удалили или перенесли:\n" + path +
+                "\n\nУбрать его из списка можно пунктом «Убрать из списка».");
+            return;
+        }
+
+        string name;
+        try
+        {
+            name = _service.Open(path).Name;
+        }
+        catch
+        {
+            name = Path.GetFileName(path.TrimEnd('\\', '/'));
+        }
+
+        var keys = _keys.HasPrivateKey(path)
+            ? "\n\nВместе с проектом уйдёт и приватный ключ " + RsaKeyManager.PrivateKeyFileName +
+              ": без него не подписать обновления для клиентов, у которых зашит этот публичный ключ. " +
+              "Если копии ключа нет — сохраните его до удаления."
+            : "";
+        if (!await _dialogs.ConfirmAsync(
+                "Удалить проект «" + name + "» вместе с содержимым?\n" + path + "\n\n" +
+                "Папка уйдёт в Корзину целиком: собранные версии (Versions), патч (Output) и настройки." + keys +
+                "\n\nФайлы на сервере и папка билда не затрагиваются."))
+            return;
+
+        if (IsOpenProject(path))
+            CloseProject();
+
+        try
+        {
+            _service.DeleteProject(path);
+        }
+        catch (OperationCanceledException)
+        {
+            return; // отменили в окне Windows (например, «удалить безвозвратно?»)
+        }
+        catch (Exception ex)
+        {
+            await _dialogs.ShowErrorAsync("Не удалось удалить проект:\n" + ex.Message);
+            return;
+        }
+
+        _recent.Remove(path);
+        RefreshRecent();
+    }
+
+    private bool IsOpenProject(string path) =>
+        _project != null && string.Equals(Path.GetFullPath(_project.RootPath).TrimEnd('\\', '/'),
+            Path.GetFullPath(path).TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase);
+
+    private void CloseProject()
+    {
+        _project = null;
+        RenderNoProject();
     }
 
     // --- отрисовка ---

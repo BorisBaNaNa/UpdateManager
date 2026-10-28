@@ -88,6 +88,24 @@ namespace UpdateManager.Core.Project
             return File.Exists(Path.Combine(folder, EngineSettingsFile));
         }
 
+        /// <summary>
+        /// Как удаляется папка проекта. По умолчанию — в Корзину (удалённое по ошибке можно вернуть);
+        /// тесты подменяют, чтобы не засорять Корзину.
+        /// </summary>
+        public Action<string> DeleteFolder { get; set; } = RecycleBin.DeleteDirectory;
+
+        /// <summary>
+        /// Удалить проект вместе с содержимым (Versions, Output, ключи). Удаляется только папка, которая
+        /// действительно проект (есть Settings.xml движка), — чужую папку по ошибочной записи не тронем.
+        /// </summary>
+        public void DeleteProject(string folder)
+        {
+            if (!IsProjectFolder(folder))
+                throw new InvalidOperationException("Это не папка проекта UpdateManager (нет " + EngineSettingsFile +
+                    "):\n" + folder);
+            DeleteFolder(folder);
+        }
+
         /// <summary>В папке есть хоть что-то (файлы/подпапки).</summary>
         public bool IsFolderNonEmpty(string folder)
         {

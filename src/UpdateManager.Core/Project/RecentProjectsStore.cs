@@ -13,8 +13,8 @@ namespace UpdateManager.Core.Project
     /// </summary>
     public class RecentProjectsStore
     {
-        /// <summary>Сколько проектов помним максимум.</summary>
-        public const int MaxItems = 10;
+        /// <summary>Сколько проектов помним максимум — три последних, чтобы список не разрастался.</summary>
+        public const int MaxItems = 3;
 
         private const string AppFolderName = "UpdateManager";
         private const string FileName = "recent.xml";
@@ -36,7 +36,10 @@ namespace UpdateManager.Core.Project
             _filePath = filePath;
         }
 
-        /// <summary>Прочитать список путей (первый = самый свежий). Нет файла — пустой список.</summary>
+        /// <summary>
+        /// Прочитать список путей (первый = самый свежий), не больше MaxItems — файл от прежних версий
+        /// мог помнить больше. Нет файла — пустой список.
+        /// </summary>
         public List<string> Load()
         {
             if (!File.Exists(_filePath))
@@ -45,6 +48,7 @@ namespace UpdateManager.Core.Project
             return XDocument.Load(_filePath).Root
                 .Elements(ItemElement)
                 .Select(e => e.Value)
+                .Take(MaxItems)
                 .ToList();
         }
 

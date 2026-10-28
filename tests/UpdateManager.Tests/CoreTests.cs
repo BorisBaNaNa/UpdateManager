@@ -229,6 +229,17 @@ public sealed class StoresTests : IDisposable
     }
 
     [Fact]
+    public void Recent_OldLongFileIsTrimmedToThree()
+    {
+        var path = Path.Combine(_root, "recent-old.xml");
+        File.WriteAllText(path, "<RecentProjects>" +
+            string.Concat(Enumerable.Range(1, 10).Select(i => "<Project>C:\\p" + i + "</Project>")) +
+            "</RecentProjects>");
+
+        Assert.Equal(new[] { "C:\\p1", "C:\\p2", "C:\\p3" }, new RecentProjectsStore(path).Load());
+    }
+
+    [Fact]
     public void Recent_KeepsMaxItems()
     {
         var store = new RecentProjectsStore(Path.Combine(_root, "recent.xml"));

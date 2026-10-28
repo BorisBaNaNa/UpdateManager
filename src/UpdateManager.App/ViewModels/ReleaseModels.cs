@@ -179,19 +179,30 @@ public sealed class ReleaseItem
 /// <summary>Карточка недавнего проекта на стартовом экране.</summary>
 public sealed class RecentProjectCard
 {
-    public RecentProjectCard(string path, string? name, ReleaseItem? lastRelease, IRelayCommand<string> open)
+    public RecentProjectCard(string path, string? name, ReleaseItem? lastRelease, IRelayCommand<string> open,
+        IRelayCommand<string?> remove, IRelayCommand<string?> delete)
     {
         Path = path;
         Name = name ?? "";
         IsMissing = name == null;
         LastRelease = lastRelease;
         OpenCommand = open;
+        RemoveCommand = remove;
+        DeleteCommand = delete;
     }
 
     public string Path { get; }
     public string Name { get; }
     public ReleaseItem? LastRelease { get; }
     public IRelayCommand<string> OpenCommand { get; }
+
+    /// <summary>«Убрать из списка» — только из показа, проект остаётся на диске.</summary>
+    public IRelayCommand<string?> RemoveCommand { get; }
+
+    /// <summary>«Удалить проект…» — папка проекта целиком в Корзину.</summary>
+    public IRelayCommand<string?> DeleteCommand { get; }
+
+    public bool CanDelete => !IsMissing;
 
     /// <summary>Папку проекта удалили или перенесли.</summary>
     public bool IsMissing { get; }

@@ -94,6 +94,11 @@
                 <MenuItem Header="Настройки проекта…" Command="{Binding EditSettingsCommand}" />
                 <MenuItem Header="Открыть в проводнике" Command="{Binding OpenInExplorerCommand}" />
                 <Separator />
+                <MenuItem Header="Убрать из списка" IsEnabled="{Binding HasProject}"
+                          Command="{Binding RemoveFromRecentCommand}" CommandParameter="{x:Null}" />
+                <MenuItem Header="Удалить проект…" IsEnabled="{Binding HasProject}"
+                          Command="{Binding DeleteProjectCommand}" CommandParameter="{x:Null}" />
+                <Separator />
                 <MenuItem Header="Выход" Command="{Binding ExitCommand}" />
             </MenuItem>
             <MenuItem Header="Выпуск">
@@ -155,6 +160,18 @@
                                             Classes.missing="{Binding IsMissing}"
                                             Command="{Binding OpenCommand}" CommandParameter="{Binding Path}"
                                             ToolTip.Tip="{Binding Path}">
+                                        <!-- Правый клик: открыть, убрать из показа, удалить с содержимым. -->
+                                        <Button.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="Открыть" Command="{Binding OpenCommand}"
+                                                          CommandParameter="{Binding Path}" />
+                                                <MenuItem Header="Убрать из списка" Command="{Binding RemoveCommand}"
+                                                          CommandParameter="{Binding Path}" />
+                                                <Separator />
+                                                <MenuItem Header="Удалить проект…" Command="{Binding DeleteCommand}"
+                                                          CommandParameter="{Binding Path}" IsEnabled="{Binding CanDelete}" />
+                                            </ContextMenu>
+                                        </Button.ContextMenu>
                                         <StackPanel Spacing="3">
                                             <Grid ColumnDefinitions="*,Auto">
                                                 <TextBlock Grid.Column="0" Text="{Binding Title}" FontSize="15"

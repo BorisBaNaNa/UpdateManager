@@ -540,6 +540,50 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.Equal("Windows", _vm.SelectedTrack!.Platform);
     }
 
+    [Fact]
+    public async Task RemoveFromRecent_KeepsFolder_ClosesOpenProject()
+    {
+        await CreateProjectWithBuild();
+
+        _vm.RemoveFromRecentCommand.Execute(null); // меню «Проект → Убрать из списка»
+
+        Assert.False(_vm.HasProject);
+        Assert.Empty(_recent.Load());
+        Assert.True(_service.IsProjectFolder(ProjectDir));
+    }
+
+    [Fact]
+    public async Task DeleteProject_AfterConfirm_FolderGone()
+    {
+        await CreateProjectWithBuild();
+        new RsaKeyManager().Generate(ProjectDir);
+        _service.DeleteFolder = p => Directory.Delete(p, recursive: true); // без Корзины в тестах
+
+        _dialogs.ConfirmAnswer = _ => false;
+        await _vm.DeleteProjectCommand.ExecuteAsync(ProjectDir);
+        Assert.True(Directory.Exists(ProjectDir));
+        Assert.True(_vm.HasProject);
+
+        _dialogs.ConfirmAnswer = _ => true;
+        await _vm.DeleteProjectCommand.ExecuteAsync(ProjectDir);
+        Assert.Contains(_dialogs.Confirms, m => m.Contains("private.key"));
+        Assert.False(Directory.Exists(ProjectDir));
+        Assert.False(_vm.HasProject);
+        Assert.Empty(_recent.Load());
+        Assert.Empty(_dialogs.Errors);
+    }
+
+    [Fact]
+    public void DeleteProject_RefusesNonProjectFolder()
+    {
+        var folder = Path.Combine(_root, "not-a-project");
+        Directory.CreateDirectory(folder);
+        _service.DeleteFolder = p => Directory.Delete(p, recursive: true);
+
+        Assert.Throws<InvalidOperationException>(() => _service.DeleteProject(folder));
+        Assert.True(Directory.Exists(folder));
+    }
+
     private string NextStepFor() =>
         typeof(MainWindowViewModel).GetField("_nextStep",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(_vm)!.ToString()!;
