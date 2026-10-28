@@ -56,6 +56,18 @@
   (только из показа, открытый закрывается) и «Удалить проект…» (подтверждение с предупреждением про `private.key`,
   папка целиком в Корзину — `Core/Common/RecycleBin`, SHFileOperation; удаляется только папка с `Settings.xml`;
   в тестах `ProjectService.DeleteFolder` подменяется). Недавних — 3 последних (`RecentProjectsStore.MaxItems`).
+- **Удалить версию / откатить сервер** (2.2, `MainWindowViewModel.Catalog.cs`) — контекстное меню каталога
+  (`CatalogList.ContextMenu`, действует на `SelectedRelease`: правый клик выбирает запись). Несколько — режим отметки:
+  удержание записи 2 с (код окна, `DispatcherTimer`, захват указателя) → флажки, протяжка отмечает задетое (только
+  добавляет), по отпусканию меню «Удалить отмеченные (N)…»; то же — «Отметить несколько». Удалять можно только
+  `ReleaseItem.CanDelete` (не «новый», ни одна полоса не текущая). `ProjectService.DeleteVersions`: папки в Корзину,
+  `ProjectMeta.ForgetVersion`; Output/ и сервер не трогает. Номера выпусков стабильны: удалённые/откатанные — в
+  `RemovedVersions`, каталог считает их в нумерации; их номера повторно не собираются (клиент с той же версией не
+  обновится) и не дают записи «новый». Откат (`CanRollback` — архивная полоса Windows): `ProjectService.RollbackTo` —
+  версии новее в Корзину (`ForgetWindowsVersion`, Android не трогается), из `Output/IncrementalPatch` и из
+  `VersionInfo.info` убираются инкрементальные патчи к ним/от них (движок переносит список из прежнего VersionInfo),
+  у цели сбрасываются патч/доставка/проверка → `BuildStagedPatch` пересобирает её последней; дальше — доставка и
+  проверка как обычно. Движок понижает версию у клиентов (сравнивает на неравенство) — `EnginePipelineTests.RollbackTo_…`.
 - **Создать / открыть / недавние проекты** (как IDE). Проект = папка движка (`Settings.xml`,
   `Versions/ Output/ SelfPatcher/ Other/`) + наш `updatemanager.project.xml` (мета: главный exe,
   последний источник билда, конфиг доставки, по версиям — даты сборки патча `PatchedVersions`,
@@ -132,7 +144,10 @@ MVVM + доменный слой, домен не знает про UI:
   `DialogViewModel`), `Views/` (окна на базе `DialogWindow`), `Services/` (`IDialogService` — все диалоги
   для VM, `ThemeService`). Композиция — `App.axaml.cs` (Microsoft.Extensions.DependencyInjection).
 - `tests/UpdateManager.Tests` — xUnit v3: Core, VM с `FakeDialogService` и настоящим Core,
-  `EnginePipelineTests` — сквозной прогон движка (сборка → подпись → «Проверить» через `file:///`).
+  `EnginePipelineTests` — сквозной прогон движка (сборка → подпись → «Проверить» через `file:///`; откат с понижением
+  версии у клиентов). Поведение привязок и жестов — настоящий `MainWindow` без экрана: `HeadlessUi.Run`
+  (Avalonia.Headless, одна сессия на процесс; `Click`, `CenterOf`, `Wait`, `window.MouseDown/Move/Up`).
+  Запущенный из репозитория UpdateManager держит `bin\Debug` — тогда тесты с `--artifacts-path <scratch>`.
 - Настройки проекта движка правит только `Core/Project/ProjectService`; операции (`PatchBuilder`,
   `PatchVerifier`, `SelfUpdate*`) создают движковые объекты сами.
 - Версия/Product/Company — `Directory.Build.props` (по Product/Company `SelfIdentity` узнаёт себя).
@@ -161,13 +176,16 @@ MVVM + доменный слой, домен не знает про UI:
 
 - Дизайн дальше — скилл Impeccable (`.claude/skills/impeccable`, `/impeccable …`); контекст — `PRODUCT.md`,
   `DESIGN.md`, бриф главного окна `.impeccable/surfaces/`. Скриншоты headless-обвязкой (Avalonia.Headless,
-  `CaptureRenderedFrame`), в `.impeccable/review/` (не в git). Окна в живом приложении глазами не проверены.
+  `CaptureRenderedFrame`), в `.impeccable/review/` (не в git).
 - Самообновление проверено вручную (2.0 → 2.1), автотестами не покрыто;
   сервер `https://updates.borealis-soft-home.duckdns.org:51943/` (только HTTPS; FTP — 192.168.0.100 в LAN).
   Роутер без NAT loopback: изнутри LAN публичный адрес недоступен (проверка/«Проверить» виснут до таймаута),
   а снаружи недоступен FTP 192.168.0.100 — HTTP-проверки делать из внешней сети.
 - FTPS/TLS для FTP-доставки (сейчас только обычный FTP) — при необходимости.
-- **CLI выпуска `umcli` (план, 2.2.0)** — выпуск без окна для агентов, `release.ps1` и CI: сначала вынос
+- **2.2.0 готовится** (не выпущена): удаление и откат версий, выключаемая подпись Android, запись версии Android
+  с отпечатками. Заметки — `docs/releases/2.2.0.md`. Открыто: выбор платформы сбрасывался на первую после
+  действия с этапом — в тестах (VM и headless-окно, в т.ч. настоящий клик) не воспроизводится; ждём точные шаги.
+- **CLI выпуска `umcli` (план, после 2.2)** — выпуск без окна для агентов, `release.ps1` и CI: сначала вынос
   логики выпуска из `MainWindowViewModel` в Core (`Core/Release/`), затем консольный `UpdateManager.Cli`.
   Спек: `docs/superpowers/specs/2026-10-28-cli-release-design.md`. Не начато.
 
