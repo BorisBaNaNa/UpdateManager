@@ -363,6 +363,46 @@ public sealed class StoresTests : IDisposable
         Assert.Empty(loaded.Android.ActiveSignMasks);
     }
 
+    [Fact]
+    public void ProjectMeta_AndroidRecordsRoundTrip()
+    {
+        var meta = new ProjectMeta();
+        meta.AndroidRecords["1.0.0"] = new AndroidRecord
+        {
+            Signed = true,
+            Masks = { "latest.json" },
+            Files = { ["App.apk"] = "aa", ["sub/latest.json"] = "bb" }
+        };
+        meta.AndroidRecords["1.0.1"] = new AndroidRecord { Signed = false };
+        meta.Save(_root);
+
+        var loaded = ProjectMeta.Load(_root);
+        Assert.True(loaded.AndroidRecords["1.0.0"].Signed);
+        Assert.Equal(new[] { "latest.json" }, loaded.AndroidRecords["1.0.0"].Masks);
+        Assert.Equal("bb", loaded.AndroidRecords["1.0.0"].Files["sub/latest.json"]);
+        Assert.False(loaded.AndroidRecords["1.0.1"].Signed);
+        Assert.Empty(loaded.AndroidRecords["1.0.1"].Files);
+    }
+
+    [Fact]
+    public void AndroidPackage_HashesSkipSig_ChangesListed()
+    {
+        var folder = Path.Combine(_root, "android");
+        Directory.CreateDirectory(Path.Combine(folder, "sub"));
+        File.WriteAllText(Path.Combine(folder, "App.apk"), "apk");
+        File.WriteAllText(Path.Combine(folder, "sub", "latest.json"), "{}");
+        File.WriteAllText(Path.Combine(folder, "sub", "latest.json.sig"), "sig");
+        var recorded = AndroidPackage.Hashes(folder, new[] { "App.apk", "sub/latest.json", "sub/latest.json.sig" });
+        Assert.Equal(new[] { "App.apk", "sub/latest.json" }, recorded.Keys.OrderBy(k => k, StringComparer.Ordinal));
+        Assert.Empty(AndroidPackage.Changes(recorded, AndroidPackage.Hashes(folder, new[] { "App.apk", "sub/latest.json" })));
+
+        File.WriteAllText(Path.Combine(folder, "App.apk"), "apk2");
+        File.WriteAllText(Path.Combine(folder, "extra.txt"), "x");
+        var current = AndroidPackage.Hashes(folder, new[] { "App.apk", "extra.txt" });
+        Assert.Equal(new[] { "изменён: App.apk", "новый: extra.txt", "пропал: sub/latest.json" },
+            AndroidPackage.Changes(recorded, current));
+    }
+
     [Theory]
     [InlineData("<Sign>latest.json</Sign>", true)]
     [InlineData("", false)]

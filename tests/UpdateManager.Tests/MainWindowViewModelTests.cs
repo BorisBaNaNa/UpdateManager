@@ -541,6 +541,63 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task Android_StageShowsHowVersionWasRecorded_NotCurrentSettings()
+    {
+        await CreateProjectWithAndroid();
+        _dialogs.Prompts.Enqueue("1.0.0");
+        await _vm.SignAndroidCommand.ExecuteAsync(null);
+
+        // Подпись выключили после — подписанная версия так и остаётся подписанной; повтор уже без подписи.
+        _dialogs.SettingsAnswer = s =>
+        {
+            s.Android.Sign = false;
+            return s;
+        };
+        await _vm.EditSettingsCommand.ExecuteAsync(null);
+        var stage = AndroidStage("1.0.0", StageKind.Files);
+        Assert.Equal("Подпись", stage.Title);
+        Assert.StartsWith("подписан", stage.Detail);
+        Assert.Equal("Записать заново", stage.ActionText);
+
+        // И выкладывается как записано: с .sig по маскам записи.
+        await _vm.DeliverAndroidCommand.ExecuteAsync(null);
+        Assert.Empty(_dialogs.Errors);
+        Assert.True(File.Exists(Path.Combine(_root, "server", "AndroidPatch", "latest.json.sig")));
+    }
+
+    [Fact]
+    public async Task Android_Unsigned_ChangedOrAddedFileBlocksDelivery()
+    {
+        var (server, android) = await CreateProjectWithAndroid();
+        _dialogs.SettingsAnswer = s =>
+        {
+            s.Android.Sign = false;
+            return s;
+        };
+        await _vm.EditSettingsCommand.ExecuteAsync(null);
+        _dialogs.Prompts.Enqueue("1.0.0");
+        await _vm.SignAndroidCommand.ExecuteAsync(null);
+
+        File.WriteAllText(Path.Combine(android, "App.apk"), "другой apk");
+        await _vm.DeliverAndroidCommand.ExecuteAsync(null);
+        Assert.Contains(_dialogs.Errors, e => e.Contains("изменён: App.apk") && e.Contains("Запишите версию заново"));
+        Assert.False(Directory.Exists(Path.Combine(server, "AndroidPatch")));
+
+        _dialogs.Prompts.Enqueue("1.0.0");
+        await _vm.SignAndroidCommand.ExecuteAsync(null); // записать заново — теперь выкладка проходит
+        File.WriteAllText(Path.Combine(android, "notes.txt"), "лишнее");
+        _dialogs.Errors.Clear();
+        await _vm.DeliverAndroidCommand.ExecuteAsync(null);
+        Assert.Contains(_dialogs.Errors, e => e.Contains("новый: notes.txt"));
+
+        File.Delete(Path.Combine(android, "notes.txt"));
+        _dialogs.Errors.Clear();
+        await _vm.DeliverAndroidCommand.ExecuteAsync(null);
+        Assert.Empty(_dialogs.Errors);
+        Assert.True(File.Exists(Path.Combine(server, "AndroidPatch", "App.apk")));
+    }
+
+    [Fact]
     public async Task Android_SignOnWithoutMasks_Error()
     {
         var (_, android) = await CreateProjectWithAndroid();

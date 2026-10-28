@@ -29,8 +29,11 @@ public sealed class StageItem
     public StageKind Kind { get; }
     public StageState State { get; }
 
-    /// <summary>Этап Files без подписи (выключена в настройках Android): только записывает версию выпуска.</summary>
+    /// <summary>Этап Files без подписи: версия записана (или будет записана) без .sig.</summary>
     public bool Unsigned { get; init; }
+
+    /// <summary>Повтор этапа Files подпишет файлы (текущие настройки) — для подписи действия.</summary>
+    public bool WillSign { get; init; } = true;
 
     /// <summary>Платформа полосы («Windows», «Android») — задаёт <see cref="PlatformTrack"/>.</summary>
     public string Platform { get; internal set; } = ReleaseCatalog.Windows;
@@ -66,7 +69,7 @@ public sealed class StageItem
     {
         StageKind.Build => "Сменить папку билда",
         StageKind.Patch => State == StageState.Done ? "Пересобрать" : "Собрать",
-        StageKind.Files when Unsigned => State == StageState.Done ? "Записать заново" : "Записать версию",
+        StageKind.Files when !WillSign => State == StageState.Done ? "Записать заново" : "Записать версию",
         StageKind.Files => State == StageState.Done ? "Подписать заново" : "Подписать",
         StageKind.Delivery => State == StageState.Done ? "Доставить снова" : "Доставить",
         _ => State == StageState.Pending ? "Проверить" : "Проверить снова"
@@ -375,13 +378,16 @@ public static class ReleaseCatalog
     {
         var stages = new List<StageItem> { new(StageKind.Build, StageState.Done, BuildFolderLabel(meta)) };
 
+        // Пройденный этап — такой, каким его записали: настройки подписи могли поменяться после.
+        // У записей 2.1.0 нет AndroidRecord — тогда по текущим маскам, как было раньше.
         DateTime? signedAt = meta.AndroidSignedVersions.TryGetValue(version, out var s) ? s : null;
-        var masks = meta.Android.ActiveSignMasks;
+        var masks = meta.AndroidRecords.TryGetValue(version, out var record) ? record.Masks : meta.Android.SignMasks;
         stages.Add(signedAt.HasValue
             ? new StageItem(StageKind.Files, StageState.Done,
                 (masks.Count > 0 ? "подписан " : "без подписи · ") + Stamp(signedAt.Value),
                 (masks.Count > 0 ? "подписан " : "без подписи · ") + Stamp(signedAt.Value) +
-                (masks.Count > 0 ? "\nмаски: " + string.Join(", ", masks) : "")) { Unsigned = !meta.Android.Sign }
+                (masks.Count > 0 ? "\nмаски: " + string.Join(", ", masks) : ""))
+                { Unsigned = masks.Count == 0, WillSign = meta.Android.Sign }
             : FilesPending(meta));
 
         DateTime? deliveredAt = meta.AndroidDeliveredVersions.TryGetValue(version, out var d) ? d : null;
@@ -407,7 +413,7 @@ public static class ReleaseCatalog
 
     private static StageItem FilesPending(ProjectMeta meta) => meta.Android.Sign
         ? new StageItem(StageKind.Files, StageState.Pending, "не подписан")
-        : new StageItem(StageKind.Files, StageState.Pending, "версия не записана") { Unsigned = true };
+        : new StageItem(StageKind.Files, StageState.Pending, "версия не записана") { Unsigned = true, WillSign = false };
 
     // Android ещё не выпускался или в папке билда есть файлы новее последней подписи.
     private static bool AndroidBuildIsNew(ProjectMeta meta)

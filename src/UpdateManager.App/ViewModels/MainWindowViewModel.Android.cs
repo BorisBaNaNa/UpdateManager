@@ -103,23 +103,36 @@ public sealed partial class MainWindowViewModel
         }
 
         ResetAndroidFrom(version, StageKind.Files);
-        if (masks.Count > 0)
+        AndroidRecord record;
+        try
         {
-            try
+            if (masks.Count > 0)
             {
                 var root = _project.RootPath;
                 var privateKey = _keys.ReadPrivateKey(root);
                 var publicKey = File.ReadAllText(_keys.PublicKeyPath(root));
                 await Task.Run(() => new FileSigner().Sign(folder, masks, privateKey, publicKey));
             }
-            catch (Exception ex)
+
+            // Как записана версия и отпечатки файлов: каталог и доставка опираются на них, а не на текущие настройки.
+            var files = AndroidPackage.Files(folder, masks, meta.Android.ExcludeMasks);
+            if (files.Count == 0)
+                throw new InvalidOperationException("в папке билда нечего выкладывать: " + folder);
+            record = new AndroidRecord
             {
-                ShowProject();
-                await _dialogs.ShowErrorAsync("Подпись не выполнена:\n" + ex.Message);
-                return;
-            }
+                Signed = masks.Count > 0,
+                Masks = new List<string>(masks),
+                Files = await Task.Run(() => AndroidPackage.Hashes(folder, files))
+            };
+        }
+        catch (Exception ex)
+        {
+            ShowProject();
+            await _dialogs.ShowErrorAsync((masks.Count > 0 ? "Подпись не выполнена:\n" : "Версия не записана:\n") + ex.Message);
+            return;
         }
 
+        meta.AndroidRecords[version] = record;
         meta.AndroidSignedVersions[version] = DateTime.Now;
         meta.Save(_project.RootPath);
         ShowProject();
@@ -141,10 +154,25 @@ public sealed partial class MainWindowViewModel
             return;
         }
 
-        var package = await PrepareAndroidPackage(checkSignatures: true);
+        var package = await PrepareAndroidPackage(version, checkSignatures: true);
         if (package == null)
             return;
         var (folder, files) = package.Value;
+
+        // Выкладывается ровно записанное: файл правили, добавили или удалили после записи — сначала записать заново.
+        if (meta.AndroidRecords.TryGetValue(version, out var record) && record.Files.Count > 0)
+        {
+            var changes = AndroidPackage.Changes(record.Files, await Task.Run(() => AndroidPackage.Hashes(folder, files)));
+            if (changes.Count > 0)
+            {
+                ShowProject();
+                await _dialogs.ShowErrorAsync("Файлы Android изменились после того, как версия " + version + " была " +
+                    (record.Signed ? "подписана" : "записана") + ":\n" + string.Join("\n", changes.Take(10)) +
+                    (changes.Count > 10 ? "\n… и ещё " + (changes.Count - 10) : "") + "\n" +
+                    (record.Signed ? "Подпишите файлы заново." : "Запишите версию заново."));
+                return;
+            }
+        }
 
         var config = meta.Delivery;
         var channel = meta.Android.Channel;
@@ -231,12 +259,12 @@ public sealed partial class MainWindowViewModel
             return;
         }
 
-        var package = await PrepareAndroidPackage(checkSignatures: false);
+        var package = await PrepareAndroidPackage(version, checkSignatures: false);
         if (package == null)
             return;
         var (folder, files) = package.Value;
 
-        var signed = AndroidPackage.SignedFiles(files, meta.Android.ActiveSignMasks);
+        var signed = AndroidPackage.SignedFiles(files, AndroidMasks(version));
         var publicKey = signed.Count > 0 && _keys.HasPublicKey(_project.RootPath)
             ? File.ReadAllText(_keys.PublicKeyPath(_project.RootPath)) : "";
         if (signed.Count > 0 && publicKey.Length == 0)
@@ -259,7 +287,7 @@ public sealed partial class MainWindowViewModel
 
     // Папка билда и файлы выкладки; checkSignatures — у подписываемых файлов .sig на месте и сходится
     // (файл не правили после подписи). null — ошибка уже показана.
-    private async Task<(string Folder, List<string> Files)?> PrepareAndroidPackage(bool checkSignatures)
+    private async Task<(string Folder, List<string> Files)?> PrepareAndroidPackage(string version, bool checkSignatures)
     {
         var meta = _project!.Meta;
         var folder = meta.Android.BuildSource;
@@ -269,7 +297,8 @@ public sealed partial class MainWindowViewModel
             return null;
         }
 
-        var files = AndroidPackage.Files(folder, meta.Android.ActiveSignMasks, meta.Android.ExcludeMasks);
+        var masks = AndroidMasks(version);
+        var files = AndroidPackage.Files(folder, masks, meta.Android.ExcludeMasks);
         if (files.Count == 0)
         {
             await _dialogs.ShowErrorAsync("В папке билда Android нечего выкладывать: " + folder);
@@ -278,7 +307,7 @@ public sealed partial class MainWindowViewModel
 
         if (checkSignatures)
         {
-            var signed = AndroidPackage.SignedFiles(files, meta.Android.ActiveSignMasks);
+            var signed = AndroidPackage.SignedFiles(files, masks);
             if (signed.Count > 0)
             {
                 var publicKey = File.ReadAllText(_keys.PublicKeyPath(_project.RootPath));
@@ -299,6 +328,10 @@ public sealed partial class MainWindowViewModel
         return (folder, files);
     }
 
+    // Маски подписи версии — какими её записали (настройки могли поменяться после); у записей 2.1.0 — текущие.
+    private List<string> AndroidMasks(string version) =>
+        _project!.Meta.AndroidRecords.TryGetValue(version, out var record) ? record.Masks : _project.Meta.Android.ActiveSignMasks;
+
     // Подсказка версии при подписи: выбранный выпуск, иначе самый новый с известной версией.
     private string SuggestAndroidVersion()
     {
@@ -312,7 +345,10 @@ public sealed partial class MainWindowViewModel
     {
         var meta = _project!.Meta;
         if (from <= StageKind.Files)
+        {
             meta.AndroidSignedVersions.Remove(version);
+            meta.AndroidRecords.Remove(version);
+        }
         if (from <= StageKind.Delivery)
             meta.AndroidDeliveredVersions.Remove(version);
         meta.AndroidVerifiedVersions.Remove(version);

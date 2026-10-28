@@ -51,6 +51,12 @@ namespace UpdateManager.Core.Project
         private const string AndroidSignedElement = "AndroidSigned";
         private const string AndroidDeliveredElement = "AndroidDelivered";
         private const string AndroidVerifiedElement = "AndroidVerified";
+        private const string AndroidRecordsElement = "AndroidRecords";
+        private const string AndroidRecordSignedAttribute = "signed";
+        private const string AndroidRecordMaskElement = "Mask";
+        private const string AndroidRecordFileElement = "File";
+        private const string AndroidRecordPathAttribute = "path";
+        private const string AndroidRecordHashAttribute = "sha256";
 
         /// <summary>Версия схемы этого файла — чтобы в будущем безболезненно менять формат.</summary>
         public int SchemaVersion { get; set; } = CurrentSchemaVersion;
@@ -109,6 +115,13 @@ namespace UpdateManager.Core.Project
         /// <summary>Android: когда файлы версии подписаны (версия → время).</summary>
         public Dictionary<string, DateTime> AndroidSignedVersions { get; set; } =
             new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Android: как версия записана на этапе подписи (подписана ли, маски, отпечатки файлов).
+        /// У записей 2.1.0 его нет — тогда признак подписи берётся из текущих масок, а отпечатки не сверяются.
+        /// </summary>
+        public Dictionary<string, AndroidRecord> AndroidRecords { get; set; } =
+            new Dictionary<string, AndroidRecord>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>Android: когда версия выложена в канал (версия → время).</summary>
         public Dictionary<string, DateTime> AndroidDeliveredVersions { get; set; } =
@@ -174,8 +187,51 @@ namespace UpdateManager.Core.Project
             LoadVersionDates(root.Element(AndroidSignedElement), meta.AndroidSignedVersions);
             LoadVersionDates(root.Element(AndroidDeliveredElement), meta.AndroidDeliveredVersions);
             LoadVerification(root.Element(AndroidVerifiedElement), meta.AndroidVerifiedVersions);
+            LoadAndroidRecords(root.Element(AndroidRecordsElement), meta.AndroidRecords);
 
             return meta;
+        }
+
+        // <AndroidRecords><Version id signed><Mask/>…<File path sha256/>…</Version></AndroidRecords>
+        private static void LoadAndroidRecords(XElement container, Dictionary<string, AndroidRecord> target)
+        {
+            if (container == null)
+                return;
+
+            foreach (var item in container.Elements(DeliveredVersionElement))
+            {
+                var id = (string)item.Attribute(DeliveredVersionIdAttribute);
+                if (string.IsNullOrEmpty(id))
+                    continue;
+
+                var record = new AndroidRecord
+                {
+                    Signed = (bool?)item.Attribute(AndroidRecordSignedAttribute) ?? false,
+                    Masks = item.Elements(AndroidRecordMaskElement).Select(e => e.Value).ToList()
+                };
+                foreach (var file in item.Elements(AndroidRecordFileElement))
+                {
+                    var path = (string)file.Attribute(AndroidRecordPathAttribute);
+                    if (!string.IsNullOrEmpty(path))
+                        record.Files[path] = (string)file.Attribute(AndroidRecordHashAttribute) ?? "";
+                }
+                target[id] = record;
+            }
+        }
+
+        private static XElement SaveAndroidRecords(Dictionary<string, AndroidRecord> source)
+        {
+            if (source.Count == 0)
+                return null;
+
+            return new XElement(AndroidRecordsElement,
+                source.Select(pair => new XElement(DeliveredVersionElement,
+                    new XAttribute(DeliveredVersionIdAttribute, pair.Key),
+                    new XAttribute(AndroidRecordSignedAttribute, pair.Value.Signed),
+                    pair.Value.Masks.Select(m => new XElement(AndroidRecordMaskElement, m)),
+                    pair.Value.Files.Select(f => new XElement(AndroidRecordFileElement,
+                        new XAttribute(AndroidRecordPathAttribute, f.Key),
+                        new XAttribute(AndroidRecordHashAttribute, f.Value))))));
         }
 
         // <X><Version id at ok details/></X> → словарь версия → итог проверки.
@@ -270,7 +326,8 @@ namespace UpdateManager.Core.Project
                         Android.ExcludeMasks.Select(m => new XElement(AndroidExcludeElement, m))),
                     SaveVersionDates(AndroidSignedElement, AndroidSignedVersions),
                     SaveVersionDates(AndroidDeliveredElement, AndroidDeliveredVersions),
-                    SaveVerification(AndroidVerifiedElement, AndroidVerifiedVersions)
+                    SaveVerification(AndroidVerifiedElement, AndroidVerifiedVersions),
+                    SaveAndroidRecords(AndroidRecords)
                 ));
             doc.Save(Path.Combine(projectRoot, FileName));
         }

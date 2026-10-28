@@ -1290,7 +1290,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                     StageKind.Files => (NextStepKind.AndroidSign, next.Unsigned
                         ? "Билд Android готов — запишите версию выпуска (подпись выключена)."
                         : "Билд Android готов — подпишите файлы."),
-                    StageKind.Delivery => (NextStepKind.AndroidDeliver, IsAndroidSigned
+                    StageKind.Delivery => (NextStepKind.AndroidDeliver, !track.Stages.Any(s => s.IsFiles && s.Unsigned)
                         ? "Файлы подписаны — выложите их в канал."
                         : "Версия записана — выложите файлы в канал."),
                     _ => (NextStepKind.AndroidVerify, next.IsFailed
