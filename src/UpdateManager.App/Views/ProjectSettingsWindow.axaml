@@ -45,53 +45,96 @@
                 </Grid>
 
                 <Border Classes="rule" Margin="0,24,0,0" />
-                <TextBlock Margin="0,18,0,0" Classes="heading" Text="Патч" />
+                <TextBlock Margin="0,18,0,0" Classes="heading" Text="Платформы" />
                 <Grid Margin="0,12,0,0" ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto">
-                    <TextBlock Grid.Row="0" Classes="field" Text="Типы патчей" />
-                    <WrapPanel Grid.Row="0" Grid.Column="1">
-                        <CheckBox Margin="0,0,20,0" Content="Repair" IsChecked="{Binding CreateRepairPatch}" />
-                        <CheckBox Margin="0,0,20,0" Content="Installer" IsChecked="{Binding CreateInstallerPatch}" />
-                        <CheckBox Content="Incremental" IsChecked="{Binding CreateIncrementalPatch}" />
-                    </WrapPanel>
-                    <CheckBox Grid.Row="1" Grid.Column="1" Content="Инкрементальные от каждой предыдущей версии"
-                              IsChecked="{Binding CreateAllIncrementalPatches}" />
-                    <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,8,0,0">
-                        <CheckBox Content="Self-patching приложение" IsChecked="{Binding IsSelfPatchingApp}" />
-                        <CheckBox Content="Подписывать патч RSA-ключом" IsChecked="{Binding SignPatch}" />
-                    </StackPanel>
+                    <TextBlock Grid.Row="0" Classes="field" Text="Выпускать" />
+                    <CheckBox Grid.Row="0" Grid.Column="1" Content="Windows — патч движка и подпись манифестов"
+                              IsChecked="{Binding WindowsEnabled}" />
+                    <CheckBox Grid.Row="1" Grid.Column="1" Content="Android — подпись файлов по маске, без патчей"
+                              IsChecked="{Binding AndroidEnabled}" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" Margin="0,4,0,0" Classes="detail"
+                               IsVisible="{Binding HasNoPlatform}"
+                               Text="Включите хотя бы одну платформу." />
                 </Grid>
 
-                <Border Classes="rule" Margin="0,24,0,0" />
-                <TextBlock Margin="0,18,0,0" Classes="heading" Text="Сжатие и разница файлов" />
-                <Grid Margin="0,14,0,0" ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto"
-                      RowSpacing="10">
-                    <TextBlock Grid.Row="0" Classes="field" Text="Repair" />
-                    <ComboBox Grid.Row="0" Grid.Column="1" MinWidth="140"
-                              ItemsSource="{Binding CompressionFormats}"
-                              SelectedItem="{Binding CompressionRepair}" />
-                    <TextBlock Grid.Row="1" Classes="field" Text="Installer" />
-                    <ComboBox Grid.Row="1" Grid.Column="1" MinWidth="140"
-                              ItemsSource="{Binding CompressionFormats}"
-                              SelectedItem="{Binding CompressionInstaller}" />
-                    <TextBlock Grid.Row="2" Classes="field" Text="Incremental" />
-                    <ComboBox Grid.Row="2" Grid.Column="1" MinWidth="140"
-                              ItemsSource="{Binding CompressionFormats}"
-                              SelectedItem="{Binding CompressionIncremental}" />
-                    <TextBlock Grid.Row="3" Classes="field" Text="BinaryDiffQuality" />
-                    <NumericUpDown Grid.Row="3" Grid.Column="1" Width="140" HorizontalAlignment="Left"
-                                   Minimum="0"
-                                   Maximum="9"
-                                   Increment="1" FormatString="0"
-                                   Value="{Binding BinaryDiffQuality}" />
-                    <CheckBox Grid.Row="4" Grid.Column="1" Content="Не создавать патч-файлы для неизменённых файлов"
-                              IsChecked="{Binding DontCreatePatchFilesForUnchangedFiles}" />
-                </Grid>
+                <!-- Windows: патч движка — типы, сжатие, игнорируемые пути. -->
+                <StackPanel IsVisible="{Binding WindowsEnabled}">
+                    <Border Classes="rule" Margin="0,24,0,0" />
+                    <TextBlock Margin="0,18,0,0" Classes="heading" Text="Патч" />
+                    <Grid Margin="0,12,0,0" ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto">
+                        <TextBlock Grid.Row="0" Classes="field" Text="Типы патчей" />
+                        <WrapPanel Grid.Row="0" Grid.Column="1">
+                            <CheckBox Margin="0,0,20,0" Content="Repair" IsChecked="{Binding CreateRepairPatch}" />
+                            <CheckBox Margin="0,0,20,0" Content="Installer" IsChecked="{Binding CreateInstallerPatch}" />
+                            <CheckBox Content="Incremental" IsChecked="{Binding CreateIncrementalPatch}" />
+                        </WrapPanel>
+                        <CheckBox Grid.Row="1" Grid.Column="1" Content="Инкрементальные от каждой предыдущей версии"
+                                  IsChecked="{Binding CreateAllIncrementalPatches}" />
+                        <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,8,0,0">
+                            <CheckBox Content="Self-patching приложение" IsChecked="{Binding IsSelfPatchingApp}" />
+                            <CheckBox Content="Подписывать патч RSA-ключом" IsChecked="{Binding SignPatch}" />
+                        </StackPanel>
+                    </Grid>
 
-                <Border Classes="rule" Margin="0,24,0,0" />
-                <TextBlock Margin="0,18,0,0" Classes="heading" Text="Игнорируемые пути" />
-                <TextBlock Margin="0,4,0,0" Classes="detail" Text="По одному в строке." />
-                <TextBox Margin="0,10,0,0" Text="{Binding IgnoredPaths}" AcceptsReturn="True" Height="120"
-                         ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                    <Border Classes="rule" Margin="0,24,0,0" />
+                    <TextBlock Margin="0,18,0,0" Classes="heading" Text="Сжатие и разница файлов" />
+                    <Grid Margin="0,14,0,0" ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                          RowSpacing="10">
+                        <TextBlock Grid.Row="0" Classes="field" Text="Repair" />
+                        <ComboBox Grid.Row="0" Grid.Column="1" MinWidth="140"
+                                  ItemsSource="{Binding CompressionFormats}"
+                                  SelectedItem="{Binding CompressionRepair}" />
+                        <TextBlock Grid.Row="1" Classes="field" Text="Installer" />
+                        <ComboBox Grid.Row="1" Grid.Column="1" MinWidth="140"
+                                  ItemsSource="{Binding CompressionFormats}"
+                                  SelectedItem="{Binding CompressionInstaller}" />
+                        <TextBlock Grid.Row="2" Classes="field" Text="Incremental" />
+                        <ComboBox Grid.Row="2" Grid.Column="1" MinWidth="140"
+                                  ItemsSource="{Binding CompressionFormats}"
+                                  SelectedItem="{Binding CompressionIncremental}" />
+                        <TextBlock Grid.Row="3" Classes="field" Text="BinaryDiffQuality" />
+                        <NumericUpDown Grid.Row="3" Grid.Column="1" Width="140" HorizontalAlignment="Left"
+                                       Minimum="0"
+                                       Maximum="9"
+                                       Increment="1" FormatString="0"
+                                       Value="{Binding BinaryDiffQuality}" />
+                        <CheckBox Grid.Row="4" Grid.Column="1" Content="Не создавать патч-файлы для неизменённых файлов"
+                                  IsChecked="{Binding DontCreatePatchFilesForUnchangedFiles}" />
+                    </Grid>
+
+                    <Border Classes="rule" Margin="0,24,0,0" />
+                    <TextBlock Margin="0,18,0,0" Classes="heading" Text="Игнорируемые пути" />
+                    <TextBlock Margin="0,4,0,0" Classes="detail" Text="По одному в строке." />
+                    <TextBox Margin="0,10,0,0" Text="{Binding IgnoredPaths}" AcceptsReturn="True" Height="120"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                </StackPanel>
+
+                <!-- Android: без патчей — подпись файлов по маске и выкладка в папку канала. -->
+                <StackPanel IsVisible="{Binding AndroidEnabled}">
+                    <Border Classes="rule" Margin="0,24,0,0" />
+                    <TextBlock Margin="0,18,0,0" Classes="heading" Text="Android" />
+                    <Grid Margin="0,14,0,0" ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                          RowSpacing="10">
+                        <TextBlock Grid.Row="0" Classes="field" Text="Канал на сервере" />
+                        <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding AndroidChannel}" PlaceholderText="AndroidPatch" />
+                        <TextBlock Grid.Row="1" Grid.Column="1" Margin="0,-2,0,4" Classes="detail"
+                                   Text="{Binding AndroidChannelUrlText}" />
+
+                        <TextBlock Grid.Row="2" Classes="field" VerticalAlignment="Top" Margin="0,6,0,0"
+                                   Text="Подписывать" />
+                        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding AndroidSignMasks}" AcceptsReturn="True"
+                                 Height="72" PlaceholderText="latest.json" ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                        <TextBlock Grid.Row="3" Grid.Column="1" Margin="0,-2,0,4" Classes="detail"
+                                   Text="Маски от папки билда, по одной в строке (latest.json, *.apk, manifests/*.json). Рядом с каждым файлом появится .sig — RSA-ключом проекта. Маска без совпадений — ошибка." />
+
+                        <TextBlock Grid.Row="4" Classes="field" VerticalAlignment="Top" Margin="0,6,0,0"
+                                   Text="Не выкладывать" />
+                        <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding AndroidExcludeMasks}" AcceptsReturn="True"
+                                 Height="72" PlaceholderText="AlmaProfile-x86_64.apk" ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                        <TextBlock Grid.Row="5" Grid.Column="1" Margin="0,-2,0,0" Classes="detail"
+                                   Text="Всё остальное из папки билда уходит в канал. Старое в канале после успешной выкладки удаляется." />
+                    </Grid>
+                </StackPanel>
             </StackPanel>
         </ScrollViewer>
     </DockPanel>

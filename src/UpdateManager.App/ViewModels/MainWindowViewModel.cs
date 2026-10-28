@@ -98,7 +98,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(BrowseBuildSourceCommand), nameof(OpenInExplorerCommand),
         nameof(EditSettingsCommand), nameof(DeliverCommand), nameof(VerifyCommand),
         nameof(ConfigureFtpCommand), nameof(ConfigureDeliveryCommand), nameof(GenerateKeysCommand),
-        nameof(RunStageCommand))]
+        nameof(RunStageCommand), nameof(BrowseAndroidBuildCommand), nameof(SignAndroidCommand),
+        nameof(DeliverAndroidCommand), nameof(VerifyAndroidCommand))]
     [NotifyPropertyChangedFor(nameof(IsStartScreen))]
     private bool _hasProject;
 
@@ -389,6 +390,18 @@ public sealed partial class MainWindowViewModel : ObservableObject
             case NextStepKind.Verify:
                 await VerifyCommand.ExecuteAsync(null);
                 break;
+            case NextStepKind.AndroidPickBuild:
+                await BrowseAndroidBuildCommand.ExecuteAsync(null);
+                break;
+            case NextStepKind.AndroidSign:
+                await SignAndroidCommand.ExecuteAsync(null);
+                break;
+            case NextStepKind.AndroidDeliver:
+                await DeliverAndroidCommand.ExecuteAsync(null);
+                break;
+            case NextStepKind.AndroidVerify:
+                await VerifyAndroidCommand.ExecuteAsync(null);
+                break;
         }
     }
 
@@ -396,6 +409,26 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanRunStage))]
     private async Task RunStage(StageItem? stage)
     {
+        if (stage?.Platform == ReleaseCatalog.Android)
+        {
+            switch (stage.Kind)
+            {
+                case StageKind.Build:
+                    await BrowseAndroidBuildCommand.ExecuteAsync(null);
+                    break;
+                case StageKind.Files:
+                    await SignAndroidCommand.ExecuteAsync(null);
+                    break;
+                case StageKind.Delivery:
+                    await DeliverAndroidCommand.ExecuteAsync(null);
+                    break;
+                case StageKind.Verify:
+                    await VerifyAndroidCommand.ExecuteAsync(null);
+                    break;
+            }
+            return;
+        }
+
         switch (stage?.Kind)
         {
             case StageKind.Build:
@@ -1016,6 +1049,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         var baseUrl = (settings.BaseDownloadURL ?? "").Trim();
         ServerText = baseUrl.Length > 0 ? baseUrl : "не задан — укажите в настройках проекта";
         DeliveryText = DescribeDelivery(project);
+        ShowAndroid(project.Meta);
 
         string? newVersion = null;
         var newDetail = "";
@@ -1087,18 +1121,22 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 ? "Версия билда не определилась — укажите главный exe."
                 : "Версий пока нет. Начните с папки билда приложения.";
         }
-        else if (!release.IsLatest)
+        else if (!release.HasCurrentTrack)
         {
-            StatusText = "Архивный выпуск: клиенты получают патч до более новой версии.";
+            StatusText = "Архивный выпуск: клиенты получают более новую версию.";
         }
         else
         {
-            var next = release.Platforms[0].NextStage;
-            if (next == null)
+            // Одна главная кнопка: следующий шаг первой незавершённой полосы (Windows, затем Android).
+            var track = release.Platforms.FirstOrDefault(p => p.IsCurrent && p.NextStage != null);
+            var next = track?.NextStage;
+            if (track == null || next == null)
             {
-                StatusText = "Выпуск собран, доставлен и проверен.";
+                StatusText = release.IsMultiPlatform ? "Выпуск по всем платформам доставлен и проверен."
+                    : release.Platforms[0].IsAndroid ? "Выпуск подписан, доставлен и проверен."
+                    : "Выпуск собран, доставлен и проверен.";
             }
-            else
+            else if (!track.IsAndroid)
             {
                 (_nextStep, StatusText) = next.Kind switch
                 {
@@ -1106,25 +1144,52 @@ public sealed partial class MainWindowViewModel : ObservableObject
                     StageKind.Patch => (NextStepKind.CreatePatch, "Билд готов — соберите патч."),
                     StageKind.Delivery => (NextStepKind.Deliver, "Патч собран — доставьте его на сервер."),
                     _ => (NextStepKind.Verify, next.IsFailed
-                        ? "Проверка не прошла: " + string.Join(" ", next.Reason.Split('\n',
-                              StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)).TrimEnd('.') + ".\n" +
+                        ? "Проверка не прошла: " + OneLine(next.Reason) + ".\n" +
                           "Проверьте адрес сервера в настройках и что патч доставлен, затем проверьте снова."
                         : "Патч на сервере — проверьте, что клиент его скачает.")
                 };
             }
+            else
+            {
+                (_nextStep, StatusText) = next.Kind switch
+                {
+                    StageKind.Build => (NextStepKind.AndroidPickBuild, "Выберите папку билда Android."),
+                    StageKind.Files => (NextStepKind.AndroidSign, "Билд Android готов — подпишите файлы."),
+                    StageKind.Delivery => (NextStepKind.AndroidDeliver, "Файлы подписаны — выложите их в канал."),
+                    _ => (NextStepKind.AndroidVerify, next.IsFailed
+                        ? "Проверка канала не прошла: " + OneLine(next.Reason) + ".\n" +
+                          "Проверьте адрес сервера и что файлы выложены, затем проверьте снова."
+                        : "Файлы в канале — проверьте, что клиент их скачает.")
+                };
+            }
+
+            // В выпуске двух платформ кнопка говорит, о какой речь.
+            if (track != null && release.IsMultiPlatform && _nextStep != NextStepKind.None)
+                StatusText = track.Platform + ": " + char.ToLower(StatusText[0]) + StatusText[1..];
         }
 
+        var failed = release?.Platforms.FirstOrDefault(p => p.IsCurrent && p.NextStage != null)?.NextStage?.IsFailed == true;
+        var suffix = release is { IsMultiPlatform: true } ? (IsAndroidStep(_nextStep) ? " Android" : " Windows") : "";
         NextStepText = _nextStep switch
         {
             NextStepKind.PickBuild => "Выбрать папку билда…",
             NextStepKind.PickExecutable => "Выбрать главный exe…",
             NextStepKind.CreatePatch => "Создать патч",
-            NextStepKind.Deliver => "Доставить",
-            NextStepKind.Verify => release?.Platforms[0].NextStage?.IsFailed == true ? "Проверить снова" : "Проверить",
+            NextStepKind.Deliver => "Доставить" + suffix,
+            NextStepKind.Verify or NextStepKind.AndroidVerify => (failed ? "Проверить снова" : "Проверить") + suffix,
+            NextStepKind.AndroidPickBuild => "Выбрать папку Android…",
+            NextStepKind.AndroidSign => "Подписать файлы",
+            NextStepKind.AndroidDeliver => "Доставить" + suffix,
             _ => ""
         };
         HasNextStep = _nextStep != NextStepKind.None;
     }
+
+    private static bool IsAndroidStep(NextStepKind step) => step is NextStepKind.AndroidPickBuild or
+        NextStepKind.AndroidSign or NextStepKind.AndroidDeliver or NextStepKind.AndroidVerify;
+
+    private static string OneLine(string text) =>
+        string.Join(" ", text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)).TrimEnd('.');
 
     private void RenderNoProject()
     {
@@ -1145,7 +1210,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
 }
 
 /// <summary>Что делает главная кнопка.</summary>
-public enum NextStepKind { None, PickBuild, PickExecutable, CreatePatch, Deliver, Verify }
+public enum NextStepKind
+{
+    None, PickBuild, PickExecutable, CreatePatch, Deliver, Verify,
+    AndroidPickBuild, AndroidSign, AndroidDeliver, AndroidVerify
+}
 
 /// <summary>Пункт меню «Недавние». Пустой список — один неактивный пункт «(пусто)».</summary>
 public sealed class RecentProjectItem

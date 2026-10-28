@@ -2,6 +2,7 @@ using UpdateManager.App.Services;
 using UpdateManager.App.ViewModels;
 using UpdateManager.Core.Delivery;
 using UpdateManager.Core.Project;
+using UpdateManager.Core.Security;
 using UpdateManager.Core.SelfUpdate;
 using UpdateManager.Core.Versioning;
 
@@ -414,6 +415,102 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.Equal(StageState.Pending, stages[3].State);
         Assert.Equal("устарела: патч пересобран", stages[3].Detail);
     }
+
+    private StageItem AndroidStage(string version, StageKind kind) =>
+        _vm.Releases.First(r => r.Version == version).Platforms.Single(p => p.IsAndroid).Stages.Single(s => s.Kind == kind);
+
+    // Проект с обеими платформами: сервер — папка (доставка и BaseDownloadURL через file:///), Android-билд рядом.
+    private async Task<(string Server, string Android)> CreateProjectWithAndroid()
+    {
+        await CreateProjectWithBuild();
+        var server = Path.Combine(_root, "server");
+        var android = Path.Combine(_root, "android");
+        Directory.CreateDirectory(android);
+        File.WriteAllBytes(Path.Combine(android, "App.apk"), new byte[] { 0x50, 0x4B, 3, 4 });
+        File.WriteAllText(Path.Combine(android, "App-x86_64.apk"), "emu");
+        File.WriteAllText(Path.Combine(android, "latest.json"), "{\"version\":\"1.0.0\"}");
+        new RsaKeyManager().Generate(ProjectDir);
+
+        _dialogs.SettingsAnswer = s =>
+        {
+            s.BaseDownloadURL = new Uri(server + Path.DirectorySeparatorChar).AbsoluteUri;
+            s.AndroidEnabled = true;
+            s.Android.SignMasks.Add("latest.json");
+            s.Android.ExcludeMasks.Add("*-x86_64.apk");
+            return s;
+        };
+        await _vm.EditSettingsCommand.ExecuteAsync(null);
+        _dialogs.DeliveryAnswer = _ => new DeliveryConfig { Method = DeliveryMethods.Folder, Path = server };
+        await _vm.ConfigureDeliveryCommand.ExecuteAsync(null);
+        _dialogs.Folders.Enqueue(android);
+        await _vm.BrowseAndroidBuildCommand.ExecuteAsync(null);
+        return (server, android);
+    }
+
+    [Fact]
+    public async Task Android_SignDeliverVerify_WindowsDeliveryKeepsChannel()
+    {
+        var (server, android) = await CreateProjectWithAndroid();
+        Assert.Equal(NextStepKind.AndroidSign.ToString(), NextStepFor());
+
+        _dialogs.Prompts.Enqueue("1.0.0");
+        await _vm.SignAndroidCommand.ExecuteAsync(null);
+        Assert.True(File.Exists(Path.Combine(android, "latest.json.sig")));
+        Assert.Equal(StageState.Done, AndroidStage("1.0.0", StageKind.Files).State);
+
+        await _vm.NextStepCommand.ExecuteAsync(null); // «Доставить»
+        var channel = Path.Combine(server, "AndroidPatch");
+        Assert.Equal(new[] { "App.apk", "latest.json", "latest.json.sig" },
+            Directory.GetFiles(channel).Select(Path.GetFileName).OrderBy(n => n, StringComparer.Ordinal));
+
+        await _vm.NextStepCommand.ExecuteAsync(null); // «Проверить»
+        Assert.Empty(_dialogs.Errors);
+        Assert.True(ProjectMeta.Load(ProjectDir).AndroidVerifiedVersions["1.0.0"].Succeeded);
+        Assert.Equal(StageState.Done, AndroidStage("1.0.0", StageKind.Verify).State);
+
+        // Windows той же версии: одна запись с двумя полосами; доставка патча не трогает канал Android.
+        _dialogs.Prompts.Enqueue("1.0.0");
+        await _vm.CreatePatchCommand.ExecuteAsync(null);
+        File.WriteAllText(Path.Combine(server, "old-junk.txt"), "старое");
+        await _vm.DeliverCommand.ExecuteAsync(null);
+        Assert.True(File.Exists(Path.Combine(server, "VersionInfo.info")));
+        Assert.False(File.Exists(Path.Combine(server, "old-junk.txt")));
+        Assert.True(File.Exists(Path.Combine(channel, "latest.json.sig")));
+        var release = _vm.Releases.Single(r => r.Version == "1.0.0");
+        Assert.Equal(new[] { "Windows", "Android" }, release.Platforms.Select(p => p.Platform));
+        Assert.Empty(_dialogs.Errors);
+    }
+
+    [Fact]
+    public async Task Android_ResignResetsDeliveryAndVerify_ChangedFileBlocksDelivery()
+    {
+        var (_, android) = await CreateProjectWithAndroid();
+        _dialogs.Prompts.Enqueue("1.0.0");
+        await _vm.SignAndroidCommand.ExecuteAsync(null);
+        await _vm.DeliverAndroidCommand.ExecuteAsync(null);
+        await _vm.VerifyAndroidCommand.ExecuteAsync(null);
+
+        _dialogs.Prompts.Enqueue("1.0.0");
+        await _vm.RunStageCommand.ExecuteAsync(AndroidStage("1.0.0", StageKind.Files)); // «Подписать заново»
+        Assert.Equal(StageState.Done, AndroidStage("1.0.0", StageKind.Files).State);
+        Assert.Equal(StageState.Pending, AndroidStage("1.0.0", StageKind.Delivery).State);
+        Assert.Equal(StageState.Pending, AndroidStage("1.0.0", StageKind.Verify).State);
+
+        // Манифест правили после подписи — выкладывать нельзя: клиент отверг бы подпись.
+        File.WriteAllText(Path.Combine(android, "latest.json"), "{\"version\":\"1.0.1\"}");
+        // Метка времени файла грубее DateTime.Now (~16 мс) — сдвигаем явно, как было бы в жизни.
+        File.SetLastWriteTime(Path.Combine(android, "latest.json"), DateTime.Now.AddMinutes(1));
+        await _vm.DeliverAndroidCommand.ExecuteAsync(null);
+        Assert.Contains(_dialogs.Errors, e => e.Contains("изменился после подписи"));
+        Assert.False(ProjectMeta.Load(ProjectDir).AndroidDeliveredVersions.ContainsKey("1.0.0"));
+
+        // Билд изменился после подписи — в каталоге запись «новый» для Android.
+        Assert.Equal(ReleaseItem.UnknownVersion, _vm.Releases[0].Version);
+    }
+
+    private string NextStepFor() =>
+        typeof(MainWindowViewModel).GetField("_nextStep",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(_vm)!.ToString()!;
 
     [Fact]
     public async Task RunStage_LockedBeyondNextStepAndInArchive()

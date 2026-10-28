@@ -1,0 +1,318 @@
+using SimplePatchToolCore;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using UpdateManager.Core.Common;
+using UpdateManager.Core.Delivery;
+using UpdateManager.Core.Operations;
+using UpdateManager.Core.Project;
+using UpdateManager.Core.Security;
+using UpdateManager.Core.Versioning;
+
+namespace UpdateManager.App.ViewModels;
+
+/// <summary>
+/// Платформа Android главного окна: без патчей — папка билда (собирается вне UpdateManager) →
+/// подпись файлов по маске RSA-ключом проекта → выкладка в папку канала → проверка канала.
+/// Версию UpdateManager из файлов не читает — спрашивает при подписи.
+/// </summary>
+public sealed partial class MainWindowViewModel
+{
+    [ObservableProperty] private string _androidBuildSource = "";
+    [ObservableProperty] private bool _isWindowsEnabled = true;
+    [ObservableProperty] private bool _isAndroidEnabled;
+
+    [RelayCommand(CanExecute = nameof(HasProject))]
+    private async Task BrowseAndroidBuild()
+    {
+        if (_project == null)
+            return;
+
+        var folder = await _dialogs.PickFolderAsync("Папка билда Android (apk, манифест)");
+        if (folder == null)
+            return;
+
+        if (FileUtils.PathsOverlap(folder, _project.RootPath))
+        {
+            await _dialogs.ShowErrorAsync(BuildSourceOverlapMessage);
+            return;
+        }
+
+        _project.Meta.Android.BuildSource = folder;
+        _project.Meta.Save(_project.RootPath);
+        ShowProject();
+    }
+
+    [RelayCommand(CanExecute = nameof(HasProject))]
+    private async Task SignAndroid()
+    {
+        if (_project == null)
+            return;
+
+        var meta = _project.Meta;
+        var folder = meta.Android.BuildSource;
+        if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder))
+        {
+            await _dialogs.ShowErrorAsync("Папка билда Android не выбрана или не существует.");
+            return;
+        }
+
+        var masks = meta.Android.SignMasks;
+        if (masks.Count > 0 && !_keys.HasKeys(_project.RootPath))
+        {
+            await _dialogs.ShowErrorAsync("Для подписи нужны RSA-ключи проекта (" + RsaKeyManager.PrivateKeyFileName +
+                " и " + RsaKeyManager.PublicKeyFileName + " в папке проекта) — те же, что подписывают патчи Windows.\n" +
+                "Положите их в папку проекта или сгенерируйте («Безопасность → Сгенерировать RSA-ключи…»; " +
+                "новые ключи не примут клиенты со старым публичным ключом).");
+            return;
+        }
+        if (masks.Count == 0 && !await _dialogs.ConfirmAsync(
+                "Маска подписи не задана (настройки проекта → Android) — файлы уйдут без .sig, и клиент, " +
+                "который проверяет подпись, обновление не примет.\nПродолжить без подписи?"))
+            return;
+
+        var version = await _dialogs.PromptAsync("Версия Android-выпуска",
+            "Под какой версией записать выпуск в каталог? (UpdateManager не читает её из файлов.)",
+            SuggestAndroidVersion());
+        if (version == null)
+            return; // отмена
+
+        if (!VersionRules.IsValid(version))
+        {
+            await _dialogs.ShowErrorAsync("Версия \"" + version + "\" недопустима: только числа через точку, например 0.9.24.");
+            return;
+        }
+
+        var latest = ReleaseCatalog.LatestAndroidVersion(meta);
+        if (latest != null && VersionRules.IsValid(latest) && new VersionCode(version).CompareTo(new VersionCode(latest)) < 0)
+        {
+            await _dialogs.ShowErrorAsync("Версия " + version + " ниже последнего Android-выпуска (" + latest + ").\n" +
+                "Подпишите версию не ниже " + latest + " (ровно " + latest + " — подписать тот же выпуск заново).");
+            return;
+        }
+
+        ResetAndroidFrom(version, StageKind.Files);
+        try
+        {
+            var root = _project.RootPath;
+            var privateKey = masks.Count > 0 ? _keys.ReadPrivateKey(root) : "";
+            var publicKey = masks.Count > 0 ? File.ReadAllText(_keys.PublicKeyPath(root)) : "";
+            await Task.Run(() => new FileSigner().Sign(folder, masks, privateKey, publicKey));
+        }
+        catch (Exception ex)
+        {
+            ShowProject();
+            await _dialogs.ShowErrorAsync("Подпись не выполнена:\n" + ex.Message);
+            return;
+        }
+
+        meta.AndroidSignedVersions[version] = DateTime.Now;
+        meta.Save(_project.RootPath);
+        ShowProject();
+    }
+
+    [RelayCommand(CanExecute = nameof(HasProject))]
+    private async Task DeliverAndroid()
+    {
+        if (_project == null)
+            return;
+
+        var meta = _project.Meta;
+        var version = ReleaseCatalog.LatestAndroidVersion(meta);
+        if (version == null || !meta.AndroidSignedVersions.ContainsKey(version))
+        {
+            await _dialogs.ShowErrorAsync("Сначала подпишите файлы Android-выпуска.");
+            return;
+        }
+
+        var package = await PrepareAndroidPackage(checkSignatures: true);
+        if (package == null)
+            return;
+        var (folder, files) = package.Value;
+
+        var config = meta.Delivery;
+        var channel = meta.Android.Channel;
+        if (config.Method != DeliveryMethods.Ftp && string.IsNullOrWhiteSpace(config.Path))
+        {
+            await _dialogs.ShowErrorAsync("Не настроена доставка: строка «Доставка → Настроить…».");
+            return;
+        }
+
+        FtpConnection? conn = null;
+        if (config.Method == DeliveryMethods.Ftp)
+        {
+            conn = _ftpStore.Load(_project.RootPath);
+            await WarnIfPasswordUndecryptable(conn);
+            if (conn == null || !conn.IsComplete() || conn.PasswordDecryptFailed)
+            {
+                conn = await _dialogs.ConfigureFtpAsync(conn ?? new FtpConnection(), GetUploadDirectory());
+                if (conn == null)
+                    return; // отмена
+                _ftpStore.Save(_project.RootPath, conn);
+            }
+        }
+
+        var staging = AndroidPackage.Stage(folder, files);
+        try
+        {
+            ResetAndroidFrom(version, StageKind.Delivery);
+            if (conn == null)
+            {
+                var target = Path.Combine(config.Path, channel);
+                try
+                {
+                    new FolderDeliveryTarget(target).Deliver(staging, Array.Empty<string>());
+                }
+                catch (Exception ex)
+                {
+                    ShowProject();
+                    await _dialogs.ShowErrorAsync("Доставка Android не удалась:\n" + ex.Message);
+                    return;
+                }
+                MarkAndroidDelivered(version);
+                await _dialogs.ShowInfoAsync("Android-выпуск " + version + " выложен в:\n" + target);
+            }
+            else
+            {
+                var remote = DownloadUrl.CombineRemote(conn.RemotePath, GetUploadDirectory()).TrimEnd('/') + "/" + channel;
+                var op = new FtpUploadOperation(conn, staging, remote, null, "Выкладка Android на FTP");
+                await _dialogs.ShowOperationAsync(op);
+                if (!op.Succeeded)
+                {
+                    ShowProject();
+                    return;
+                }
+                MarkAndroidDelivered(version);
+                await _dialogs.ShowInfoAsync("Android-выпуск " + version + " залит на FTP:\n" + remote);
+            }
+        }
+        finally
+        {
+            try { Directory.Delete(staging, recursive: true); } catch { /* временная копия */ }
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(HasProject))]
+    private async Task VerifyAndroid()
+    {
+        if (_project == null)
+            return;
+
+        var meta = _project.Meta;
+        var version = ReleaseCatalog.LatestAndroidVersion(meta);
+        if (version == null)
+        {
+            await _dialogs.ShowErrorAsync("Android ещё не выпускался — сначала подпишите и доставьте файлы.");
+            return;
+        }
+
+        var baseUrl = (_service.LoadSettings(_project.RootPath).BaseDownloadURL ?? "").Trim();
+        if (baseUrl.Length == 0)
+        {
+            await _dialogs.ShowErrorAsync("Не задан адрес сервера (BaseDownloadURL). Укажите его в настройках проекта.");
+            return;
+        }
+
+        var package = await PrepareAndroidPackage(checkSignatures: false);
+        if (package == null)
+            return;
+        var (folder, files) = package.Value;
+
+        var signed = AndroidPackage.SignedFiles(files, meta.Android.SignMasks);
+        var publicKey = signed.Count > 0 && _keys.HasPublicKey(_project.RootPath)
+            ? File.ReadAllText(_keys.PublicKeyPath(_project.RootPath)) : "";
+        if (signed.Count > 0 && publicKey.Length == 0)
+        {
+            await _dialogs.ShowErrorAsync("Нет публичного ключа проекта (" + RsaKeyManager.PublicKeyFileName + ") — подпись нечем сверить.");
+            return;
+        }
+
+        var channelUrl = baseUrl.TrimEnd('/') + "/" + meta.Android.Channel.Trim('/') + "/";
+        var verifier = new AndroidChannelVerifier(channelUrl, folder, files, signed, publicKey);
+        await _dialogs.ShowOperationAsync(verifier);
+
+        var details = verifier.Succeeded ? "" : verifier.ResultDetails;
+        if (!verifier.Succeeded && string.IsNullOrWhiteSpace(details))
+            details = "проверка прервана";
+        meta.AndroidVerifiedVersions[version] = new VerificationResult(DateTime.Now, verifier.Succeeded, details);
+        meta.Save(_project.RootPath);
+        ShowProject();
+    }
+
+    // Папка билда и файлы выкладки; checkSignatures — у подписываемых файлов .sig на месте и сходится
+    // (файл не правили после подписи). null — ошибка уже показана.
+    private async Task<(string Folder, List<string> Files)?> PrepareAndroidPackage(bool checkSignatures)
+    {
+        var meta = _project!.Meta;
+        var folder = meta.Android.BuildSource;
+        if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder))
+        {
+            await _dialogs.ShowErrorAsync("Папка билда Android не выбрана или не существует.");
+            return null;
+        }
+
+        var files = AndroidPackage.Files(folder, meta.Android.SignMasks, meta.Android.ExcludeMasks);
+        if (files.Count == 0)
+        {
+            await _dialogs.ShowErrorAsync("В папке билда Android нечего выкладывать: " + folder);
+            return null;
+        }
+
+        if (checkSignatures)
+        {
+            var signed = AndroidPackage.SignedFiles(files, meta.Android.SignMasks);
+            if (signed.Count > 0)
+            {
+                var publicKey = File.ReadAllText(_keys.PublicKeyPath(_project.RootPath));
+                foreach (var file in signed)
+                {
+                    var path = Path.Combine(folder, file);
+                    var sig = path + FileSigner.SignatureExtension;
+                    if (!File.Exists(sig) || !FileSigner.Verify(File.ReadAllBytes(path), File.ReadAllText(sig), publicKey))
+                    {
+                        ShowProject(); // билд изменился — каталог покажет его как новый
+                        await _dialogs.ShowErrorAsync("Файл " + file + " изменился после подписи (или нет его .sig).\n" +
+                            "Подпишите файлы заново — иначе клиент не примет обновление.");
+                        return null;
+                    }
+                }
+            }
+        }
+        return (folder, files);
+    }
+
+    // Подсказка версии при подписи: выбранный выпуск, иначе самый новый с известной версией.
+    private string SuggestAndroidVersion()
+    {
+        if (SelectedRelease != null && SelectedRelease.Version != ReleaseItem.UnknownVersion)
+            return SelectedRelease.Version;
+        return Releases.FirstOrDefault(r => r.Version != ReleaseItem.UnknownVersion)?.Version ?? "";
+    }
+
+    // Этап Android выполняется (заново) — его запись и записи следующих этапов этой версии больше не верны.
+    private void ResetAndroidFrom(string version, StageKind from)
+    {
+        var meta = _project!.Meta;
+        if (from <= StageKind.Files)
+            meta.AndroidSignedVersions.Remove(version);
+        if (from <= StageKind.Delivery)
+            meta.AndroidDeliveredVersions.Remove(version);
+        meta.AndroidVerifiedVersions.Remove(version);
+        meta.Save(_project.RootPath);
+    }
+
+    private void MarkAndroidDelivered(string version)
+    {
+        _project!.Meta.AndroidDeliveredVersions[version] = DateTime.Now;
+        _project.Meta.Save(_project.RootPath);
+        ShowProject();
+    }
+
+    // Сведения Android для строки в главном окне (вызывается из ShowProject).
+    private void ShowAndroid(ProjectMeta meta)
+    {
+        IsWindowsEnabled = meta.WindowsEnabled;
+        IsAndroidEnabled = meta.AndroidEnabled;
+        var folder = meta.Android.BuildSource ?? "";
+        AndroidBuildSource = folder.Length > 0 ? folder : "не выбрана";
+    }
+}

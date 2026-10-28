@@ -35,7 +35,15 @@ public sealed partial class ProjectSettingsViewModel : DialogViewModel
         _compressionIncremental = settings.CompressionFormatIncrementalPatch;
         _binaryDiffQuality = Math.Clamp(settings.BinaryDiffQuality, BinaryDiffQualityMin, BinaryDiffQualityMax);
         _dontCreatePatchFilesForUnchangedFiles = settings.DontCreatePatchFilesForUnchangedFiles;
+        _windowsEnabled = settings.WindowsEnabled;
+        _androidEnabled = settings.AndroidEnabled;
+        _androidChannel = settings.Android.Channel;
+        _androidSignMasks = string.Join(Environment.NewLine, settings.Android.SignMasks);
+        _androidExcludeMasks = string.Join(Environment.NewLine, settings.Android.ExcludeMasks);
+        _android = settings.Android;
     }
+
+    private readonly AndroidConfig _android;
 
     /// <summary>Форматы сжатия — из движкового enum (LZMA/GZIP/NONE).</summary>
     public CompressionFormat[] CompressionFormats { get; } = Enum.GetValues<CompressionFormat>();
@@ -44,12 +52,43 @@ public sealed partial class ProjectSettingsViewModel : DialogViewModel
 
     [ObservableProperty] private string _name;
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(DownloadUrlText), nameof(HasNoServer))]
+    [NotifyPropertyChangedFor(nameof(DownloadUrlText), nameof(HasNoServer), nameof(AndroidChannelUrlText))]
     private string _server;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(DownloadUrlText))]
+    [NotifyPropertyChangedFor(nameof(DownloadUrlText), nameof(AndroidChannelUrlText))]
     private string _uploadDirectory;
+
+    // Платформы: Windows — патч движка, Android — подпись файлов по маске и выкладка в канал.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasNoPlatform))]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    private bool _windowsEnabled;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasNoPlatform))]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    private bool _androidEnabled;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AndroidChannelUrlText))]
+    private string _androidChannel;
+
+    [ObservableProperty] private string _androidSignMasks;
+    [ObservableProperty] private string _androidExcludeMasks;
+
+    public bool HasNoPlatform => !WindowsEnabled && !AndroidEnabled;
+
+    /// <summary>Публичный адрес канала Android — BaseDownloadURL + папка канала.</summary>
+    public string AndroidChannelUrlText => HasNoServer
+        ? "Адрес сервера не задан — проверке канала некуда обращаться."
+        : "Клиенты Android будут качать с " + DownloadUrl.Join(Server, UploadDirectory) + ChannelName() + "/";
+
+    private string ChannelName()
+    {
+        var channel = (AndroidChannel ?? "").Trim().Trim('/');
+        return channel.Length > 0 ? channel : AndroidConfig.DefaultChannel;
+    }
 
     /// <summary>Итоговый BaseDownloadURL — откуда клиенты будут качать патч.</summary>
     public string DownloadUrlText => HasNoServer
@@ -72,9 +111,16 @@ public sealed partial class ProjectSettingsViewModel : DialogViewModel
     [ObservableProperty] private decimal? _binaryDiffQuality;
     [ObservableProperty] private bool _dontCreatePatchFilesForUnchangedFiles;
 
-    [RelayCommand]
+    private bool CanSave() => !HasNoPlatform;
+
+    [RelayCommand(CanExecute = nameof(CanSave))]
     private void Save()
     {
+        var android = _android.Clone();
+        android.Channel = ChannelName();
+        android.SignMasks = FileMask.ParseLines(AndroidSignMasks);
+        android.ExcludeMasks = FileMask.ParseLines(AndroidExcludeMasks);
+
         Result = new ProjectSettings
         {
             Name = Name.Trim(),
@@ -95,7 +141,10 @@ public sealed partial class ProjectSettingsViewModel : DialogViewModel
             CompressionFormatInstallerPatch = CompressionInstaller,
             CompressionFormatIncrementalPatch = CompressionIncremental,
             BinaryDiffQuality = (int)(BinaryDiffQuality ?? 3),
-            DontCreatePatchFilesForUnchangedFiles = DontCreatePatchFilesForUnchangedFiles
+            DontCreatePatchFilesForUnchangedFiles = DontCreatePatchFilesForUnchangedFiles,
+            WindowsEnabled = WindowsEnabled,
+            AndroidEnabled = AndroidEnabled,
+            Android = android
         };
         Close(true);
     }

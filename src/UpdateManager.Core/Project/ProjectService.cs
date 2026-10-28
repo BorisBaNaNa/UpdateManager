@@ -200,8 +200,8 @@ namespace UpdateManager.Core.Project
         public ProjectSettings LoadSettings(string projectRoot)
         {
             var info = new ProjectManager(projectRoot).LoadProjectInfo();
-            // SignPatch у движка нет — берём из нашей меты.
-            var signPatch = ProjectMeta.Load(projectRoot).SignPatch;
+            // SignPatch и платформ у движка нет — берём из нашей меты.
+            var meta = ProjectMeta.Load(projectRoot);
             return new ProjectSettings
             {
                 Name = info.Name ?? "",
@@ -218,7 +218,10 @@ namespace UpdateManager.Core.Project
                 CompressionFormatIncrementalPatch = info.CompressionFormatIncrementalPatch,
                 BinaryDiffQuality = info.BinaryDiffQuality,
                 DontCreatePatchFilesForUnchangedFiles = info.DontCreatePatchFilesForUnchangedFiles,
-                SignPatch = signPatch
+                SignPatch = meta.SignPatch,
+                WindowsEnabled = meta.WindowsEnabled,
+                AndroidEnabled = meta.AndroidEnabled,
+                Android = meta.Android.Clone()
             };
         }
 
@@ -249,9 +252,20 @@ namespace UpdateManager.Core.Project
 
             manager.SaveProjectInfo(info);
 
-            // SignPatch движок не хранит — пишем в нашу мету (остальные поля меты не трогаем).
+            // SignPatch и платформы движок не хранит — пишем в нашу мету (остальные поля меты не трогаем).
             var meta = ProjectMeta.Load(projectRoot);
             meta.SignPatch = settings.SignPatch;
+            meta.WindowsEnabled = settings.WindowsEnabled;
+            meta.AndroidEnabled = settings.AndroidEnabled;
+            if (settings.Android != null)
+            {
+                // Папку билда Android настройки не правят — её выбирают в главном окне.
+                meta.Android.Channel = (settings.Android.Channel ?? "").Trim().Trim('/');
+                if (meta.Android.Channel.Length == 0)
+                    meta.Android.Channel = AndroidConfig.DefaultChannel;
+                meta.Android.SignMasks = new List<string>(settings.Android.SignMasks);
+                meta.Android.ExcludeMasks = new List<string>(settings.Android.ExcludeMasks);
+            }
             meta.Save(projectRoot);
         }
 

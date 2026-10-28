@@ -54,5 +54,14 @@ namespace UpdateManager.Core.Project
         /// updatemanager.project.xml — но для UI прокидывается через этот же DTO.
         /// </summary>
         public bool SignPatch { get; set; }
+
+        /// <summary>Платформа Windows включена (из меты, как SignPatch).</summary>
+        public bool WindowsEnabled { get; set; } = true;
+
+        /// <summary>Платформа Android включена (из меты).</summary>
+        public bool AndroidEnabled { get; set; }
+
+        /// <summary>Канал и маски Android (из меты). Папку билда Android правит главное окно, не настройки.</summary>
+        public AndroidConfig Android { get; set; } = new AndroidConfig();
     }
 }
