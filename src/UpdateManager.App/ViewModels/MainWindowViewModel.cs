@@ -1188,17 +1188,18 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     // Выбранный выпуск показывает одну полосу — выбранной платформы (переключатель возле версии).
-    // Выбор платформы запоминается при переходе между выпусками, где она есть.
+    // Выбор платформы запоминается при переходе между выпусками, где она есть, и при перерисовке каталога.
+    // Запоминается только явный выбор (клик, свайп): Carousel при смене полос сам выбирает первую —
+    // поэтому полосы (Tracks) меняются раньше выбранной, а SelectedItem к нему привязан в одну сторону.
+    [ObservableProperty] private IReadOnlyList<PlatformTrack>? _tracks;
     [ObservableProperty] private PlatformTrack? _selectedTrack;
     private string? _preferredPlatform;
-    private bool _syncingTrack;
 
     partial void OnSelectedReleaseChanged(ReleaseItem? value)
     {
-        _syncingTrack = true;
+        Tracks = value?.Platforms;
         SelectedTrack = value?.Platforms.FirstOrDefault(p => p.Platform == _preferredPlatform)
             ?? value?.Platforms.FirstOrDefault();
-        _syncingTrack = false;
         UpdateNextStep();
     }
 
@@ -1208,11 +1209,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
             oldValue.IsSelected = false;
         if (newValue != null)
             newValue.IsSelected = true;
-        if (_syncingTrack)
-            return;
-        if (newValue != null)
-            _preferredPlatform = newValue.Platform;
         UpdateNextStep();
+    }
+
+    private void ChooseTrack(PlatformTrack track)
+    {
+        _preferredPlatform = track.Platform;
+        SelectedTrack = track;
     }
 
     // Переключатель платформ возле версии (клик по имени).
@@ -1220,7 +1223,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private void SelectTrack(PlatformTrack? track)
     {
         if (track != null && SelectedRelease?.Platforms.Contains(track) == true)
-            SelectedTrack = track;
+            ChooseTrack(track);
     }
 
     /// <summary>Свайп: +1 — следующая платформа (въезжает справа), −1 — предыдущая. Без зацикливания.</summary>
@@ -1232,7 +1235,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         var index = platforms.ToList().IndexOf(SelectedTrack) + direction;
         if (index >= 0 && index < platforms.Count)
-            SelectedTrack = platforms[index];
+            ChooseTrack(platforms[index]);
     }
 
     // Главная кнопка и строка состояния для выбранного выпуска.

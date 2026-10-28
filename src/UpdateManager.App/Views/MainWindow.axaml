@@ -298,8 +298,8 @@
 
                         <!-- Одна полоса — выбранной платформы; вторая въезжает из-за правого края (свайп, клик по имени). -->
                         <Carousel x:Name="TrackCarousel" Margin="0,24,0,0" ClipToBounds="True"
-                                  ItemsSource="{Binding SelectedRelease.Platforms, FallbackValue={x:Null}}"
-                                  SelectedItem="{Binding SelectedTrack}"
+                                  ItemsSource="{Binding Tracks}"
+                                  SelectedItem="{Binding SelectedTrack, Mode=OneWay}"
                                   ItemTemplate="{StaticResource StageBlocks}">
                             <Carousel.PageTransition>
                                 <PageSlide Duration="0:0:0.25" Orientation="Horizontal"

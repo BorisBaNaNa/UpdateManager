@@ -528,7 +528,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.Equal(StageState.Done, files.State);
         Assert.Equal("Версия", files.Title);
         Assert.Equal("старая подпись", File.ReadAllText(Path.Combine(android, "latest.json.sig"))); // не подписывали
-        Assert.Empty(_dialogs.Confirms.Where(m => m.Contains("подпис")));
+        Assert.DoesNotContain(_dialogs.Confirms, m => m.Contains("подпис"));
 
         await _vm.DeliverAndroidCommand.ExecuteAsync(null);
         var channel = Path.Combine(server, "AndroidPatch");
@@ -557,6 +557,44 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.False(ProjectMeta.Load(ProjectDir).AndroidSignedVersions.ContainsKey("1.0.0"));
         Assert.False(File.Exists(Path.Combine(android, "latest.json.sig")));
     }
+
+    [Fact]
+    public Task PlatformSwitch_InWindow_SurvivesStageAction() => HeadlessUi.Run(async () =>
+    {
+        // Carousel при смене полос сам выбирает первую — выбор Android не должен от этого слетать на Windows.
+        await CreateProjectWithAndroid();
+        _dialogs.Prompts.Enqueue("1.0.0");
+        await _vm.SignAndroidCommand.ExecuteAsync(null);
+        _dialogs.Prompts.Enqueue("1.0.0");
+        await _vm.CreatePatchCommand.ExecuteAsync(null);
+
+        var window = new UpdateManager.App.Views.MainWindow { DataContext = _vm };
+        window.Show();
+        HeadlessUi.Flush();
+        var carousel = Avalonia.Controls.ControlExtensions.FindControl<Avalonia.Controls.Carousel>(window, "TrackCarousel")!;
+
+        _vm.ShiftTrack(1);
+        HeadlessUi.Flush();
+        Assert.Equal("Android", ((PlatformTrack)carousel.SelectedItem!).Platform);
+
+        // Настоящий клик мышью по блоку «Билд» Android — «Сменить папку билда».
+        _dialogs.Folders.Enqueue(Path.Combine(_root, "android"));
+        await HeadlessUi.Click(window, _vm.SelectedTrack!.Stages[0]);
+        Assert.Empty(_dialogs.Folders); // клик дошёл: папку спросили
+        Assert.Equal("Android", _vm.SelectedTrack!.Platform);
+        Assert.Equal("Android", ((PlatformTrack)carousel.SelectedItem!).Platform);
+
+        // Билд Android обновился — каталог перерисован с записью «новый»; выбор платформы тот же.
+        File.SetLastWriteTime(Path.Combine(_root, "android", "App.apk"), DateTime.Now.AddMinutes(1));
+        _dialogs.Folders.Enqueue(Path.Combine(_root, "android"));
+        await _vm.BrowseAndroidBuildCommand.ExecuteAsync(null);
+        HeadlessUi.Flush();
+        var log = string.Join(" | ", _vm.Releases.Select(r => r.Version + ":" + string.Join(",", r.Platforms.Select(p => p.Platform))));
+        Assert.True(_vm.SelectedTrack!.Platform == "Android", "выбран " + _vm.SelectedRelease!.Version + "/" + _vm.SelectedTrack.Platform + "; каталог " + log);
+        Assert.Equal("Android", ((PlatformTrack)carousel.SelectedItem!).Platform);
+        Assert.Equal(NextStepKind.AndroidDeliver.ToString(), NextStepFor());
+        window.Close();
+    });
 
     [Fact]
     public async Task PlatformSwitch_OneTrackOnScreen_ButtonFollowsIt()
