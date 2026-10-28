@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Xml.Linq;
 using UpdateManager.Core.Common;
 
 namespace UpdateManager.Core.Project
@@ -128,6 +129,68 @@ namespace UpdateManager.Core.Project
                 meta.ForgetVersion(version);
             }
             meta.Save(projectRoot);
+        }
+
+        /// <summary>
+        /// Откатить проект на версию: Windows-версии новее неё — в Корзину (их записи этапов забываются, номера
+        /// в каталоге остаются занятыми), из Output/IncrementalPatch уходят патчи от них и к ним, а у самой версии
+        /// сбрасываются патч, доставка и проверка — следующая сборка сделает её последней. Движок понижает версию
+        /// у клиентов (сравнивает версии на неравенство): клиенты на откатанных версиях вернутся на эту.
+        /// Записи Android не трогаются — его сборка лежит вне проекта. Возвращает откатанные версии.
+        /// </summary>
+        public List<string> RollbackTo(string projectRoot, string version)
+        {
+            var target = new VersionCode(version);
+            var versions = ReadVersions(projectRoot);
+            if (!versions.Any(v => string.Equals(v.Version, version, StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidOperationException("Версии " + version + " нет в " + VersionsFolder + "/ — откатываться не на что.");
+            var newer = versions.Where(v => new VersionCode(v.Version).CompareTo(target) > 0).Select(v => v.Version).ToList();
+            if (newer.Count == 0)
+                throw new InvalidOperationException("Версия " + version + " и так самая новая.");
+
+            var meta = ProjectMeta.Load(projectRoot);
+            foreach (var v in newer)
+            {
+                DeleteFolder(Path.Combine(projectRoot, VersionsFolder, v));
+                meta.ForgetWindowsVersion(v);
+            }
+
+            // Инкрементальные патчи движок называет «1_0_0__1_0_1.*» — убираем те, где откатанная версия с любой стороны.
+            var output = GetOutputPath(projectRoot);
+            var incremental = Path.Combine(output, PatchParameters.INCREMENTAL_PATCH_DIRECTORY);
+            if (Directory.Exists(incremental))
+            {
+                var gone = new HashSet<string>(newer.Select(v => v.Replace('.', '_')), StringComparer.OrdinalIgnoreCase);
+                foreach (var file in Directory.GetFiles(incremental))
+                {
+                    var ends = Path.GetFileNameWithoutExtension(file).Split(new[] { "__" }, StringSplitOptions.None);
+                    if (ends.Any(gone.Contains))
+                        File.Delete(file);
+                }
+            }
+
+            // Список инкрементальных патчей движок переносит из прежнего VersionInfo — вычищаем и его,
+            // остальные записи (от старых версий к этой и раньше) остаются: старые клиенты идут по цепочке.
+            var versionInfo = Path.Combine(output, PatchParameters.VERSION_INFO_FILENAME);
+            if (File.Exists(versionInfo))
+            {
+                var doc = XDocument.Load(versionInfo);
+                var stale = doc.Descendants("IncrementalPatch")
+                    .Where(p => newer.Any(v => string.Equals((string)p.Element("FromVersion"), v, StringComparison.OrdinalIgnoreCase) ||
+                                               string.Equals((string)p.Element("ToVersion"), v, StringComparison.OrdinalIgnoreCase)))
+                    .ToList();
+                foreach (var patch in stale)
+                    patch.Remove();
+                doc.Save(versionInfo);
+            }
+
+            meta.PatchedVersions.Remove(version);
+            meta.DeliveredVersions.Remove(version);
+            meta.VerifiedVersions.Remove(version);
+            meta.LastDeliveredAt = null;
+            meta.LastBuiltSettings = "";
+            meta.Save(projectRoot);
+            return newer;
         }
 
         /// <summary>В папке есть хоть что-то (файлы/подпапки).</summary>

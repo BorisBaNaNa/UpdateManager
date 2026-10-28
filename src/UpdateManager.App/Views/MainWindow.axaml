@@ -201,6 +201,9 @@
                                  SelectedItem="{Binding SelectedRelease}">
                             <ListBox.ContextMenu>
                                 <ContextMenu>
+                                    <MenuItem Header="{Binding SelectedRelease.Version, StringFormat='Откатить сервер на {0}…', FallbackValue='Откатить сервер…'}"
+                                              IsVisible="{Binding IsNotMarkingReleases}"
+                                              Command="{Binding RollbackReleaseCommand}" />
                                     <MenuItem Header="{Binding SelectedRelease.Version, StringFormat='Удалить версию {0}…', FallbackValue='Удалить версию…'}"
                                               IsVisible="{Binding IsNotMarkingReleases}"
                                               Command="{Binding DeleteReleaseCommand}" />

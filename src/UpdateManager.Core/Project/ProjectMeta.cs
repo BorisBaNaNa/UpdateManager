@@ -130,17 +130,23 @@ namespace UpdateManager.Core.Project
         /// </summary>
         public HashSet<string> RemovedVersions { get; set; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        /// <summary>Забыть версию: все записи этапов обеих платформ; номер в каталоге остаётся занятым.</summary>
-        public void ForgetVersion(string version)
+        /// <summary>Забыть Windows-версию (откат): записи патча, доставки и проверки; номер в каталоге остаётся занятым.</summary>
+        public void ForgetWindowsVersion(string version)
         {
             PatchedVersions.Remove(version);
             DeliveredVersions.Remove(version);
             VerifiedVersions.Remove(version);
+            RemovedVersions.Add(version);
+        }
+
+        /// <summary>Забыть версию: все записи этапов обеих платформ; номер в каталоге остаётся занятым.</summary>
+        public void ForgetVersion(string version)
+        {
+            ForgetWindowsVersion(version);
             AndroidSignedVersions.Remove(version);
             AndroidRecords.Remove(version);
             AndroidDeliveredVersions.Remove(version);
             AndroidVerifiedVersions.Remove(version);
-            RemovedVersions.Add(version);
         }
 
         /// <summary>Android: когда версия выложена в канал (версия → время).</summary>

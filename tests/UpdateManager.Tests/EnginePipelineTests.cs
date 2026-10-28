@@ -116,6 +116,91 @@ public sealed class EnginePipelineTests : IDisposable
                 File.ReadAllBytes(Path.Combine(clientDir, "SPPatcher", Path.GetFileName(file))));
     }
 
+    // Откат 1.0.2 → 1.0.1 (ProjectService.RollbackTo + пересборка): клиент на 1.0.2 возвращается на 1.0.1,
+    // клиент на 1.0.0 поднимается до 1.0.1 по уцелевшему инкрементальному патчу.
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void RollbackTo_ClientsOnNewerGoBack_OlderStillChain(bool versionHolder)
+    {
+        var service = new ProjectService { DeleteFolder = folder => Directory.Delete(folder, recursive: true) };
+        var projectDir = Path.Combine(_root, "project");
+        var buildDir = Path.Combine(_root, "build");
+        var newerClient = Path.Combine(_root, "client-newer");
+        var olderClient = Path.Combine(_root, "client-older");
+        Directory.CreateDirectory(newerClient);
+
+        service.Create(projectDir, "TestApp");
+        var output = service.GetOutputPath(projectDir);
+        var settings = service.LoadSettings(projectDir);
+        settings.BaseDownloadURL = new Uri(output).AbsoluteUri;
+        settings.CreateRepairPatch = true;
+        settings.CreateInstallerPatch = true;
+        settings.CreateIncrementalPatch = true;
+        service.SaveSettings(projectDir, settings);
+        var url = service.BuildVersionInfoUrl(service.LoadSettings(projectDir).BaseDownloadURL);
+
+        var markers = new[] { "first", "second", "third" };
+        for (int i = 0; i < markers.Length; i++)
+        {
+            WriteBuild(buildDir, markers[i], versionHolder ? "1.0." + i : null);
+            service.StageBuild(projectDir, buildDir, "1.0." + i);
+            RunToEnd(new PatchBuilder(projectDir));
+            RunToEnd(new PatchVerifier(newerClient, url));
+            if (i == 0)
+                CopyDirectory(newerClient, olderClient); // этот клиент остаётся на 1.0.0
+        }
+        Assert.Equal("third", File.ReadAllText(Path.Combine(newerClient, "app.txt")));
+
+        Assert.Equal(new[] { "1.0.2" }, service.RollbackTo(projectDir, "1.0.1"));
+        Assert.False(service.VersionExists(projectDir, "1.0.2"));
+        Assert.Contains("1.0.2", ProjectMeta.Load(projectDir).RemovedVersions);
+        RunToEnd(new PatchBuilder(projectDir));
+
+        var info = File.ReadAllText(Path.Combine(output, "VersionInfo.info"));
+        Assert.Contains("<Version>1.0.1</Version>", info);
+        Assert.DoesNotContain("1.0.2", info);
+        Assert.Contains("<ToVersion>1.0.1</ToVersion>", info); // 1.0.0 → 1.0.1 уцелел
+        Assert.Equal(new[] { "1_0_0__1_0_1.info", "1_0_0__1_0_1.patch" },
+            Directory.GetFiles(Path.Combine(output, "IncrementalPatch")).Select(Path.GetFileName).OrderBy(n => n, StringComparer.Ordinal));
+
+        // Клиент на 1.0.2 видит «обновление» (движок сравнивает версии на неравенство, не на «больше»)
+        // и возвращается на 1.0.1 — и по проверке только версии (version holder), и по файлам.
+        var check = new SimplePatchToolCore.SimplePatchTool(newerClient, url);
+        Assert.True(check.CheckForUpdates(versionHolder));
+        var timer = Stopwatch.StartNew();
+        while (check.IsRunning && timer.Elapsed < TimeSpan.FromMinutes(1))
+            Thread.Sleep(50);
+        Assert.Equal(SimplePatchToolCore.PatchResult.Success, check.Result); // Success = есть что ставить
+
+        RunToEnd(new PatchVerifier(newerClient, url));
+        Assert.Equal("second", File.ReadAllText(Path.Combine(newerClient, "app.txt")));
+        RunToEnd(new PatchVerifier(olderClient, url));
+        Assert.Equal("second", File.ReadAllText(Path.Combine(olderClient, "app.txt")));
+        if (versionHolder)
+        {
+            Assert.Equal("1.0.1", File.ReadAllText(Path.Combine(newerClient, "TestApp_vers.sptv")));
+            Assert.Equal("1.0.1", File.ReadAllText(Path.Combine(olderClient, "TestApp_vers.sptv")));
+        }
+    }
+
+    private static void CopyDirectory(string from, string to)
+    {
+        foreach (var file in Directory.GetFiles(from, "*", SearchOption.AllDirectories))
+        {
+            var target = Path.Combine(to, Path.GetRelativePath(from, file));
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            File.Copy(file, target);
+        }
+    }
+
+    private static void WriteBuild(string dir, string marker, string? versionHolder)
+    {
+        WriteBuild(dir, marker);
+        if (versionHolder != null)
+            File.WriteAllText(Path.Combine(dir, "TestApp_vers.sptv"), versionHolder);
+    }
+
     private static void WriteBuild(string dir, string marker)
     {
         if (Directory.Exists(dir))

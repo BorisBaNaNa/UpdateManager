@@ -872,6 +872,15 @@ public sealed partial class MainWindowViewModel : ObservableObject
             return;
         }
 
+        // Номер откатанной или удалённой версии повторять нельзя: клиент, успевший её получить, сравнит
+        // версии, увидит «то же самое» и не обновится, хотя файлы другие.
+        if (_project.Meta.RemovedVersions.Contains(version))
+        {
+            await _dialogs.ShowErrorAsync("Версия " + version + " уже выпускалась и была откатана или удалена.\n" +
+                "Клиенты, успевшие её получить, не увидят обновления с тем же номером. Соберите следующую версию.");
+            return;
+        }
+
         // Версия уже есть? Спросить про перезапись.
         if (_service.VersionExists(_project.RootPath, version) &&
             !await _dialogs.ConfirmAsync("Версия " + version + " уже есть в Versions/. Перезаписать её?"))
@@ -890,8 +899,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        // Сборка патча в модальном окне с логом.
-        var builder = new PatchBuilder(_project.RootPath);
+        await BuildStagedPatch(version, settings);
+    }
+
+    // Сборка патча из уже лежащей Versions/<версия> (окно с логом) → подпись → запись этапа; проект перечитывается.
+    private async Task BuildStagedPatch(string version, ProjectSettings settings)
+    {
+        var builder = new PatchBuilder(_project!.RootPath);
         await _dialogs.ShowOperationAsync(builder);
 
         // Запоминаем отпечаток настроек, с которыми собран Output, — для проверки при доставке.
@@ -1149,8 +1163,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 : build.ExecutableName + (build.Version != null ? " · " + build.Version : "");
 
             // В папке билда версия новее собранных → это следующий выпуск, ещё без патча.
+            // Откатанная версия в папке билда — не «новый» выпуск: её номер больше не используется.
             if (build.Version != null && VersionRules.IsValid(build.Version) &&
                 !_service.VersionExists(project.RootPath, build.Version) &&
+                !project.Meta.RemovedVersions.Contains(build.Version) &&
                 !_service.IsBelowMaxVersion(project.RootPath, build.Version, out _))
             {
                 newVersion = build.Version;

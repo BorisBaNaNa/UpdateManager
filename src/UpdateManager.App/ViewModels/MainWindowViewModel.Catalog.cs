@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using SimplePatchToolCore;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using UpdateManager.Core.Project;
@@ -91,6 +92,65 @@ public sealed partial class MainWindowViewModel
         }
         _project = _service.Open(_project.RootPath);
         ShowProject();
+    }
+
+    /// <summary>
+    /// Откатить сервер на выбранный выпуск: Windows-версии новее него — в Корзину, Output пересобирается так,
+    /// что этот выпуск последний (ProjectService.RollbackTo). Дальше — доставка и проверка, как обычно; движок
+    /// понижает версию у клиентов (проверено EnginePipelineTests.RollbackTo_…).
+    /// </summary>
+    [RelayCommand]
+    private async Task RollbackRelease()
+    {
+        var release = SelectedRelease;
+        if (_project == null || release == null)
+            return;
+        if (!release.CanRollback)
+        {
+            await _dialogs.ShowErrorAsync(release.IsNew || !release.Platforms.Any(p => p.Platform == ReleaseCatalog.Windows)
+                ? "Откатиться можно только на собранный выпуск Windows: Android-сборка лежит вне проекта — " +
+                  "чтобы вернуть старую, выберите её папку и запишите версию заново."
+                : "Выпуск " + release.Version + " и так текущий для Windows.");
+            return;
+        }
+
+        var settings = _service.LoadSettings(_project.RootPath);
+        if ((settings.BaseDownloadURL ?? "").Trim().Length == 0 ||
+            (!settings.CreateRepairPatch && !settings.CreateInstallerPatch && !settings.CreateIncrementalPatch))
+        {
+            await _dialogs.ShowErrorAsync("Патч не соберётся: в настройках проекта не задан BaseDownloadURL или не выбран ни один тип патча.");
+            return;
+        }
+
+        var target = new VersionCode(release.Version);
+        var newer = _project.Versions.Where(v => new VersionCode(v.Version).CompareTo(target) > 0)
+            .Select(v => v.Version).ToList();
+        var list = string.Join(", ", newer);
+        if (!await _dialogs.ConfirmAsync("Откатить сервер на версию " + release.Version + "?\n\n" +
+                (newer.Count == 1 ? "Версия " : "Версии ") + list + " уйдут в Корзину (из " + ProjectService.VersionsFolder +
+                "/ и каталога; номера выпусков не изменятся), патч " + release.Version + " пересоберётся последним. " +
+                "Затем доставьте и проверьте его, как обычно.\n\n" +
+                "Клиенты на " + list + " вернутся на " + release.Version + ": движок ставит версию с сервера, даже если она ниже. " +
+                "Номера " + list + " больше не используются — следующий выпуск должен быть новее." +
+                (release.Platforms.Any(p => p.IsAndroid) || newer.Any(v => _project.Meta.AndroidSignedVersions.ContainsKey(v))
+                    ? "\n\nAndroid не откатывается: его канал остаётся как есть." : "")))
+            return;
+
+        try
+        {
+            _service.RollbackTo(_project.RootPath, release.Version);
+        }
+        catch (Exception ex)
+        {
+            _project = _service.Open(_project.RootPath);
+            ShowProject();
+            await _dialogs.ShowErrorAsync("Откат не выполнен:\n" + ex.Message);
+            return;
+        }
+
+        _project = _service.Open(_project.RootPath);
+        ShowProject();
+        await BuildStagedPatch(release.Version, settings);
     }
 
     // Каталог перерисован — записи новые: режим отметки заканчивается, счётчик следит за флажками новых записей.

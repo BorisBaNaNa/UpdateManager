@@ -697,6 +697,35 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task Rollback_NewerGone_PatchRebuilt_NumberNotReused()
+    {
+        await CreateProjectWithVersions(3);
+        _vm.SelectedRelease = _vm.Releases.Single(r => r.Version == "1.0.1");
+        Assert.True(_vm.SelectedRelease.CanRollback);
+        Assert.False(_vm.Releases.Single(r => r.Version == "1.0.2").CanRollback); // текущий
+
+        await _vm.RollbackReleaseCommand.ExecuteAsync(null);
+        Assert.Contains(_dialogs.Confirms, m => m.Contains("Откатить сервер на версию 1.0.1?") && m.Contains("1.0.2 уйдут в Корзину"));
+        Assert.Empty(_dialogs.Errors);
+        Assert.False(VersionStaged("1.0.2"));
+        Assert.Contains("<Version>1.0.1</Version>", File.ReadAllText(Path.Combine(_service.GetOutputPath(ProjectDir), "VersionInfo.info")));
+
+        var current = _vm.Releases[0];
+        Assert.Equal("1.0.1", current.Version);
+        Assert.Equal(2, current.Number);
+        Assert.Equal(StageState.Done, Stage("1.0.1", StageKind.Patch).State); // пересобран — дальше доставка
+        Assert.Equal(NextStepKind.Deliver.ToString(), NextStepFor());
+
+        // Номер откатанной версии не повторяется: клиенты, получившие 1.0.2, не увидели бы обновления.
+        _dialogs.Prompts.Enqueue("1.0.2");
+        await _vm.CreatePatchCommand.ExecuteAsync(null);
+        Assert.Contains(_dialogs.Errors, e => e.Contains("уже выпускалась"));
+        _dialogs.Prompts.Enqueue("1.0.3");
+        await _vm.CreatePatchCommand.ExecuteAsync(null);
+        Assert.Equal(4, _vm.Releases.Single(r => r.Version == "1.0.3").Number);
+    }
+
+    [Fact]
     public Task DeleteReleases_HoldAndDragMarksTouched_MenuOnRelease() => HeadlessUi.Run(async () =>
     {
         await CreateProjectWithVersions(4); // 1.0.3 текущий, 1.0.2 … 1.0.0 — старые

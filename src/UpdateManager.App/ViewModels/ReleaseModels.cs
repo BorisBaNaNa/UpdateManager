@@ -145,6 +145,9 @@ public sealed partial class ReleaseItem : ObservableObject
     /// </summary>
     public bool CanDelete => !IsNew && !HasCurrentTrack;
 
+    /// <summary>На этот выпуск можно откатить сервер: у него есть архивная (не текущая) полоса Windows.</summary>
+    public bool CanRollback => !IsNew && Platforms.Any(p => p.Platform == ReleaseCatalog.Windows && !p.IsCurrent);
+
     /// <summary>Подпись записи «новый» Android-билда, версию которого спросят при подписи.</summary>
     public const string UnknownVersion = "новый";
 
