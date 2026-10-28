@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Xml.Linq;
 using UpdateManager.Core.Common;
+using UpdateManager.Core.Versioning;
 
 namespace UpdateManager.Core.Project
 {
@@ -19,8 +20,49 @@ namespace UpdateManager.Core.Project
         /// <summary>Файл настроек движка в корне проекта (источник истины — сам движок).</summary>
         public const string EngineSettingsFile = PatchParameters.PROJECT_SETTINGS_FILENAME;
 
-        /// <summary>Папка движка с версиями-билдами.</summary>
+        /// <summary>Папка с версиями-билдами; внутри — по папке на платформу (с 2.2).</summary>
         public const string VersionsFolder = PatchParameters.PROJECT_VERSIONS_DIRECTORY;
+
+        /// <summary>Версии Windows: Versions/Windows/&lt;версия&gt; — из них движок собирает патчи.</summary>
+        public const string WindowsPlatformFolder = "Windows";
+
+        /// <summary>Версии Android: Versions/Android/&lt;версия&gt; — сохранённая выкладка (для доставки и отката).</summary>
+        public const string AndroidPlatformFolder = "Android";
+
+        public static string WindowsVersionsPath(string projectRoot)
+        {
+            return Path.Combine(projectRoot, VersionsFolder, WindowsPlatformFolder);
+        }
+
+        public static string AndroidVersionsPath(string projectRoot)
+        {
+            return Path.Combine(projectRoot, VersionsFolder, AndroidPlatformFolder);
+        }
+
+        public static string WindowsVersionPath(string projectRoot, string version)
+        {
+            return Path.Combine(WindowsVersionsPath(projectRoot), version);
+        }
+
+        public static string AndroidVersionPath(string projectRoot, string version)
+        {
+            return Path.Combine(AndroidVersionsPath(projectRoot), version);
+        }
+
+        /// <summary>
+        /// Движок проекта, смотрящий в Versions/Windows. Движок сам считает версиями все подпапки Versions/
+        /// (и падает на «Android»), а путь к ним держит в readonly-поле versionsPath — переназначаем его.
+        /// DLL движка у нас неизменна (lib/), поле проверено EnginePipelineTests.
+        /// </summary>
+        public static ProjectManager CreateEngine(string projectRoot)
+        {
+            var manager = new ProjectManager(projectRoot);
+            var field = typeof(ProjectManager).GetField("versionsPath");
+            if (field == null)
+                throw new InvalidOperationException("Движок SimplePatchTool не той версии: нет ProjectManager.versionsPath.");
+            field.SetValue(manager, WindowsVersionsPath(projectRoot));
+            return manager;
+        }
 
         /// <summary>Папка проекта движка с self-patcher'ом (для self-patching приложений).</summary>
         public const string SelfPatcherFolder = "SelfPatcher";
@@ -44,6 +86,8 @@ namespace UpdateManager.Core.Project
             // 1. Движок создаёт Settings.xml + папки Versions/ Output/ SelfPatcher/ Other/.
             var manager = new ProjectManager(folder);
             manager.CreateProject();
+            Directory.CreateDirectory(WindowsVersionsPath(folder));
+            Directory.CreateDirectory(AndroidVersionsPath(folder));
 
             // 2. Кладём self-patcher в SelfPatcher/ — без него self-patching приложение не применит патч.
             InstallSelfPatcher(folder);
@@ -108,27 +152,60 @@ namespace UpdateManager.Core.Project
         }
 
         /// <summary>
-        /// Удалить версии из проекта: папки Versions/&lt;версия&gt; — в Корзину (DeleteFolder), записи этапов — из меты
-        /// (номера в каталоге остаются занятыми). Самую новую версию Versions/ не трогает: она — основа следующего
-        /// инкрементального патча. Output/ и сервер не меняются.
+        /// Удалить версии из проекта: их папки обеих платформ (Versions/Windows|Android/&lt;версия&gt;) — в Корзину
+        /// (DeleteFolder), записи этапов — из меты (номера в каталоге остаются занятыми). Самую новую версию Windows
+        /// не трогает: она — основа следующего инкрементального патча. Output/ и сервер не меняются.
         /// </summary>
         public void DeleteVersions(string projectRoot, IEnumerable<string> versions)
         {
             var list = versions.ToList();
             var max = GetMaxVersion(projectRoot);
             if (max != null && list.Contains(max, StringComparer.OrdinalIgnoreCase))
-                throw new InvalidOperationException("Версию " + max + " удалить нельзя: она самая новая в " + VersionsFolder +
-                    "/ — из неё собирается следующий инкрементальный патч.");
+                throw new InvalidOperationException("Версию " + max + " удалить нельзя: она самая новая из версий Windows " +
+                    "— из неё собирается следующий инкрементальный патч.");
 
             var meta = ProjectMeta.Load(projectRoot);
             foreach (var version in list)
             {
-                var folder = Path.Combine(projectRoot, VersionsFolder, version);
-                if (Directory.Exists(folder))
-                    DeleteFolder(folder);
+                foreach (var folder in new[] { WindowsVersionPath(projectRoot, version), AndroidVersionPath(projectRoot, version) })
+                    if (Directory.Exists(folder))
+                        DeleteFolder(folder);
                 meta.ForgetVersion(version);
             }
             meta.Save(projectRoot);
+        }
+
+        /// <summary>
+        /// Откатить Android на версию: сохранённые выкладки новее неё (Versions/Android) — в Корзину, их записи
+        /// этапов забываются, а у самой версии сбрасываются доставка и проверка — её выкладка становится текущей,
+        /// дальше её доставляют в канал как обычно. Возвращает откатанные версии.
+        /// </summary>
+        public List<string> RollbackAndroidTo(string projectRoot, string version)
+        {
+            if (!Directory.Exists(AndroidVersionPath(projectRoot, version)))
+                throw new InvalidOperationException("Выкладка Android " + version + " не сохранена в проекте (" + VersionsFolder +
+                    "/" + AndroidPlatformFolder + ") — откатываться не на что.");
+
+            var meta = ProjectMeta.Load(projectRoot);
+            var target = new VersionCode(version);
+            var newer = meta.AndroidSignedVersions.Keys.Concat(meta.AndroidDeliveredVersions.Keys)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Where(v => VersionRules.IsValid(v) && new VersionCode(v).CompareTo(target) > 0)
+                .ToList();
+            if (newer.Count == 0)
+                throw new InvalidOperationException("Версия Android " + version + " и так самая новая.");
+
+            foreach (var v in newer)
+            {
+                var folder = AndroidVersionPath(projectRoot, v);
+                if (Directory.Exists(folder))
+                    DeleteFolder(folder);
+                meta.ForgetAndroidVersion(v);
+            }
+            meta.AndroidDeliveredVersions.Remove(version);
+            meta.AndroidVerifiedVersions.Remove(version);
+            meta.Save(projectRoot);
+            return newer;
         }
 
         /// <summary>
@@ -136,14 +213,14 @@ namespace UpdateManager.Core.Project
         /// в каталоге остаются занятыми), из Output/IncrementalPatch уходят патчи от них и к ним, а у самой версии
         /// сбрасываются патч, доставка и проверка — следующая сборка сделает её последней. Движок понижает версию
         /// у клиентов (сравнивает версии на неравенство): клиенты на откатанных версиях вернутся на эту.
-        /// Записи Android не трогаются — его сборка лежит вне проекта. Возвращает откатанные версии.
+        /// Android здесь не трогается — у него свой RollbackAndroidTo. Возвращает откатанные версии.
         /// </summary>
         public List<string> RollbackTo(string projectRoot, string version)
         {
             var target = new VersionCode(version);
             var versions = ReadVersions(projectRoot);
             if (!versions.Any(v => string.Equals(v.Version, version, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException("Версии " + version + " нет в " + VersionsFolder + "/ — откатываться не на что.");
+                throw new InvalidOperationException("Версии Windows " + version + " нет в проекте — откатываться не на что.");
             var newer = versions.Where(v => new VersionCode(v.Version).CompareTo(target) > 0).Select(v => v.Version).ToList();
             if (newer.Count == 0)
                 throw new InvalidOperationException("Версия " + version + " и так самая новая.");
@@ -151,7 +228,7 @@ namespace UpdateManager.Core.Project
             var meta = ProjectMeta.Load(projectRoot);
             foreach (var v in newer)
             {
-                DeleteFolder(Path.Combine(projectRoot, VersionsFolder, v));
+                DeleteFolder(WindowsVersionPath(projectRoot, v));
                 meta.ForgetWindowsVersion(v);
             }
 
@@ -202,7 +279,7 @@ namespace UpdateManager.Core.Project
         /// <summary>Есть ли уже папка такой версии в Versions/.</summary>
         public bool VersionExists(string projectRoot, string version)
         {
-            return Directory.Exists(Path.Combine(projectRoot, VersionsFolder, version));
+            return Directory.Exists(WindowsVersionPath(projectRoot, version));
         }
 
         /// <summary>Максимальная (числовая) версия в Versions/ или null, если версий ещё нет.</summary>
@@ -262,7 +339,7 @@ namespace UpdateManager.Core.Project
         /// </summary>
         public void StageBuild(string projectRoot, string buildSource, string version)
         {
-            var dest = Path.Combine(projectRoot, VersionsFolder, version);
+            var dest = WindowsVersionPath(projectRoot, version);
             if (Directory.Exists(dest))
                 Directory.Delete(dest, recursive: true);
 
@@ -395,7 +472,7 @@ namespace UpdateManager.Core.Project
 
         private static List<ProjectVersion> ReadVersions(string folder)
         {
-            var versionsDir = Path.Combine(folder, VersionsFolder);
+            var versionsDir = WindowsVersionsPath(folder);
             if (!Directory.Exists(versionsDir))
                 return new List<ProjectVersion>();
 

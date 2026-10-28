@@ -18,7 +18,7 @@ namespace UpdateManager.Core.Project
         public const string FileName = "updatemanager.project.xml";
 
         /// <summary>Текущая версия схемы файла — увеличиваем при изменении формата.</summary>
-        public const int CurrentSchemaVersion = 1;
+        public const int CurrentSchemaVersion = 2; // 2 — версии по платформам: Versions/Windows, Versions/Android (2.2)
 
         // Имена узлов нашего XML — в одном месте, чтобы Load и Save не расходились.
         private const string RootElement = "UpdateManagerProject";
@@ -53,6 +53,7 @@ namespace UpdateManager.Core.Project
         private const string AndroidVerifiedElement = "AndroidVerified";
         private const string AndroidRecordsElement = "AndroidRecords";
         private const string RemovedVersionsElement = "RemovedVersions";
+        private const string RemovedAndroidVersionsElement = "RemovedAndroidVersions";
         private const string AndroidRecordSignedAttribute = "signed";
         private const string AndroidRecordMaskElement = "Mask";
         private const string AndroidRecordFileElement = "File";
@@ -130,6 +131,9 @@ namespace UpdateManager.Core.Project
         /// </summary>
         public HashSet<string> RemovedVersions { get; set; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>Удалённые или откатанные Android-версии: их номер повторно не записывается (клиент не обновился бы).</summary>
+        public HashSet<string> RemovedAndroidVersions { get; set; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         /// <summary>Забыть Windows-версию (откат): записи патча, доставки и проверки; номер в каталоге остаётся занятым.</summary>
         public void ForgetWindowsVersion(string version)
         {
@@ -139,14 +143,21 @@ namespace UpdateManager.Core.Project
             RemovedVersions.Add(version);
         }
 
-        /// <summary>Забыть версию: все записи этапов обеих платформ; номер в каталоге остаётся занятым.</summary>
-        public void ForgetVersion(string version)
+        /// <summary>Забыть Android-версию (откат): все её записи этапов; номер повторно не записывается.</summary>
+        public void ForgetAndroidVersion(string version)
         {
-            ForgetWindowsVersion(version);
             AndroidSignedVersions.Remove(version);
             AndroidRecords.Remove(version);
             AndroidDeliveredVersions.Remove(version);
             AndroidVerifiedVersions.Remove(version);
+            RemovedAndroidVersions.Add(version);
+        }
+
+        /// <summary>Забыть версию: все записи этапов обеих платформ; номер в каталоге остаётся занятым.</summary>
+        public void ForgetVersion(string version)
+        {
+            ForgetWindowsVersion(version);
+            ForgetAndroidVersion(version);
         }
 
         /// <summary>Android: когда версия выложена в канал (версия → время).</summary>
@@ -215,16 +226,31 @@ namespace UpdateManager.Core.Project
             LoadVerification(root.Element(AndroidVerifiedElement), meta.AndroidVerifiedVersions);
             LoadAndroidRecords(root.Element(AndroidRecordsElement), meta.AndroidRecords);
 
-            var removed = root.Element(RemovedVersionsElement);
-            if (removed != null)
-                foreach (var item in removed.Elements(DeliveredVersionElement))
-                {
-                    var id = (string)item.Attribute(DeliveredVersionIdAttribute);
-                    if (!string.IsNullOrEmpty(id))
-                        meta.RemovedVersions.Add(id);
-                }
+            LoadVersionSet(root.Element(RemovedVersionsElement), meta.RemovedVersions);
+            LoadVersionSet(root.Element(RemovedAndroidVersionsElement), meta.RemovedAndroidVersions);
 
             return meta;
+        }
+
+        // <X><Version id="1.0.0"/></X> → множество версий.
+        private static void LoadVersionSet(XElement container, HashSet<string> target)
+        {
+            if (container == null)
+                return;
+            foreach (var item in container.Elements(DeliveredVersionElement))
+            {
+                var id = (string)item.Attribute(DeliveredVersionIdAttribute);
+                if (!string.IsNullOrEmpty(id))
+                    target.Add(id);
+            }
+        }
+
+        private static XElement SaveVersionSet(string name, HashSet<string> source)
+        {
+            if (source.Count == 0)
+                return null;
+            return new XElement(name, source.OrderBy(v => v, StringComparer.OrdinalIgnoreCase)
+                .Select(v => new XElement(DeliveredVersionElement, new XAttribute(DeliveredVersionIdAttribute, v))));
         }
 
         // <AndroidRecords><Version id signed><Mask/>…<File path sha256/>…</Version></AndroidRecords>
@@ -363,10 +389,8 @@ namespace UpdateManager.Core.Project
                     SaveVersionDates(AndroidDeliveredElement, AndroidDeliveredVersions),
                     SaveVerification(AndroidVerifiedElement, AndroidVerifiedVersions),
                     SaveAndroidRecords(AndroidRecords),
-                    RemovedVersions.Count > 0
-                        ? new XElement(RemovedVersionsElement, RemovedVersions.OrderBy(v => v, StringComparer.OrdinalIgnoreCase)
-                            .Select(v => new XElement(DeliveredVersionElement, new XAttribute(DeliveredVersionIdAttribute, v))))
-                        : null
+                    SaveVersionSet(RemovedVersionsElement, RemovedVersions),
+                    SaveVersionSet(RemovedAndroidVersionsElement, RemovedAndroidVersions)
                 ));
             doc.Save(Path.Combine(projectRoot, FileName));
         }

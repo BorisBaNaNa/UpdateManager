@@ -1,4 +1,5 @@
 using SimplePatchToolCore;
+using UpdateManager.Core.Project;
 
 namespace UpdateManager.Core.Operations
 {
@@ -12,7 +13,7 @@ namespace UpdateManager.Core.Operations
 
         public PatchBuilder(string projectRoot)
         {
-            _project = new ProjectManager(projectRoot);
+            _project = ProjectService.CreateEngine(projectRoot); // версии — из Versions/Windows
         }
 
         public string Title { get { return "Сборка патча"; } }

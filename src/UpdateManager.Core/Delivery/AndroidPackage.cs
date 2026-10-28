@@ -80,14 +80,25 @@ namespace UpdateManager.Core.Delivery
         public static string Stage(string buildFolder, IList<string> files)
         {
             var staging = Path.Combine(Path.GetTempPath(), "UpdateManagerAndroid_" + Guid.NewGuid().ToString("N"));
+            CopyTo(buildFolder, files, staging);
+            return staging;
+        }
+
+        /// <summary>
+        /// Сохранить выкладку в папку <paramref name="target"/> (Versions/Android/&lt;версия&gt;): прежнее содержимое
+        /// папки заменяется — в ней ровно эти файлы.
+        /// </summary>
+        public static void CopyTo(string buildFolder, IList<string> files, string target)
+        {
+            if (Directory.Exists(target))
+                Directory.Delete(target, recursive: true);
+            Directory.CreateDirectory(target);
             foreach (var file in files)
             {
-                var target = Path.Combine(staging, file.Replace('/', Path.DirectorySeparatorChar));
-                Directory.CreateDirectory(Path.GetDirectoryName(target));
-                File.Copy(Path.Combine(buildFolder, file), target);
+                var path = Path.Combine(target, file.Replace('/', Path.DirectorySeparatorChar));
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                File.Copy(Path.Combine(buildFolder, file.Replace('/', Path.DirectorySeparatorChar)), path);
             }
-            Directory.CreateDirectory(staging);
-            return staging;
         }
     }
 }

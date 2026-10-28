@@ -208,15 +208,22 @@ public sealed partial class MainWindowViewModel : ObservableObject
     // Открыть проект по известному пути (из диалога или из списка недавних).
     private async Task OpenPath(string folder)
     {
+        List<string> upgraded;
         try
         {
+            _service.Open(folder); // это проект? (иначе — понятная ошибка до донастройки)
+            // Проект прежней версии UpdateManager — донастроить (раскладка версий по платформам и т.п.).
+            upgraded = ProjectUpgrade.Run(folder);
             _project = _service.Open(folder);
             OnProjectOpened(folder);
         }
         catch (Exception ex)
         {
             await _dialogs.ShowErrorAsync("Не удалось открыть проект:\n" + ex.Message);
+            return;
         }
+        if (upgraded.Count > 0)
+            await _dialogs.ShowInfoAsync("Проект донастроен под эту версию UpdateManager:\n\n• " + string.Join("\n• ", upgraded));
     }
 
     // Общий хвост создания/открытия: показать проект и обновить список недавних.

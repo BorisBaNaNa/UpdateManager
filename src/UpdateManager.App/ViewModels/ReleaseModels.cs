@@ -105,6 +105,12 @@ public sealed partial class PlatformTrack : ObservableObject
     public bool IsAndroid => Platform == ReleaseCatalog.Android;
 
     /// <summary>
+    /// Версия хранится в проекте (Versions/&lt;платформа&gt;/&lt;версия&gt;) — на неё можно откатиться. Windows — всегда;
+    /// Android — если выкладка сохранена (до 2.2 не сохранялась).
+    /// </summary>
+    public bool CanRestore { get; internal set; } = true;
+
+    /// <summary>
     /// Текущий выпуск платформы (самая новая запись, где она есть): только его этапы нажимаются
     /// и только для него считается следующий шаг.
     /// </summary>
@@ -145,8 +151,8 @@ public sealed partial class ReleaseItem : ObservableObject
     /// </summary>
     public bool CanDelete => !IsNew && !HasCurrentTrack;
 
-    /// <summary>На этот выпуск можно откатить сервер: у него есть архивная (не текущая) полоса Windows.</summary>
-    public bool CanRollback => !IsNew && Platforms.Any(p => p.Platform == ReleaseCatalog.Windows && !p.IsCurrent);
+    /// <summary>На этот выпуск можно откатить сервер: у него есть архивная (не текущая) полоса, хранящаяся в проекте.</summary>
+    public bool CanRollback => !IsNew && Platforms.Any(p => !p.IsCurrent && p.CanRestore);
 
     /// <summary>Подпись записи «новый» Android-билда, версию которого спросят при подписи.</summary>
     public const string UnknownVersion = "новый";
@@ -269,10 +275,15 @@ public static class ReleaseCatalog
 
         if (meta.AndroidEnabled)
             foreach (var version in AndroidVersions(meta))
-                Add(version, AndroidTrack(meta, version));
+            {
+                var track = AndroidTrack(meta, version);
+                track.CanRestore = Directory.Exists(ProjectService.AndroidVersionPath(project.RootPath, version));
+                Add(version, track);
+            }
 
         // Номер — место среди всех версий проекта, включая удалённые: «№ N» не сдвигается после удаления.
-        var numbered = tracks.Keys.Concat(meta.RemovedVersions).Distinct(StringComparer.OrdinalIgnoreCase)
+        var numbered = tracks.Keys.Concat(meta.RemovedVersions).Concat(meta.RemovedAndroidVersions)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(VersionKey).ThenBy(v => v, StringComparer.OrdinalIgnoreCase).ToList();
         var result = numbered
             .Select((version, i) => (version, number: i + 1))

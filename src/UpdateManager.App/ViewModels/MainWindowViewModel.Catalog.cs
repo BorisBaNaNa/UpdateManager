@@ -2,6 +2,7 @@ using SimplePatchToolCore;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using UpdateManager.Core.Project;
+using UpdateManager.Core.Versioning;
 
 namespace UpdateManager.App.ViewModels;
 
@@ -104,7 +105,7 @@ public sealed partial class MainWindowViewModel
         var versions = items.Select(r => r.Version).ToList();
         var list = string.Join(", ", versions);
         if (!await _dialogs.ConfirmAsync((versions.Count == 1 ? "Удалить версию " : "Удалить версии ") + list + "?\n\n" +
-                "Папки " + ProjectService.VersionsFolder + "/<версия> уйдут в Корзину, записи этапов — из проекта; " +
+                "Их папки в " + ProjectService.VersionsFolder + "/ уйдут в Корзину, записи этапов — из проекта; " +
                 "номера остальных выпусков не изменятся.\nOutput/ и сервер не меняются — клиенты на этих версиях " +
                 "обновятся как раньше. Откатить сервер на удалённую версию будет нельзя."))
             return;
@@ -122,9 +123,10 @@ public sealed partial class MainWindowViewModel
     }
 
     /// <summary>
-    /// Откатить сервер на выбранный выпуск: Windows-версии новее него — в Корзину, Output пересобирается так,
-    /// что этот выпуск последний (ProjectService.RollbackTo). Дальше — доставка и проверка, как обычно; движок
-    /// понижает версию у клиентов (проверено EnginePipelineTests.RollbackTo_…).
+    /// Откатить сервер на выбранный выпуск — по каждой платформе, где он архивный и хранится в проекте.
+    /// Windows: версии новее — в Корзину, Output пересобирается так, что этот выпуск последний (RollbackTo);
+    /// движок понижает версию у клиентов (EnginePipelineTests.RollbackTo_…). Android: сохранённые выкладки новее —
+    /// в Корзину, выкладка выпуска снова текущая (RollbackAndroidTo). Дальше — доставка и проверка, как обычно.
     /// </summary>
     [RelayCommand]
     private async Task RollbackRelease()
@@ -132,40 +134,57 @@ public sealed partial class MainWindowViewModel
         var release = SelectedRelease;
         if (_project == null || release == null)
             return;
-        if (!release.CanRollback)
+
+        var windows = release.Platforms.FirstOrDefault(p => p.Platform == ReleaseCatalog.Windows && !p.IsCurrent);
+        var android = release.Platforms.FirstOrDefault(p => p.IsAndroid && !p.IsCurrent && p.CanRestore);
+        if (windows == null && android == null)
         {
-            await _dialogs.ShowErrorAsync(release.IsNew || !release.Platforms.Any(p => p.Platform == ReleaseCatalog.Windows)
-                ? "Откатиться можно только на собранный выпуск Windows: Android-сборка лежит вне проекта — " +
-                  "чтобы вернуть старую, выберите её папку и запишите версию заново."
-                : "Выпуск " + release.Version + " и так текущий для Windows.");
+            await _dialogs.ShowErrorAsync(release.IsNew ? "Запись «новый» ещё не выпускалась — откатываться не на что."
+                : release.Platforms.Any(p => p.IsAndroid && !p.IsCurrent)
+                    ? "Выкладка Android " + release.Version + " не сохранена в проекте (выпущена до 2.2) — откатиться на неё нельзя. " +
+                      "Выберите её папку билда и запишите версию заново (под новым номером)."
+                    : "Выпуск " + release.Version + " и так текущий.");
             return;
         }
 
         var settings = _service.LoadSettings(_project.RootPath);
-        if ((settings.BaseDownloadURL ?? "").Trim().Length == 0 ||
-            (!settings.CreateRepairPatch && !settings.CreateInstallerPatch && !settings.CreateIncrementalPatch))
+        if (windows != null && ((settings.BaseDownloadURL ?? "").Trim().Length == 0 ||
+            (!settings.CreateRepairPatch && !settings.CreateInstallerPatch && !settings.CreateIncrementalPatch)))
         {
             await _dialogs.ShowErrorAsync("Патч не соберётся: в настройках проекта не задан BaseDownloadURL или не выбран ни один тип патча.");
             return;
         }
 
         var target = new VersionCode(release.Version);
-        var newer = _project.Versions.Where(v => new VersionCode(v.Version).CompareTo(target) > 0)
-            .Select(v => v.Version).ToList();
-        var list = string.Join(", ", newer);
-        if (!await _dialogs.ConfirmAsync("Откатить сервер на версию " + release.Version + "?\n\n" +
-                (newer.Count == 1 ? "Версия " : "Версии ") + list + " уйдут в Корзину (из " + ProjectService.VersionsFolder +
-                "/ и каталога; номера выпусков не изменятся), патч " + release.Version + " пересоберётся последним. " +
-                "Затем доставьте и проверьте его, как обычно.\n\n" +
-                "Клиенты на " + list + " вернутся на " + release.Version + ": движок ставит версию с сервера, даже если она ниже. " +
-                "Номера " + list + " больше не используются — следующий выпуск должен быть новее." +
-                (release.Platforms.Any(p => p.IsAndroid) || newer.Any(v => _project.Meta.AndroidSignedVersions.ContainsKey(v))
-                    ? "\n\nAndroid не откатывается: его канал остаётся как есть." : "")))
+        bool Newer(string v) => VersionRules.IsValid(v) && new VersionCode(v).CompareTo(target) > 0;
+        var newerWindows = windows == null ? new List<string>()
+            : _project.Versions.Select(v => v.Version).Where(Newer).ToList();
+        var newerAndroid = android == null ? new List<string>()
+            : ReleaseCatalog.AndroidVersions(_project.Meta).Where(Newer).OrderBy(v => new VersionCode(v)).ToList();
+        var all = newerWindows.Concat(newerAndroid).Distinct().OrderBy(v => new VersionCode(v)).ToList();
+        var list = string.Join(", ", all);
+
+        var text = "Откатить сервер на версию " + release.Version + "?\n\n" +
+            (all.Count == 1 ? "Версия " : "Версии ") + list + " уйдут в Корзину (из " + ProjectService.VersionsFolder +
+            "/ и каталога; номера выпусков не изменятся).";
+        if (windows != null)
+            text += "\nWindows: патч " + release.Version + " пересоберётся последним — затем доставьте и проверьте его. " +
+                "Клиенты на более новых версиях вернутся на " + release.Version + ": движок ставит версию с сервера, даже если она ниже.";
+        if (android != null)
+            text += "\nAndroid: выкладка " + release.Version + " снова текущая — доставьте её в канал и проверьте.";
+        else if (release.Platforms.Any(p => p.IsAndroid) || _project.Meta.AndroidEnabled)
+            text += "\nAndroid не откатывается: " + (release.Platforms.Any(p => p.IsAndroid && p.IsCurrent)
+                ? "этот выпуск для него и так текущий." : "выкладка этой версии не сохранена в проекте.");
+        text += "\n\nНомера " + list + " больше не используются — следующий выпуск должен быть новее.";
+        if (!await _dialogs.ConfirmAsync(text))
             return;
 
         try
         {
-            _service.RollbackTo(_project.RootPath, release.Version);
+            if (windows != null)
+                _service.RollbackTo(_project.RootPath, release.Version);
+            if (android != null)
+                _service.RollbackAndroidTo(_project.RootPath, release.Version);
         }
         catch (Exception ex)
         {
@@ -177,7 +196,8 @@ public sealed partial class MainWindowViewModel
 
         _project = _service.Open(_project.RootPath);
         ShowProject();
-        await BuildStagedPatch(release.Version, settings);
+        if (windows != null)
+            await BuildStagedPatch(release.Version, settings);
     }
 
     // Каталог перерисован — записи новые: прежнее выделение к ним не относится.

@@ -102,6 +102,14 @@ public sealed partial class MainWindowViewModel
             return;
         }
 
+        // Номер откатанной или удалённой версии не повторяется: клиент с ней не увидел бы обновления.
+        if (meta.RemovedAndroidVersions.Contains(version))
+        {
+            await _dialogs.ShowErrorAsync("Версия Android " + version + " уже выпускалась и была откатана или удалена.\n" +
+                "Клиенты, успевшие её получить, не увидят обновления с тем же номером. Запишите следующую версию.");
+            return;
+        }
+
         ResetAndroidFrom(version, StageKind.Files);
         AndroidRecord record;
         try
@@ -124,6 +132,11 @@ public sealed partial class MainWindowViewModel
                 Masks = new List<string>(masks),
                 Files = await Task.Run(() => AndroidPackage.Hashes(folder, files))
             };
+
+            // Выкладка версии сохраняется в проект (Versions/Android/<версия>): доставка и откат берут её
+            // оттуда, а правки папки билда после записи — уже следующий, «новый» билд.
+            var stored = ProjectService.AndroidVersionPath(_project.RootPath, version);
+            await Task.Run(() => AndroidPackage.CopyTo(folder, files, stored));
         }
         catch (Exception ex)
         {
@@ -285,15 +298,18 @@ public sealed partial class MainWindowViewModel
         ShowProject();
     }
 
-    // Папка билда и файлы выкладки; checkSignatures — у подписываемых файлов .sig на месте и сходится
+    // Откуда выкладывается версия и её файлы: сохранённая при записи копия (Versions/Android/<версия>), у записей
+    // до 2.2 без копии — папка билда. checkSignatures — у подписываемых файлов .sig на месте и сходится
     // (файл не правили после подписи). null — ошибка уже показана.
     private async Task<(string Folder, List<string> Files)?> PrepareAndroidPackage(string version, bool checkSignatures)
     {
         var meta = _project!.Meta;
-        var folder = meta.Android.BuildSource;
+        var stored = ProjectService.AndroidVersionPath(_project.RootPath, version);
+        var folder = Directory.Exists(stored) ? stored : meta.Android.BuildSource;
         if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder))
         {
-            await _dialogs.ShowErrorAsync("Папка билда Android не выбрана или не существует.");
+            await _dialogs.ShowErrorAsync("Выкладка Android " + version + " не сохранена в проекте, а папки билда нет.\n" +
+                "Выберите папку билда и запишите версию заново.");
             return null;
         }
 

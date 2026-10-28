@@ -483,9 +483,9 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task Android_ResignResetsDeliveryAndVerify_ChangedFileBlocksDelivery()
+    public async Task Android_ResignResetsDeliveryAndVerify_BuildChangeDoesNotTouchStoredRelease()
     {
-        var (_, android) = await CreateProjectWithAndroid();
+        var (server, android) = await CreateProjectWithAndroid();
         _dialogs.Prompts.Enqueue("1.0.0");
         await _vm.SignAndroidCommand.ExecuteAsync(null);
         await _vm.DeliverAndroidCommand.ExecuteAsync(null);
@@ -497,16 +497,21 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.Equal(StageState.Pending, AndroidStage("1.0.0", StageKind.Delivery).State);
         Assert.Equal(StageState.Pending, AndroidStage("1.0.0", StageKind.Verify).State);
 
-        // Манифест правили после подписи — выкладывать нельзя: клиент отверг бы подпись.
+        // Манифест в папке билда правили после подписи — это уже следующий билд («новый» в каталоге),
+        // а выкладывается сохранённая при подписи копия 1.0.0: подписанная и неизменная.
         File.WriteAllText(Path.Combine(android, "latest.json"), "{\"version\":\"1.0.1\"}");
         // Метка времени файла грубее DateTime.Now (~16 мс) — сдвигаем явно, как было бы в жизни.
         File.SetLastWriteTime(Path.Combine(android, "latest.json"), DateTime.Now.AddMinutes(1));
         await _vm.DeliverAndroidCommand.ExecuteAsync(null);
-        Assert.Contains(_dialogs.Errors, e => e.Contains("изменился после подписи"));
-        Assert.False(ProjectMeta.Load(ProjectDir).AndroidDeliveredVersions.ContainsKey("1.0.0"));
+        Assert.Empty(_dialogs.Errors);
+        Assert.Equal(ReleaseItem.UnknownVersion, _vm.Releases[0].Version); // перерисованный каталог видит новый билд
+        Assert.Equal("{\"version\":\"1.0.0\"}", File.ReadAllText(Path.Combine(server, "AndroidPatch", "latest.json")));
+        Assert.True(File.Exists(Path.Combine(ProjectService.AndroidVersionPath(ProjectDir, "1.0.0"), "latest.json.sig")));
 
-        // Билд изменился после подписи — в каталоге запись «новый» для Android.
-        Assert.Equal(ReleaseItem.UnknownVersion, _vm.Releases[0].Version);
+        // Испортили саму сохранённую копию — выкладывать нельзя: клиент отверг бы подпись.
+        File.WriteAllText(Path.Combine(ProjectService.AndroidVersionPath(ProjectDir, "1.0.0"), "latest.json"), "подмена");
+        await _vm.DeliverAndroidCommand.ExecuteAsync(null);
+        Assert.Contains(_dialogs.Errors, e => e.Contains("изменился после подписи"));
     }
 
     [Fact]
@@ -567,7 +572,7 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task Android_Unsigned_ChangedOrAddedFileBlocksDelivery()
+    public async Task Android_Unsigned_StoredCopyDelivered_TamperedCopyBlocked()
     {
         var (server, android) = await CreateProjectWithAndroid();
         _dialogs.SettingsAnswer = s =>
@@ -578,24 +583,87 @@ public sealed class MainWindowViewModelTests : IDisposable
         await _vm.EditSettingsCommand.ExecuteAsync(null);
         _dialogs.Prompts.Enqueue("1.0.0");
         await _vm.SignAndroidCommand.ExecuteAsync(null);
+        var stored = ProjectService.AndroidVersionPath(ProjectDir, "1.0.0");
+        Assert.Equal(new[] { "App.apk", "latest.json" },
+            Directory.GetFiles(stored).Select(Path.GetFileName).OrderBy(n => n, StringComparer.Ordinal));
 
+        // Папку билда меняют дальше — выкладывается записанное.
         File.WriteAllText(Path.Combine(android, "App.apk"), "другой apk");
-        await _vm.DeliverAndroidCommand.ExecuteAsync(null);
-        Assert.Contains(_dialogs.Errors, e => e.Contains("изменён: App.apk") && e.Contains("Запишите версию заново"));
-        Assert.False(Directory.Exists(Path.Combine(server, "AndroidPatch")));
-
-        _dialogs.Prompts.Enqueue("1.0.0");
-        await _vm.SignAndroidCommand.ExecuteAsync(null); // записать заново — теперь выкладка проходит
         File.WriteAllText(Path.Combine(android, "notes.txt"), "лишнее");
-        _dialogs.Errors.Clear();
-        await _vm.DeliverAndroidCommand.ExecuteAsync(null);
-        Assert.Contains(_dialogs.Errors, e => e.Contains("новый: notes.txt"));
-
-        File.Delete(Path.Combine(android, "notes.txt"));
-        _dialogs.Errors.Clear();
         await _vm.DeliverAndroidCommand.ExecuteAsync(null);
         Assert.Empty(_dialogs.Errors);
-        Assert.True(File.Exists(Path.Combine(server, "AndroidPatch", "App.apk")));
+        Assert.Equal(new byte[] { 0x50, 0x4B, 3, 4 }, File.ReadAllBytes(Path.Combine(server, "AndroidPatch", "App.apk")));
+        Assert.False(File.Exists(Path.Combine(server, "AndroidPatch", "notes.txt")));
+
+        // Сохранённую копию испортили или подложили файл — отпечатки не сходятся, выкладка отказывает.
+        File.WriteAllText(Path.Combine(stored, "App.apk"), "подмена");
+        File.WriteAllText(Path.Combine(stored, "extra.txt"), "подложили");
+        await _vm.DeliverAndroidCommand.ExecuteAsync(null);
+        Assert.Contains(_dialogs.Errors, e => e.Contains("изменён: App.apk") && e.Contains("новый: extra.txt") &&
+            e.Contains("Запишите версию заново"));
+    }
+
+    [Fact]
+    public async Task Android_Rollback_StoredOlderReleaseBecomesCurrent_NumberNotReused()
+    {
+        var (server, android) = await CreateProjectWithAndroid();
+        _dialogs.Prompts.Enqueue("1.0.0");
+        await _vm.SignAndroidCommand.ExecuteAsync(null);
+        await _vm.DeliverAndroidCommand.ExecuteAsync(null);
+
+        File.WriteAllText(Path.Combine(android, "App.apk"), "плохой apk");
+        File.SetLastWriteTime(Path.Combine(android, "App.apk"), DateTime.Now.AddMinutes(1));
+        _dialogs.Prompts.Enqueue("1.0.1");
+        await _vm.SignAndroidCommand.ExecuteAsync(null);
+        await _vm.DeliverAndroidCommand.ExecuteAsync(null);
+        var channelApk = Path.Combine(server, "AndroidPatch", "App.apk");
+        Assert.Equal("плохой apk", File.ReadAllText(channelApk));
+
+        _vm.SelectedRelease = _vm.Releases.Single(r => r.Version == "1.0.0");
+        Assert.True(_vm.SelectedRelease.CanRollback);
+        await _vm.RollbackReleaseCommand.ExecuteAsync(null);
+        Assert.Contains(_dialogs.Confirms, m => m.Contains("Откатить сервер на версию 1.0.0?") && m.Contains("Android: выкладка 1.0.0 снова текущая"));
+        Assert.Empty(_dialogs.Errors);
+        Assert.False(Directory.Exists(ProjectService.AndroidVersionPath(ProjectDir, "1.0.1")));
+        Assert.Equal("1.0.0", ReleaseCatalog.LatestAndroidVersion(ProjectMeta.Load(ProjectDir)));
+        Assert.Equal(StageState.Pending, AndroidStage("1.0.0", StageKind.Delivery).State);
+
+        await _vm.DeliverAndroidCommand.ExecuteAsync(null);
+        Assert.Empty(_dialogs.Errors);
+        Assert.Equal(new byte[] { 0x50, 0x4B, 3, 4 }, File.ReadAllBytes(channelApk)); // в канале снова 1.0.0
+
+        _dialogs.Prompts.Enqueue("1.0.1");
+        await _vm.SignAndroidCommand.ExecuteAsync(null);
+        Assert.Contains(_dialogs.Errors, e => e.Contains("уже выпускалась"));
+    }
+
+    [Fact]
+    public async Task OpenProject_From21_AndroidReleaseSavedIntoProject()
+    {
+        var (_, android) = await CreateProjectWithAndroid();
+        _dialogs.Prompts.Enqueue("1.0.0");
+        await _vm.SignAndroidCommand.ExecuteAsync(null);
+
+        // Проект как из 2.1: копии выкладки нет, записи с отпечатками нет, схема 1.
+        Directory.Delete(ProjectService.AndroidVersionPath(ProjectDir, "1.0.0"), recursive: true);
+        var meta = ProjectMeta.Load(ProjectDir);
+        meta.AndroidRecords.Clear();
+        meta.SchemaVersion = 1;
+        meta.Save(ProjectDir);
+
+        _dialogs.Folders.Enqueue(ProjectDir);
+        await _vm.OpenProjectCommand.ExecuteAsync(null);
+        Assert.Contains(_dialogs.Infos, m => m.Contains("донастроен") && m.Contains("Android 1.0.0 сохранена"));
+        Assert.True(File.Exists(Path.Combine(ProjectService.AndroidVersionPath(ProjectDir, "1.0.0"), "latest.json.sig")));
+        var upgraded = ProjectMeta.Load(ProjectDir);
+        Assert.True(upgraded.AndroidRecords["1.0.0"].Signed);
+        Assert.NotEmpty(upgraded.AndroidRecords["1.0.0"].Files);
+        Assert.Equal(ProjectMeta.CurrentSchemaVersion, upgraded.SchemaVersion);
+
+        _dialogs.Infos.Clear();
+        _dialogs.Folders.Enqueue(ProjectDir);
+        await _vm.OpenProjectCommand.ExecuteAsync(null);
+        Assert.Empty(_dialogs.Infos); // второй раз донастраивать нечего
     }
 
     [Fact]

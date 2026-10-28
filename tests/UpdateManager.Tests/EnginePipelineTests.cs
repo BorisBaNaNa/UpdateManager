@@ -184,6 +184,54 @@ public sealed class EnginePipelineTests : IDisposable
         }
     }
 
+    // Проект 2.1 (версии прямо в Versions/) после донастройки: версии в Versions/Windows, рядом Versions/Android —
+    // движок (CreateEngine) собирает инкрементальный патч из Windows и не спотыкается об Android.
+    [Fact]
+    public void UpgradedProject_WindowsVersionsMoved_EngineIgnoresAndroid()
+    {
+        var service = new ProjectService();
+        var projectDir = Path.Combine(_root, "project");
+        var buildDir = Path.Combine(_root, "build");
+        var clientDir = Path.Combine(_root, "client");
+        service.Create(projectDir, "TestApp");
+        var output = service.GetOutputPath(projectDir);
+        var settings = service.LoadSettings(projectDir);
+        settings.BaseDownloadURL = new Uri(output).AbsoluteUri;
+        settings.CreateRepairPatch = true;
+        settings.CreateIncrementalPatch = true;
+        service.SaveSettings(projectDir, settings);
+
+        // Раскладка 2.1: Versions/1.0.0, мета схемы 1.
+        var versions = Path.Combine(projectDir, ProjectService.VersionsFolder);
+        Directory.Delete(versions, recursive: true);
+        WriteBuild(buildDir, "first");
+        CopyDirectory(buildDir, Path.Combine(versions, "1.0.0"));
+        var meta = ProjectMeta.Load(projectDir);
+        meta.SchemaVersion = 1;
+        meta.Save(projectDir);
+
+        var notes = ProjectUpgrade.Run(projectDir);
+        Assert.Contains(notes, n => n.Contains("перенесены") && n.Contains("1.0.0"));
+        Assert.True(service.VersionExists(projectDir, "1.0.0"));
+        Assert.False(Directory.Exists(Path.Combine(versions, "1.0.0")));
+        Assert.Equal(ProjectMeta.CurrentSchemaVersion, ProjectMeta.Load(projectDir).SchemaVersion);
+        Assert.Empty(ProjectUpgrade.Run(projectDir)); // повторно — нечего делать
+
+        var android = ProjectService.AndroidVersionPath(projectDir, "1.0.0");
+        Directory.CreateDirectory(android);
+        File.WriteAllText(Path.Combine(android, "latest.json"), "{}");
+        RunToEnd(new PatchBuilder(projectDir));
+        WriteBuild(buildDir, "second");
+        service.StageBuild(projectDir, buildDir, "1.0.1");
+        RunToEnd(new PatchBuilder(projectDir));
+
+        var info = File.ReadAllText(Path.Combine(output, "VersionInfo.info"));
+        Assert.Contains("<Version>1.0.1</Version>", info);
+        Assert.Contains("<ToVersion>1.0.1</ToVersion>", info);
+        RunToEnd(new PatchVerifier(clientDir, service.BuildVersionInfoUrl(service.LoadSettings(projectDir).BaseDownloadURL)));
+        Assert.Equal("second", File.ReadAllText(Path.Combine(clientDir, "app.txt")));
+    }
+
     private static void CopyDirectory(string from, string to)
     {
         foreach (var file in Directory.GetFiles(from, "*", SearchOption.AllDirectories))
