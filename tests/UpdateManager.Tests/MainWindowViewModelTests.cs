@@ -545,7 +545,7 @@ public sealed class MainWindowViewModelTests : IDisposable
     {
         await CreateProjectWithBuild();
 
-        _vm.RemoveFromRecentCommand.Execute(null); // меню «Проект → Убрать из списка»
+        _vm.RemoveFromRecentCommand.Execute(ProjectDir); // контекстное меню карточки
 
         Assert.False(_vm.HasProject);
         Assert.Empty(_recent.Load());

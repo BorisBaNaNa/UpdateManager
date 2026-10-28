@@ -1038,12 +1038,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     // --- убрать из списка / удалить проект ---
 
+    // Контекстное меню карточки недавнего проекта.
     // «Убрать из списка» — только из показа: проект остаётся на диске. Открытый — закрывается.
-    // path = null — открытый проект (меню «Проект»).
     [RelayCommand]
     private void RemoveFromRecent(string? path)
     {
-        path ??= _project?.RootPath;
         if (path == null)
             return;
 
@@ -1057,7 +1056,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private async Task DeleteProject(string? path)
     {
-        path ??= _project?.RootPath;
         if (path == null)
             return;
 

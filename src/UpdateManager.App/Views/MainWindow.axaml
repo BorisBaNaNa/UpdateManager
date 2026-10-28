@@ -94,11 +94,6 @@
                 <MenuItem Header="Настройки проекта…" Command="{Binding EditSettingsCommand}" />
                 <MenuItem Header="Открыть в проводнике" Command="{Binding OpenInExplorerCommand}" />
                 <Separator />
-                <MenuItem Header="Убрать из списка" IsEnabled="{Binding HasProject}"
-                          Command="{Binding RemoveFromRecentCommand}" CommandParameter="{x:Null}" />
-                <MenuItem Header="Удалить проект…" IsEnabled="{Binding HasProject}"
-                          Command="{Binding DeleteProjectCommand}" CommandParameter="{x:Null}" />
-                <Separator />
                 <MenuItem Header="Выход" Command="{Binding ExitCommand}" />
             </MenuItem>
             <MenuItem Header="Выпуск">
