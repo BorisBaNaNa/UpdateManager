@@ -17,6 +17,12 @@
   Схема версий — SemVer из трёх чисел: появилась новая возможность → minor, иначе patch.
   Скрипт НИЧЕГО не коммитит и не заливает — патч собирается и доставляется в самом UpdateManager.
 
+  -Publish — отдельный шаг, когда патч проверен, тег поставлен и запушен: ничего не собирает, а публикует
+  GitHub Release текущей версии (Directory.Build.props) — заголовок «UpdateManager vX.Y.Z.0», текст
+  docs/releases/X.Y.Z.md, архив Release/ как UpdateManager.vX.Y.Z.zip. Нужен GitHub CLI (gh) со входом.
+  Перед публикацией сверяет: FileVersion в Release/ = версия, тег vX.Y.Z есть локально и на origin
+  (тот же), выпуска с этим тегом на GitHub ещё нет.
+
 .EXAMPLE
   powershell.exe -ExecutionPolicy Bypass -File scripts/release.ps1 patch
 .EXAMPLE
@@ -27,6 +33,8 @@
   powershell.exe -ExecutionPolicy Bypass -File scripts/release.ps1 -NoBump      # пересобрать текущую версию
 .EXAMPLE
   powershell.exe -ExecutionPolicy Bypass -File scripts/release.ps1 patch -DryRun   # показать план, ничего не трогая
+.EXAMPLE
+  powershell.exe -ExecutionPolicy Bypass -File scripts/release.ps1 -Publish     # GitHub Release текущей версии
 #>
 [CmdletBinding()]
 param(
@@ -45,7 +53,10 @@ param(
     [switch]$SkipTests,
 
     # Показать план, файлы не менять и ничего не собирать.
-    [switch]$DryRun
+    [switch]$DryRun,
+
+    # Не собирать, а опубликовать GitHub Release текущей версии (после проверки патча и push тега).
+    [switch]$Publish
 )
 
 $ErrorActionPreference = 'Stop'
@@ -70,7 +81,10 @@ function ConvertTo-Version([string]$text) {
 
 function Format-Version([version]$v) { return "$($v.Major).$($v.Minor).$($v.Build)" }
 
-if (-not $NoBump -and -not $Part -and -not $To) {
+if ($Publish -and ($NoBump -or $Part -or $To -or $SkipTests)) {
+    throw "-Publish ничего не собирает и публикует текущую версию — без разряда, -To, -NoBump и -SkipTests"
+}
+if (-not $Publish -and -not $NoBump -and -not $Part -and -not $To) {
     throw "укажи разряд (patch/minor/major), явную версию через -To или -NoBump. Пример: powershell.exe -ExecutionPolicy Bypass -File scripts/release.ps1 patch"
 }
 
@@ -84,6 +98,78 @@ if (-not $current) { throw "<Version>$($Matches[1])</Version> не похожа 
 if ($props -notmatch '<Product>([^<]+)</Product>') { throw "в $PropsPath нет <Product>" }
 $productName = $Matches[1].Trim()
 $VersionHolder = Join-Path $ReleaseDir ($productName + $VersionHolderPostfix)
+
+# --- -Publish: GitHub Release уже собранной и проверенной версии --------------------------------
+if ($Publish) {
+    $versionText = Format-Version $current
+    $tag = "v$versionText"
+    $title = "$productName $tag.0"
+    $NotesFile = Join-Path $RepoRoot "docs\releases\$versionText.md"
+    $zipName = "$productName.$tag.zip"
+    Write-Host "публикация: $title (тег $tag)" -ForegroundColor Cyan
+
+    if (-not (Test-Path $NotesFile)) { throw "нет заметок выпуска $NotesFile" }
+    if (-not (Test-Path $ReleaseExe)) { throw "нет $ReleaseExe — сначала соберите выпуск" }
+    $built = (Get-Item $ReleaseExe).VersionInfo.FileVersion
+    if ($built -ne "$versionText.0") {
+        throw "в Release/ собрана версия $built, а в Directory.Build.props — $versionText. Пересоберите: release.ps1 -NoBump"
+    }
+
+    $gh = Get-Command gh -ErrorAction SilentlyContinue
+    $ghPath = if ($gh) { $gh.Source } else { Join-Path $env:ProgramFiles 'GitHub CLI\gh.exe' }
+    if (-not (Test-Path $ghPath)) { throw "нет GitHub CLI: winget install --id GitHub.cli, затем gh auth login" }
+
+    # Тег должен быть и локально, и на origin — тот же самый: выпуск строится по тегу на сервере.
+    $localTag = & git -C $RepoRoot rev-parse -q --verify "refs/tags/$tag"
+    if ($LASTEXITCODE -ne 0) { throw "нет тега $tag — поставьте его на коммит, из которого собран Release/: git tag -a $tag -m `"$productName $versionText`"" }
+    $remoteLine = & git -C $RepoRoot ls-remote origin "refs/tags/$tag"
+    if ($LASTEXITCODE -ne 0) { throw "не удалось спросить origin о теге $tag" }
+    if (-not $remoteLine) { throw "тега $tag нет на origin — запушьте: git push origin main $tag" }
+    if (($remoteLine -split '\s+')[0] -ne $localTag) { throw "тег $tag на origin не совпадает с локальным" }
+
+    # Перенаправленный stderr внешней команды при 'Stop' в Windows PowerShell 5.1 — прерывающая ошибка.
+    $ErrorActionPreference = 'Continue'
+    & $ghPath release view $tag *> $null
+    $ErrorActionPreference = 'Stop'
+    if ($LASTEXITCODE -eq 0) { throw "выпуск $tag на GitHub уже есть — правьте его на сайте или: gh release upload $tag <файл> --clobber" }
+
+    if ($DryRun) {
+        Write-Host ""
+        Write-Host "DryRun — план:" -ForegroundColor Yellow
+        Write-Host "  архив $ReleaseDir → $zipName"
+        Write-Host "  gh release create $tag --verify-tag --title `"$title`" --notes-file $NotesFile $zipName"
+        return
+    }
+
+    # Записи по одной: Compress-Archive и ZipFile.CreateFromDirectory в Windows PowerShell 5.1
+    # пишут пути с обратной косой (SPPatcher\SelfPatcher.exe), а в zip разделитель — '/'.
+    Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
+    $zipDir = Join-Path ([IO.Path]::GetTempPath()) "UpdateManager-release-$tag"
+    if (Test-Path $zipDir) { Remove-Item $zipDir -Recurse -Force }
+    New-Item -ItemType Directory $zipDir | Out-Null
+    $zip = Join-Path $zipDir $zipName
+    Write-Host ""
+    Write-Host "== Архив → $zip" -ForegroundColor Cyan
+    $archive = [IO.Compression.ZipFile]::Open($zip, [IO.Compression.ZipArchiveMode]::Create)
+    try {
+        foreach ($file in Get-ChildItem $ReleaseDir -Recurse -File) {
+            $entry = $file.FullName.Substring($ReleaseDir.Length + 1).Replace('\', '/')
+            [IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $file.FullName, $entry, [IO.Compression.CompressionLevel]::Optimal) | Out-Null
+        }
+    } finally {
+        $archive.Dispose()
+    }
+
+    Write-Host ""
+    Write-Host "== GitHub Release $tag" -ForegroundColor Cyan
+    & $ghPath release create $tag --verify-tag --title $title --notes-file $NotesFile $zip
+    if ($LASTEXITCODE -ne 0) { throw "gh release create не удался (вход: gh auth status)" }
+    Remove-Item $zipDir -Recurse -Force
+
+    Write-Host ""
+    Write-Host "Опубликовано: $title" -ForegroundColor Green
+    return
+}
 
 if ($NoBump) {
     $next = $current
@@ -189,3 +275,4 @@ if (-not $NoBump) {
     Write-Host "  3. Закоммитить подъём версии: git commit -am `"Версия $nextText`""
 }
 Write-Host "  Когда патч проверен — тег на коммите, из которого собран Release/: git tag -a v$nextText -m `"UpdateManager $nextText`""
+Write-Host "  После push main и тега — GitHub Release с архивом: scripts/release.ps1 -Publish"
