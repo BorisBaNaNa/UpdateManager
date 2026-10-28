@@ -79,7 +79,16 @@ dotnet publish src/UpdateManager.App -p:PublishProfile=win-x64
    Скрипт ничего не коммитит. Новая возможность → minor, иначе patch.
 2. В самом UpdateManager: патч из `Release/` → доставка → «Проверить».
 3. Коммит подъёма версии и **тег git** `vX.Y.Z` (аннотированный, на коммите, из которого собран
-   `Release/`), например `git tag -a v2.0.0 -m "UpdateManager 2.0.0"`. По тегу публикуется GitHub Release.
+   `Release/`), например `git tag -a v2.0.0 -m "UpdateManager 2.0.0"`; push `main` и тега.
+4. GitHub Release — тем же скриптом (нужен [GitHub CLI](https://cli.github.com/) со входом, `gh auth login`):
+
+   ```bash
+   powershell.exe -ExecutionPolicy Bypass -File scripts/release.ps1 -Publish
+   ```
+
+   Ничего не собирает: проверяет, что в `Release/` текущая версия и тег запушен, и публикует выпуск
+   «UpdateManager vX.Y.Z.0» с текстом `docs/releases/X.Y.Z.md` и архивом `Release/` (`UpdateManager.vX.Y.Z.zip`).
+   Архив собирается во временной папке и удаляется после отправки.
 
 Структура репозитория:
 

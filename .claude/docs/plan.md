@@ -11,7 +11,7 @@
   `MainWindowViewModel` в Core (`Core/Release/`); окно — клиент сервиса.
 - Консольный `src/UpdateManager.Cli` → `umcli.exe` рядом с `UpdateManager.exe`: `status`, `patch`,
   `deliver`, `verify`, `release`; вопросы окна — флаги; коды выхода; `--json`; `--dry-run` у доставки.
-- Необязательная связка с `scripts/release.ps1` (`-Publish`).
+- Необязательная связка с `scripts/release.ps1` (`-Deliver`; `-Publish` уже занят — GitHub Release).
 - Спек: `docs/superpowers/specs/2026-10-28-cli-release-design.md`.
 
 ### «Удалить старые версии…» — идея, не начато
@@ -42,6 +42,8 @@
 - Окно «Что нового»: заметки `docs/releases/X.Y.Z.md` вшиты в программу, показываются один раз после
   обновления и по «Справка → Что нового…»; `release.ps1` требует заметки к выпускаемой версии.
 - Рамка фокуса и полосы прокрутки в стиле «каталога»; `.impeccable/design.json` обновлён.
+- После выпуска: `release.ps1 -Publish` — GitHub Release с текстом заметок и архивом `Release/` через `gh`
+  (у 2.1.0 выпуск и архив созданы вручную теми же командами).
 - Проверить на настоящем AlmaProfile: подпись `latest.json` ключом проекта должна совпасть байт в байт
   с `latest.json.sig` от сборки 0.9.23; после выкладки агент проекта прогоняет `UpdateChannelTests`.
 

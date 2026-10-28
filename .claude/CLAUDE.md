@@ -138,14 +138,15 @@ MVVM + доменный слой, домен не знает про UI:
   X.Y.Z.0 (version holder движка: клиентский `CheckForUpdates(true)` и наш `VersionDetector`) → сверка FileVersion
   и наличия `Release/SPPatcher/SelfPatcher.exe`.
   Ничего не коммитит; при запущенном из репозитория UpdateManager останавливается с понятной ошибкой.
-- **Каждый выпуск сопровождается тегом git**: когда патч собран, доставлен и проверен — коммит подъёма версии,
-  затем аннотированный тег `vX.Y.Z` на коммите, из которого собран `Release/`
-  (`git tag -a vX.Y.Z -m "UpdateManager X.Y.Z"`); по тегу пользователь публикует GitHub Release
-  (заголовок «UpdateManager vX.Y.Z.0», текст — `docs/releases/X.Y.Z.md`, по темам, как у `v1.0.3`;
-  к выпуску прикрепляется архив содержимого `Release/` — `UpdateManager.vX.Y.Z.zip`). Тег ставит Claude, push — пользователь.
-  Release с архивом публикует `scripts/release.ps1 -Publish` (через `gh`, вход выполнен): ничего не собирает,
-  сверяет FileVersion в `Release/`, тег локально и на origin, отсутствие выпуска. Порядок: собрал выпуск →
-  пользователь проверяет патч → по его слову коммит версии и тег → пользователь пушит → `-Publish`.
+- **Каждый выпуск сопровождается тегом git и GitHub Release.** Порядок: Claude собирает выпуск →
+  пользователь проверяет и ставит патч → по его слову Claude делает коммит подъёма версии и аннотированный тег
+  `vX.Y.Z` на коммите, из которого собран `Release/` (`git tag -a vX.Y.Z -m "UpdateManager X.Y.Z"`) →
+  пользователь пушит `main` и тег → Claude запускает `scripts/release.ps1 -Publish`.
+  `-Publish` ничего не собирает: публикует через `gh` (`C:\Program Files\GitHub CLI\gh.exe`, вход выполнен)
+  выпуск текущей версии — заголовок «UpdateManager vX.Y.Z.0», текст `docs/releases/X.Y.Z.md` (по темам, как у
+  `v1.0.3`), архив `Release/` как `UpdateManager.vX.Y.Z.zip`. Сверяет FileVersion в `Release/`, тег локально и на
+  origin, отсутствие выпуска; архив собирается в `%TEMP%` (пути в zip через `/` — `Compress-Archive` в PS 5.1
+  пишет `\`) и удаляется после отправки, удачной или нет.
   Схема версий — SemVer из трёх чисел: новая возможность → minor, иначе patch.
   Скрипт — Windows PowerShell 5.1, сохранять в UTF-8 **с BOM** (иначе кириллица ломается).
 
