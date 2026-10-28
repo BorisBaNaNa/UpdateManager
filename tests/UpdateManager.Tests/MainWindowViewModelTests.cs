@@ -726,33 +726,78 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
-    public Task DeleteReleases_HoldAndDragMarksTouched_MenuOnRelease() => HeadlessUi.Run(async () =>
+    public Task DeleteReleases_AreaSelection_ShrinksBack_MenuAfterRelease_DismissClears() => HeadlessUi.Run(async () =>
     {
         await CreateProjectWithVersions(4); // 1.0.3 текущий, 1.0.2 … 1.0.0 — старые
         var window = new UpdateManager.App.Views.MainWindow { DataContext = _vm };
         window.Show();
         HeadlessUi.Flush();
-
-        // Удержание на 1.0.2 две секунды → флажки; тянем вниз через 1.0.1 до 1.0.0 и отпускаем.
-        var from = HeadlessUi.CenterOf(window, _vm.Releases.Single(r => r.Version == "1.0.2"));
-        window.MouseDown(from, Avalonia.Input.MouseButton.Left);
-        await HeadlessUi.Wait(TimeSpan.FromSeconds(2.2));
-        Assert.True(_vm.IsMarkingReleases);
-        window.MouseMove(HeadlessUi.CenterOf(window, _vm.Releases.Single(r => r.Version == "1.0.1")));
-        var to = HeadlessUi.CenterOf(window, _vm.Releases.Single(r => r.Version == "1.0.0"));
-        window.MouseMove(to);
-        window.MouseUp(to, Avalonia.Input.MouseButton.Left);
-        HeadlessUi.Flush();
-
-        Assert.Equal(new[] { "1.0.2", "1.0.1", "1.0.0" }, _vm.Releases.Where(r => r.IsChecked).Select(r => r.Version));
-        Assert.Equal(3, _vm.MarkedCount);
         var list = Avalonia.Controls.ControlExtensions.FindControl<Avalonia.Controls.ListBox>(window, "CatalogList")!;
-        Assert.True(list.ContextMenu!.IsOpen);
-        list.ContextMenu.Close();
+        var menu = (Avalonia.Controls.ContextMenu)list.Resources["MarkedMenu"]!;
+        Avalonia.Point At(string version) => HeadlessUi.CenterOf(window, _vm.Releases.Single(r => r.Version == version));
+        string[] Marked() => _vm.Releases.Where(r => r.IsChecked).Select(r => r.Version).ToArray();
 
-        await _vm.DeleteMarkedReleasesCommand.ExecuteAsync(null);
-        Assert.Equal(new[] { "1.0.3" }, _vm.Releases.Select(r => r.Version));
+        // Удержание на 1.0.2 секунду — точка начала; тянем вниз до 1.0.0: выделено всё между.
+        window.MouseDown(At("1.0.2"), Avalonia.Input.MouseButton.Left);
+        await HeadlessUi.Wait(TimeSpan.FromSeconds(1.2));
+        Assert.Equal(new[] { "1.0.2" }, Marked());
+        window.MouseMove(At("1.0.1"));
+        window.MouseMove(At("1.0.0"));
+        Assert.Equal(new[] { "1.0.2", "1.0.1", "1.0.0" }, Marked());
+        Assert.False(menu.IsOpen); // меню — только после отпускания
+
+        // Обратно к точке начала — выделение сжимается; выше точки — текущий 1.0.3 не выделяется.
+        window.MouseMove(At("1.0.1"));
+        Assert.Equal(new[] { "1.0.2", "1.0.1" }, Marked());
+        window.MouseMove(At("1.0.3"));
+        Assert.Equal(new[] { "1.0.2" }, Marked());
+        window.MouseMove(At("1.0.1"));
+        window.MouseUp(At("1.0.1"), Avalonia.Input.MouseButton.Left);
+        HeadlessUi.Flush();
+        Assert.True(menu.IsOpen);
+        Assert.Equal(2, _vm.MarkedCount);
+
+        // Меню закрыли мимо — выделение спало.
+        menu.Close();
+        HeadlessUi.Flush();
+        Assert.Empty(Marked());
         Assert.False(_vm.IsMarkingReleases);
+
+        // Ещё раз — и «Удалить выделенные».
+        window.MouseDown(At("1.0.1"), Avalonia.Input.MouseButton.Left);
+        await HeadlessUi.Wait(TimeSpan.FromSeconds(1.2));
+        window.MouseMove(At("1.0.0"));
+        window.MouseUp(At("1.0.0"), Avalonia.Input.MouseButton.Left);
+        HeadlessUi.Flush();
+        await _vm.DeleteMarkedReleasesCommand.ExecuteAsync(null);
+        menu.Close();
+        HeadlessUi.Flush();
+        Assert.Equal(new[] { "1.0.3", "1.0.2" }, _vm.Releases.Select(r => r.Version));
+        Assert.False(_vm.IsMarkingReleases);
+        window.Close();
+    });
+
+    [Fact]
+    public Task DeleteReleases_DragPastEdge_ScrollsAndExtends() => HeadlessUi.Run(async () =>
+    {
+        await CreateProjectWithVersions(14);
+        var window = new UpdateManager.App.Views.MainWindow { DataContext = _vm, Width = 1000, Height = 420 };
+        window.Show();
+        HeadlessUi.Flush();
+        var list = Avalonia.Controls.ControlExtensions.FindControl<Avalonia.Controls.ListBox>(window, "CatalogList")!;
+        var scroll = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(list).OfType<Avalonia.Controls.ScrollViewer>().First();
+        Assert.True(scroll.Extent.Height > scroll.Viewport.Height, "каталог должен не помещаться");
+
+        window.MouseDown(HeadlessUi.CenterOf(window, _vm.Releases[1]), Avalonia.Input.MouseButton.Left);
+        await HeadlessUi.Wait(TimeSpan.FromSeconds(1.2));
+        // Указатель ниже списка: список едет вниз, выделение тянется до самой старой записи.
+        var below = Avalonia.VisualExtensions.TranslatePoint(list, new Avalonia.Point(list.Bounds.Width / 2, list.Bounds.Height + 30), window)!.Value;
+        window.MouseMove(below);
+        await HeadlessUi.Wait(TimeSpan.FromSeconds(2.5));
+        Assert.True(scroll.Offset.Y > 0);
+        Assert.True(_vm.Releases[^1].IsChecked, "до последней записи: " + _vm.MarkedCount);
+        Assert.Equal(_vm.Releases.Count - 1, _vm.MarkedCount); // все, кроме текущего 1.0.13
+        window.MouseUp(below, Avalonia.Input.MouseButton.Left);
         window.Close();
     });
 

@@ -5,6 +5,7 @@ colors:
   ground: "#EFEFED"
   panel: "#E5E5E3"
   selected: "#D6D6D3"
+  marked: "#BDBDB9"
   ink: "#111111"
   ink-inverse: "#F4F4F2"
   muted: "#595957"
@@ -14,6 +15,7 @@ colors:
   ground-dark: "#111111"
   panel-dark: "#161616"
   selected-dark: "#242424"
+  marked-dark: "#383836"
   ink-dark: "#F2F2F0"
   ink-inverse-dark: "#111111"
   muted-dark: "#9B9B98"
@@ -160,6 +162,7 @@ A near-achromatic warm-grey ground with ink type, plus five saturated stage hues
 - **Matte Ground** (`ground` / `ground-dark`): window background.
 - **Panel Grey** (`panel` / `panel-dark`): the 280px left column (recent projects or release catalog), one step off the ground.
 - **Selected Grey** (`selected` / `selected-dark`): hover and selection fill for catalog rows and quiet buttons. Selection is a fill, never a coloured bar.
+- **Marked Grey** (`marked` / `marked-dark`): one tonal step past Selected — catalog rows caught by an area selection (hold 1 s, drag). Fill across the whole row; no checkboxes, since marking is a gesture, not a toggle.
 - **Muted Grey** (`muted` / `muted-dark`): secondary text: paths, catalog second lines, status line, table labels, list labels, pending stage text.
 - **Hairline** (`hairline` / `hairline-dark`): 1px rules under the menu, between catalog rows, beside the panel, above the info table, and quiet button outlines.
 - **Pending Grey** (`pending` / `pending-dark`): outline of not-yet-done stage blocks and chips; quiet button hover border; disabled quiet text.

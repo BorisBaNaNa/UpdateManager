@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using SimplePatchToolCore;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -7,47 +6,63 @@ using UpdateManager.Core.Project;
 namespace UpdateManager.App.ViewModels;
 
 /// <summary>
-/// Каталог выпусков: удаление старых версий. Одна — контекстное меню записи; несколько — режим отметки
-/// (удержание записи 2 секунды или «Отметить несколько»): у записей появляются флажки, протяжка отмечает
-/// всё, что задела, а по отпусканию открывается меню для отмеченного.
+/// Каталог выпусков: удаление и откат версий. Одна — контекстное меню записи; несколько — выделение областью:
+/// удержание записи 1 секунду задаёт точку начала, протяжка выделяет записи от неё до текущей (назад к точке —
+/// выделение сжимается), по отпусканию — меню для выделенного. Меню закрыли, ничего не выбрав, — выделение спадает.
 /// </summary>
 public sealed partial class MainWindowViewModel
 {
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsNotMarkingReleases))]
-    private bool _isMarkingReleases;
+    [ObservableProperty] private bool _isMarkingReleases;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(DeleteMarkedText))]
     private int _markedCount;
 
-    public bool IsNotMarkingReleases => !IsMarkingReleases;
+    public string DeleteMarkedText => "Удалить выделенные (" + MarkedCount + ")…";
 
-    public string DeleteMarkedText => "Удалить отмеченные (" + MarkedCount + ")…";
+    private ReleaseItem? _markAnchor;
+    private bool _marksInUse;
 
-    /// <summary>Войти в режим отметки; <paramref name="first"/> — запись, с которой начали (если её можно удалить).</summary>
-    public void StartMarking(ReleaseItem? first)
+    /// <summary>Начать выделение областью с записи <paramref name="anchor"/>.</summary>
+    public void StartMarking(ReleaseItem anchor)
     {
         IsMarkingReleases = true;
-        if (first != null)
-            Mark(first);
+        _markAnchor = anchor;
+        MarkTo(anchor);
     }
 
-    /// <summary>Отметить запись протяжкой (только добавляет: что задели — то отмечено).</summary>
-    public void Mark(ReleaseItem item)
+    /// <summary>
+    /// Выделить записи от точки начала до <paramref name="current"/> включительно (что можно удалить);
+    /// остальные — снять: протяжка назад к точке сжимает выделение.
+    /// </summary>
+    public void MarkTo(ReleaseItem current)
     {
-        if (IsMarkingReleases && item.CanDelete)
-            item.IsChecked = true;
+        if (!IsMarkingReleases || _markAnchor == null)
+            return;
+        var from = Releases.IndexOf(_markAnchor);
+        var to = Releases.IndexOf(current);
+        if (from < 0 || to < 0)
+            return;
+        var (low, high) = from <= to ? (from, to) : (to, from);
+        for (int i = 0; i < Releases.Count; i++)
+            Releases[i].IsChecked = i >= low && i <= high && Releases[i].CanDelete;
+        MarkedCount = Releases.Count(r => r.IsChecked);
     }
 
-    [RelayCommand]
-    private void MarkReleases() => StartMarking(SelectedRelease);
+    /// <summary>Выделение закончилось ничем (меню закрыли мимо, отпустили на пустом) — снять всё.</summary>
+    public void EndMarking()
+    {
+        if (_marksInUse)
+            return; // команда меню уже забрала выделенное — снимет сама
+        ClearMarks();
+    }
 
-    [RelayCommand]
     private void ClearMarks()
     {
         foreach (var item in Releases)
             item.IsChecked = false;
+        MarkedCount = 0;
+        _markAnchor = null;
         IsMarkingReleases = false;
     }
 
@@ -56,7 +71,19 @@ public sealed partial class MainWindowViewModel
         SelectedRelease == null ? Task.CompletedTask : DeleteReleases(new[] { SelectedRelease });
 
     [RelayCommand]
-    private Task DeleteMarkedReleases() => DeleteReleases(Releases.Where(r => r.IsChecked).ToList());
+    private async Task DeleteMarkedReleases()
+    {
+        _marksInUse = true;
+        try
+        {
+            await DeleteReleases(Releases.Where(r => r.IsChecked).ToList());
+        }
+        finally
+        {
+            _marksInUse = false;
+            ClearMarks();
+        }
+    }
 
     private async Task DeleteReleases(IReadOnlyList<ReleaseItem> items)
     {
@@ -153,22 +180,11 @@ public sealed partial class MainWindowViewModel
         await BuildStagedPatch(release.Version, settings);
     }
 
-    // Каталог перерисован — записи новые: режим отметки заканчивается, счётчик следит за флажками новых записей.
-    private void WatchReleaseMarks()
+    // Каталог перерисован — записи новые: прежнее выделение к ним не относится.
+    private void ResetReleaseMarks()
     {
-        IsMarkingReleases = false;
         MarkedCount = 0;
-        foreach (var item in Releases)
-            item.PropertyChanged += OnReleaseMarkChanged;
-    }
-
-    private void OnReleaseMarkChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName != nameof(ReleaseItem.IsChecked))
-            return;
-        var before = MarkedCount;
-        MarkedCount = Releases.Count(r => r.IsChecked);
-        if (before > 0 && MarkedCount == 0)
-            IsMarkingReleases = false; // сняли последний флажок — режим закончен
+        _markAnchor = null;
+        IsMarkingReleases = false;
     }
 }

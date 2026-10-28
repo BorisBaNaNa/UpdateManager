@@ -31,74 +31,123 @@ public partial class MainWindow : Window
         CatalogList.AddHandler(PointerPressedEvent, OnCatalogPressed, RoutingStrategies.Tunnel, true);
         CatalogList.AddHandler(PointerMovedEvent, OnCatalogMoved, RoutingStrategies.Tunnel, true);
         CatalogList.AddHandler(PointerReleasedEvent, OnCatalogReleased, RoutingStrategies.Tunnel, true);
+        CatalogList.AddHandler(PointerCaptureLostEvent, OnCatalogCaptureLost, RoutingStrategies.Direct, true);
         _holdTimer.Tick += OnHoldElapsed;
+        _edgeTimer.Tick += OnEdgeScroll;
+        MarkedMenu.Closed += (_, _) => Dispatcher.UIThread.Post(() => Vm?.EndMarking()); // после команды пункта, не до
     }
 
-    // --- Каталог: удержание записи 2 с → режим отметки; протяжка отмечает задетое; отпускание → меню ---
+    // --- Каталог: выделение областью. Удержание записи 1 с (сдвиг раньше — не удержание) задаёт точку
+    // начала; протяжка выделяет от неё до записи под указателем, у краёв список прокручивается;
+    // отпускание — меню выделенного, закрыли мимо — выделение спадает. ---
 
     private const double HoldSlop = 8;
-    private readonly DispatcherTimer _holdTimer = new() { Interval = TimeSpan.FromSeconds(2) };
+    private const double EdgeZone = 28;
+    private const double EdgeStep = 14;
+    private readonly DispatcherTimer _holdTimer = new() { Interval = TimeSpan.FromSeconds(1) };
+    private readonly DispatcherTimer _edgeTimer = new() { Interval = TimeSpan.FromMilliseconds(30) };
     private Point _holdStart;
+    private Point _lastPosition;
     private IPointer? _holdPointer;
     private ReleaseItem? _holdItem;
     private bool _dragMarking;
+
+    private ContextMenu MarkedMenu => (ContextMenu)CatalogList.Resources["MarkedMenu"]!;
 
     private void OnCatalogPressed(object? sender, PointerPressedEventArgs e)
     {
         if (!e.GetCurrentPoint(CatalogList).Properties.IsLeftButtonPressed)
             return;
-        _holdStart = e.GetPosition(CatalogList);
+        _holdStart = _lastPosition = e.GetPosition(CatalogList);
         _holdPointer = e.Pointer;
         _holdItem = ReleaseAt(_holdStart);
-        if (_holdItem == null)
-            return;
-
-        if (Vm?.IsMarkingReleases == true)
-            BeginDragMarking(); // режим уже включён — протяжка сразу, без ожидания
-        else
+        if (_holdItem != null)
             _holdTimer.Start();
     }
 
     private void OnHoldElapsed(object? sender, EventArgs e)
     {
         _holdTimer.Stop();
-        Vm?.StartMarking(_holdItem);
-        BeginDragMarking();
-    }
-
-    private void BeginDragMarking()
-    {
+        if (_holdItem == null || Vm == null)
+            return;
+        Vm.StartMarking(_holdItem);
         _dragMarking = true;
-        if (_holdItem != null)
-            Vm?.Mark(_holdItem);
-        _holdPointer?.Capture(CatalogList); // протяжка за пределы списка не теряет отпускание
+        _holdPointer?.Capture(CatalogList); // протяжка за пределы списка не теряет ни движение, ни отпускание
     }
 
     private void OnCatalogMoved(object? sender, PointerEventArgs e)
     {
-        var position = e.GetPosition(CatalogList);
+        _lastPosition = e.GetPosition(CatalogList);
         if (_holdTimer.IsEnabled)
         {
-            if (Math.Abs(position.X - _holdStart.X) > HoldSlop || Math.Abs(position.Y - _holdStart.Y) > HoldSlop)
-                _holdTimer.Stop(); // сдвинули раньше двух секунд — это не удержание
+            if (Math.Abs(_lastPosition.X - _holdStart.X) > HoldSlop || Math.Abs(_lastPosition.Y - _holdStart.Y) > HoldSlop)
+                _holdTimer.Stop(); // сдвинули раньше секунды — это не удержание
             return;
         }
-        if (_dragMarking && ReleaseAt(position) is { } item)
-            Vm?.Mark(item);
+        if (!_dragMarking)
+            return;
+
+        MarkUnderPointer();
+        var nearEdge = _lastPosition.Y < EdgeZone || _lastPosition.Y > CatalogList.Bounds.Height - EdgeZone;
+        if (nearEdge && !_edgeTimer.IsEnabled)
+            _edgeTimer.Start();
+        else if (!nearEdge)
+            _edgeTimer.Stop();
+    }
+
+    // Указатель у края списка — прокручиваем и продолжаем выделение до записи, что въехала под него.
+    private void OnEdgeScroll(object? sender, EventArgs e)
+    {
+        var scroll = CatalogList.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault();
+        if (!_dragMarking || scroll == null)
+        {
+            _edgeTimer.Stop();
+            return;
+        }
+        var up = _lastPosition.Y < EdgeZone;
+        var depth = up ? EdgeZone - _lastPosition.Y : _lastPosition.Y - (CatalogList.Bounds.Height - EdgeZone);
+        var step = EdgeStep * Math.Clamp(depth / EdgeZone, 0.3, 3); // чем дальше за край, тем быстрее
+        var max = Math.Max(0, scroll.Extent.Height - scroll.Viewport.Height);
+        scroll.Offset = new Vector(scroll.Offset.X, Math.Clamp(scroll.Offset.Y + (up ? -step : step), 0, max));
+        MarkUnderPointer();
+    }
+
+    // Запись под указателем; за верхним/нижним краем — крайняя видимая (держим указатель в пределах списка).
+    private void MarkUnderPointer()
+    {
+        var y = Math.Clamp(_lastPosition.Y, 1, Math.Max(1, CatalogList.Bounds.Height - 1));
+        var x = Math.Clamp(_lastPosition.X, 1, Math.Max(1, CatalogList.Bounds.Width - 1));
+        if (ReleaseAt(new Point(x, y)) is { } item)
+            Vm?.MarkTo(item);
     }
 
     private void OnCatalogReleased(object? sender, PointerReleasedEventArgs e)
     {
         _holdTimer.Stop();
+        _edgeTimer.Stop();
         if (!_dragMarking)
             return;
 
         _dragMarking = false;
         _holdPointer?.Capture(null);
         _holdPointer = null;
-        e.Handled = true;
+        e.Handled = true; // отпускание после выделения — не клик по записи
         if (Vm?.MarkedCount > 0)
-            CatalogList.ContextMenu?.Open(CatalogList);
+        {
+            MarkedMenu.DataContext = Vm;
+            MarkedMenu.Open(CatalogList);
+        }
+        else
+            Vm?.EndMarking();
+    }
+
+    private void OnCatalogCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+    {
+        if (!_dragMarking)
+            return;
+        _dragMarking = false; // захват отняли (окно потеряло фокус) — выделение не доведено
+        _edgeTimer.Stop();
+        Vm?.EndMarking();
     }
 
     private ReleaseItem? ReleaseAt(Point position) =>

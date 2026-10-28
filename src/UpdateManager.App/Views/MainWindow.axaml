@@ -196,41 +196,40 @@
                         <TextBlock DockPanel.Dock="Top" Classes="caps" Text="ВЫПУСКИ" Margin="20,10,20,8" />
                         <TextBlock DockPanel.Dock="Top" Classes="muted" Margin="20,4" TextWrapping="Wrap"
                                    IsVisible="{Binding !HasReleases}" Text="Пока пусто." />
-                        <!-- Правый клик — меню выпуска; удержание 2 с — режим отметки (протяжка отмечает задетое). -->
+                        <!-- Правый клик — меню выпуска. Удержание 1 с и протяжка — выделение областью
+                             (код окна), по отпусканию — меню выделенного (MarkedMenu). -->
                         <ListBox x:Name="CatalogList" Classes="catalog" ItemsSource="{Binding Releases}"
                                  SelectedItem="{Binding SelectedRelease}">
+                            <ListBox.Resources>
+                                <ContextMenu x:Key="MarkedMenu">
+                                    <MenuItem Header="{Binding DeleteMarkedText}" Command="{Binding DeleteMarkedReleasesCommand}" />
+                                </ContextMenu>
+                            </ListBox.Resources>
                             <ListBox.ContextMenu>
                                 <ContextMenu>
                                     <MenuItem Header="{Binding SelectedRelease.Version, StringFormat='Откатить сервер на {0}…', FallbackValue='Откатить сервер…'}"
-                                              IsVisible="{Binding IsNotMarkingReleases}"
                                               Command="{Binding RollbackReleaseCommand}" />
                                     <MenuItem Header="{Binding SelectedRelease.Version, StringFormat='Удалить версию {0}…', FallbackValue='Удалить версию…'}"
-                                              IsVisible="{Binding IsNotMarkingReleases}"
                                               Command="{Binding DeleteReleaseCommand}" />
-                                    <MenuItem Header="Отметить несколько" IsVisible="{Binding IsNotMarkingReleases}"
-                                              Command="{Binding MarkReleasesCommand}" />
-                                    <MenuItem Header="{Binding DeleteMarkedText}" IsVisible="{Binding IsMarkingReleases}"
-                                              Command="{Binding DeleteMarkedReleasesCommand}" />
-                                    <MenuItem Header="Снять отметки" IsVisible="{Binding IsMarkingReleases}"
-                                              Command="{Binding ClearMarksCommand}" />
                                 </ContextMenu>
                             </ListBox.ContextMenu>
                             <ListBox.ItemTemplate>
                                 <DataTemplate x:DataType="vm:ReleaseItem">
-                                    <Grid ColumnDefinitions="Auto,*,Auto">
-                                        <CheckBox Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Center"
-                                                  IsChecked="{Binding IsChecked}" IsEnabled="{Binding CanDelete}"
-                                                  IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsMarkingReleases, FallbackValue=False}"
-                                                  ToolTip.Tip="Отметить для удаления" />
-                                        <StackPanel Grid.Column="1" Spacing="1">
+                                    <Panel>
+                                    <!-- Выделенная область: заливка во всю запись (поверх отступов ListBoxItem). -->
+                                    <Border Margin="-20,-11" Background="{DynamicResource MarkedBrush}"
+                                            IsVisible="{Binding IsChecked}" />
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <StackPanel Grid.Column="0" Spacing="1">
                                             <TextBlock Classes="number" Text="{Binding Version}" FontSize="15" />
                                             <TextBlock Classes="muted number" FontSize="12" Text="{Binding CatalogLine}"
                                                        TextTrimming="CharacterEllipsis" />
                                         </StackPanel>
-                                        <ItemsControl Grid.Column="2" VerticalAlignment="Center" Margin="8,0,0,0"
+                                        <ItemsControl Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0"
                                                       ItemsSource="{Binding Platforms}"
                                                       ItemTemplate="{StaticResource ChipStrip}" />
                                     </Grid>
+                                    </Panel>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>

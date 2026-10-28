@@ -136,7 +136,7 @@ public sealed partial class PlatformTrack : ObservableObject
 /// <summary>Запись каталога: выпуск (версия) со своим номером и полосами этапов по платформам.</summary>
 public sealed partial class ReleaseItem : ObservableObject
 {
-    /// <summary>Отмечена для «Удалить отмеченные…» (режим отметки каталога).</summary>
+    /// <summary>Попала в выделение областью (удержание и протяжка в каталоге) — для «Удалить выделенные…».</summary>
     [ObservableProperty] private bool _isChecked;
 
     /// <summary>

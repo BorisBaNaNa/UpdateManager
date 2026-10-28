@@ -1184,7 +1184,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Releases.Clear();
         foreach (var release in ReleaseCatalog.Build(project, newVersion, newDetail))
             Releases.Add(release);
-        WatchReleaseMarks();
+        ResetReleaseMarks();
         OnPropertyChanged(nameof(HasReleases));
 
         SelectedRelease = Releases.FirstOrDefault(r => r.Version == keep) ?? Releases.FirstOrDefault();
