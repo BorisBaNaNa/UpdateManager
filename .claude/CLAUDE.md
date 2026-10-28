@@ -65,12 +65,15 @@
   залито `MarkedBrush`. Удалять можно только
   `ReleaseItem.CanDelete` (не «новый», ни одна полоса не текущая). `ProjectService.DeleteVersions`: папки в Корзину,
   `ProjectMeta.ForgetVersion`; Output/ и сервер не трогает. Номера выпусков стабильны: удалённые/откатанные — в
-  `RemovedVersions`, каталог считает их в нумерации; их номера повторно не собираются (клиент с той же версией не
-  обновится) и не дают записи «новый». Откат (`CanRollback` — архивная полоса Windows): `ProjectService.RollbackTo` —
-  версии новее в Корзину (`ForgetWindowsVersion`, Android не трогается), из `Output/IncrementalPatch` и из
-  `VersionInfo.info` убираются инкрементальные патчи к ним/от них (движок переносит список из прежнего VersionInfo),
-  у цели сбрасываются патч/доставка/проверка → `BuildStagedPatch` пересобирает её последней; дальше — доставка и
-  проверка как обычно. Движок понижает версию у клиентов (сравнивает на неравенство) — `EnginePipelineTests.RollbackTo_…`.
+  `RemovedVersions` (Windows) и `RemovedAndroidVersions`, каталог считает их в нумерации; их номера повторно не
+  собираются/не записываются (клиент с той же версией не обновится) и не дают записи «новый». Откат (`CanRollback` —
+  архивная полоса с `PlatformTrack.CanRestore`: Windows всегда, Android — если есть `Versions/Android/<версия>`), по
+  каждой такой платформе. Windows — `ProjectService.RollbackTo`: версии новее в Корзину (`ForgetWindowsVersion`), из
+  `Output/IncrementalPatch` и из `VersionInfo.info` убираются инкрементальные патчи к ним/от них (движок переносит
+  список из прежнего VersionInfo), у цели сбрасываются патч/доставка/проверка → `BuildStagedPatch` пересобирает её
+  последней. Android — `RollbackAndroidTo`: выкладки новее в Корзину (`ForgetAndroidVersion`), у цели сбрасываются
+  доставка/проверка. Дальше — доставка и проверка как обычно. Движок понижает версию у клиентов (сравнивает на
+  неравенство) — `EnginePipelineTests.RollbackTo_…`.
 - **Создать / открыть / недавние проекты** (как IDE). Проект = папка движка (`Settings.xml`,
   `Versions/ Output/ SelfPatcher/ Other/`) + наш `updatemanager.project.xml` (мета: главный exe,
   последний источник билда, конфиг доставки, по версиям — даты сборки патча `PatchedVersions`,
@@ -80,8 +83,15 @@
   «Дополнительно» (форматы сжатия Repair/Installer/Incremental, `BinaryDiffQuality`,
   `DontCreatePatchFilesForUnchangedFiles`); прочие продвинутые поля движка сохраняются как есть.
 - **Создать патч** — папка билда → версия из `FileVersion` главного exe (валидация через `VersionCode`)
-  → копия в `Versions/<версия>` → `ProjectManager.GeneratePatch()` (окно лога). Инкрементальные патчи
+  → копия в `Versions/Windows/<версия>` → `GeneratePatch()` (окно лога). Инкрементальные патчи
   движок делает сам из накопленных версий.
+- **Версии по платформам** (2.2, схема меты 2): `Versions/Windows/<версия>` и `Versions/Android/<версия>`
+  (`ProjectService.Windows|AndroidVersionPath`). Движок считает версиями ВСЕ подпапки `Versions/` и падает на
+  нечисловых («Failed to compare two elements») — поэтому он смотрит в `Versions/Windows`: `ProjectService.CreateEngine`
+  переназначает readonly-поле `ProjectManager.versionsPath` через reflection (DLL движка неизменна); `PatchBuilder`
+  создаёт движок только так. Android: запись версии копирует выкладку в `Versions/Android/<версия>`, доставка и
+  проверка берут её оттуда (нет копии — запись до 2.2 — папка билда). Проекты прежней раскладки донастраивает
+  `ProjectUpgrade.Run` при открытии (`OpenPath`, идемпотентна; итог — одно сообщение).
 - **Доставить патч** — два метода: **папка** (стратегия `IDeliveryTarget`, копия `Output/`) и **FTP**
   (`FtpUploadOperation` на FluentFTP, Binary-режим, прогресс через `IEngineOperation`). Реквизиты FTP
   (host/port/user/path + пароль) хранятся в профиле пользователя (`%AppData%\UpdateManager\ftp.xml`),
