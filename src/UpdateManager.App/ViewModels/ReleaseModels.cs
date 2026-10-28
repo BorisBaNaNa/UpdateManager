@@ -134,8 +134,17 @@ public sealed partial class PlatformTrack : ObservableObject
 }
 
 /// <summary>Запись каталога: выпуск (версия) со своим номером и полосами этапов по платформам.</summary>
-public sealed class ReleaseItem
+public sealed partial class ReleaseItem : ObservableObject
 {
+    /// <summary>Отмечена для «Удалить отмеченные…» (режим отметки каталога).</summary>
+    [ObservableProperty] private bool _isChecked;
+
+    /// <summary>
+    /// Выпуск можно удалить: не «новый» и ни одна его полоса не текущая (текущий Windows — основа следующего
+    /// инкрементального патча и то, что сейчас на сервере).
+    /// </summary>
+    public bool CanDelete => !IsNew && !HasCurrentTrack;
+
     /// <summary>Подпись записи «новый» Android-билда, версию которого спросят при подписи.</summary>
     public const string UnknownVersion = "новый";
 
@@ -259,11 +268,16 @@ public static class ReleaseCatalog
             foreach (var version in AndroidVersions(meta))
                 Add(version, AndroidTrack(meta, version));
 
-        var ordered = tracks.Keys.OrderBy(VersionKey).ThenBy(v => v, StringComparer.OrdinalIgnoreCase).ToList();
-        var result = ordered
-            .Select((version, i) => new ReleaseItem(i + 1, version, isNew: false, isLatest: false,
-                tracks[version].OrderBy(t => t.IsAndroid).ToList()))
+        // Номер — место среди всех версий проекта, включая удалённые: «№ N» не сдвигается после удаления.
+        var numbered = tracks.Keys.Concat(meta.RemovedVersions).Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(VersionKey).ThenBy(v => v, StringComparer.OrdinalIgnoreCase).ToList();
+        var result = numbered
+            .Select((version, i) => (version, number: i + 1))
+            .Where(x => tracks.ContainsKey(x.version))
+            .Select(x => new ReleaseItem(x.number, x.version, isNew: false, isLatest: false,
+                tracks[x.version].OrderBy(t => t.IsAndroid).ToList()))
             .ToList();
+        var nextNumber = numbered.Count + 1;
 
         // Новый Windows-билд: своя запись (или полоса в записи той же версии, если Android её уже выпускал).
         if (meta.WindowsEnabled && newBuildVersion != null)
@@ -286,7 +300,7 @@ public static class ReleaseCatalog
                 var platforms = new List<PlatformTrack> { windows };
                 if (meta.AndroidEnabled)
                     platforms.Add(AndroidPendingTrack(meta)); // Android того же выпуска — подписать вместе
-                result.Add(new ReleaseItem(result.Count + 1, newBuildVersion, isNew: true, isLatest: false, platforms));
+                result.Add(new ReleaseItem(nextNumber++, newBuildVersion, isNew: true, isLatest: false, platforms));
             }
         }
 
@@ -298,7 +312,7 @@ public static class ReleaseCatalog
                 result[^1] = new ReleaseItem(last.Number, last.Version, last.IsNew, isLatest: false,
                     last.Platforms.Append(AndroidPendingTrack(meta)).ToList());
             else
-                result.Add(new ReleaseItem(result.Count + 1, ReleaseItem.UnknownVersion, isNew: true, isLatest: false,
+                result.Add(new ReleaseItem(nextNumber, ReleaseItem.UnknownVersion, isNew: true, isLatest: false,
                     new[] { AndroidPendingTrack(meta) }));
         }
 

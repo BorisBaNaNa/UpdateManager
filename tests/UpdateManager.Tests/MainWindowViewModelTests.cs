@@ -1,3 +1,4 @@
+using Avalonia.Headless;
 using UpdateManager.App.Services;
 using UpdateManager.App.ViewModels;
 using UpdateManager.Core.Delivery;
@@ -650,6 +651,97 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.True(_vm.SelectedTrack!.Platform == "Android", "выбран " + _vm.SelectedRelease!.Version + "/" + _vm.SelectedTrack.Platform + "; каталог " + log);
         Assert.Equal("Android", ((PlatformTrack)carousel.SelectedItem!).Platform);
         Assert.Equal(NextStepKind.AndroidDeliver.ToString(), NextStepFor());
+        window.Close();
+    });
+
+    // Проект с версиями 1.0.0 … 1.0.<count-1>, собранными по очереди; папки удаляются насовсем, не в Корзину.
+    private async Task CreateProjectWithVersions(int count)
+    {
+        await CreateProjectWithBuild();
+        _service.DeleteFolder = folder => Directory.Delete(folder, recursive: true);
+        for (int i = 0; i < count; i++)
+        {
+            File.WriteAllText(Path.Combine(BuildDir, "app.txt"), "v" + i);
+            _dialogs.Prompts.Enqueue("1.0." + i);
+            await _vm.CreatePatchCommand.ExecuteAsync(null);
+        }
+        Assert.Empty(_dialogs.Errors);
+    }
+
+    [Fact]
+    public async Task DeleteRelease_OldGoes_NumbersStay_CurrentRefused()
+    {
+        await CreateProjectWithVersions(3);
+        Assert.Equal(3, _vm.Releases.Single(r => r.Version == "1.0.2").Number);
+
+        _vm.SelectedRelease = _vm.Releases.Single(r => r.Version == "1.0.0");
+        await _vm.DeleteReleaseCommand.ExecuteAsync(null);
+        Assert.Contains(_dialogs.Confirms, m => m.Contains("Удалить версию 1.0.0?"));
+        Assert.False(VersionStaged("1.0.0"));
+        Assert.False(ProjectMeta.Load(ProjectDir).PatchedVersions.ContainsKey("1.0.0"));
+        Assert.DoesNotContain(_vm.Releases, r => r.Version == "1.0.0");
+        Assert.Equal(2, _vm.Releases.Single(r => r.Version == "1.0.1").Number); // номера не сдвинулись
+        Assert.Equal(3, _vm.Releases.Single(r => r.Version == "1.0.2").Number);
+
+        // Текущий выпуск — основа следующего патча и то, что на сервере: не удаляется.
+        _vm.SelectedRelease = _vm.Releases.Single(r => r.Version == "1.0.2");
+        await _vm.DeleteReleaseCommand.ExecuteAsync(null);
+        Assert.Contains(_dialogs.Errors, e => e.Contains("текущий для Windows"));
+        Assert.True(VersionStaged("1.0.2"));
+
+        // Следующий выпуск получает следующий номер, а не занятый удалённым.
+        File.WriteAllText(Path.Combine(BuildDir, "app.txt"), "v3");
+        _dialogs.Prompts.Enqueue("1.0.3");
+        await _vm.CreatePatchCommand.ExecuteAsync(null);
+        Assert.Equal(4, _vm.Releases.Single(r => r.Version == "1.0.3").Number);
+    }
+
+    [Fact]
+    public Task DeleteReleases_HoldAndDragMarksTouched_MenuOnRelease() => HeadlessUi.Run(async () =>
+    {
+        await CreateProjectWithVersions(4); // 1.0.3 текущий, 1.0.2 … 1.0.0 — старые
+        var window = new UpdateManager.App.Views.MainWindow { DataContext = _vm };
+        window.Show();
+        HeadlessUi.Flush();
+
+        // Удержание на 1.0.2 две секунды → флажки; тянем вниз через 1.0.1 до 1.0.0 и отпускаем.
+        var from = HeadlessUi.CenterOf(window, _vm.Releases.Single(r => r.Version == "1.0.2"));
+        window.MouseDown(from, Avalonia.Input.MouseButton.Left);
+        await HeadlessUi.Wait(TimeSpan.FromSeconds(2.2));
+        Assert.True(_vm.IsMarkingReleases);
+        window.MouseMove(HeadlessUi.CenterOf(window, _vm.Releases.Single(r => r.Version == "1.0.1")));
+        var to = HeadlessUi.CenterOf(window, _vm.Releases.Single(r => r.Version == "1.0.0"));
+        window.MouseMove(to);
+        window.MouseUp(to, Avalonia.Input.MouseButton.Left);
+        HeadlessUi.Flush();
+
+        Assert.Equal(new[] { "1.0.2", "1.0.1", "1.0.0" }, _vm.Releases.Where(r => r.IsChecked).Select(r => r.Version));
+        Assert.Equal(3, _vm.MarkedCount);
+        var list = Avalonia.Controls.ControlExtensions.FindControl<Avalonia.Controls.ListBox>(window, "CatalogList")!;
+        Assert.True(list.ContextMenu!.IsOpen);
+        list.ContextMenu.Close();
+
+        await _vm.DeleteMarkedReleasesCommand.ExecuteAsync(null);
+        Assert.Equal(new[] { "1.0.3" }, _vm.Releases.Select(r => r.Version));
+        Assert.False(_vm.IsMarkingReleases);
+        window.Close();
+    });
+
+    [Fact]
+    public Task DeleteReleases_ShortPressDoesNotMark() => HeadlessUi.Run(async () =>
+    {
+        await CreateProjectWithVersions(2);
+        var window = new UpdateManager.App.Views.MainWindow { DataContext = _vm };
+        window.Show();
+        HeadlessUi.Flush();
+
+        var at = HeadlessUi.CenterOf(window, _vm.Releases.Single(r => r.Version == "1.0.0"));
+        window.MouseDown(at, Avalonia.Input.MouseButton.Left);
+        await HeadlessUi.Wait(TimeSpan.FromSeconds(0.5));
+        window.MouseUp(at, Avalonia.Input.MouseButton.Left);
+        await HeadlessUi.Wait(TimeSpan.FromSeconds(2));
+        Assert.False(_vm.IsMarkingReleases);
+        Assert.Equal("1.0.0", _vm.SelectedRelease!.Version); // обычный клик — выбор выпуска
         window.Close();
     });
 

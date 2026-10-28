@@ -106,6 +106,30 @@ namespace UpdateManager.Core.Project
             DeleteFolder(folder);
         }
 
+        /// <summary>
+        /// Удалить версии из проекта: папки Versions/&lt;версия&gt; — в Корзину (DeleteFolder), записи этапов — из меты
+        /// (номера в каталоге остаются занятыми). Самую новую версию Versions/ не трогает: она — основа следующего
+        /// инкрементального патча. Output/ и сервер не меняются.
+        /// </summary>
+        public void DeleteVersions(string projectRoot, IEnumerable<string> versions)
+        {
+            var list = versions.ToList();
+            var max = GetMaxVersion(projectRoot);
+            if (max != null && list.Contains(max, StringComparer.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Версию " + max + " удалить нельзя: она самая новая в " + VersionsFolder +
+                    "/ — из неё собирается следующий инкрементальный патч.");
+
+            var meta = ProjectMeta.Load(projectRoot);
+            foreach (var version in list)
+            {
+                var folder = Path.Combine(projectRoot, VersionsFolder, version);
+                if (Directory.Exists(folder))
+                    DeleteFolder(folder);
+                meta.ForgetVersion(version);
+            }
+            meta.Save(projectRoot);
+        }
+
         /// <summary>В папке есть хоть что-то (файлы/подпапки).</summary>
         public bool IsFolderNonEmpty(string folder)
         {

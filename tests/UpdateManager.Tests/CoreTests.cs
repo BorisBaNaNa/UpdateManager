@@ -364,6 +364,23 @@ public sealed class StoresTests : IDisposable
     }
 
     [Fact]
+    public void ProjectMeta_ForgetVersion_RemovedVersionsRoundTrip()
+    {
+        var meta = new ProjectMeta();
+        meta.PatchedVersions["1.0.0"] = DateTime.Now;
+        meta.AndroidSignedVersions["1.0.0"] = DateTime.Now;
+        meta.AndroidRecords["1.0.0"] = new AndroidRecord();
+        meta.ForgetVersion("1.0.0");
+        meta.Save(_root);
+
+        var loaded = ProjectMeta.Load(_root);
+        Assert.Empty(loaded.PatchedVersions);
+        Assert.Empty(loaded.AndroidSignedVersions);
+        Assert.Empty(loaded.AndroidRecords);
+        Assert.Contains("1.0.0", loaded.RemovedVersions);
+    }
+
+    [Fact]
     public void ProjectMeta_AndroidRecordsRoundTrip()
     {
         var meta = new ProjectMeta();

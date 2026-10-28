@@ -52,6 +52,7 @@ namespace UpdateManager.Core.Project
         private const string AndroidDeliveredElement = "AndroidDelivered";
         private const string AndroidVerifiedElement = "AndroidVerified";
         private const string AndroidRecordsElement = "AndroidRecords";
+        private const string RemovedVersionsElement = "RemovedVersions";
         private const string AndroidRecordSignedAttribute = "signed";
         private const string AndroidRecordMaskElement = "Mask";
         private const string AndroidRecordFileElement = "File";
@@ -123,6 +124,25 @@ namespace UpdateManager.Core.Project
         public Dictionary<string, AndroidRecord> AndroidRecords { get; set; } =
             new Dictionary<string, AndroidRecord>(StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>
+        /// Удалённые версии («Удалить версию…»): их нет ни в Versions/, ни в записях этапов, но каталог
+        /// учитывает их в нумерации — «№ N» остальных выпусков не сдвигается.
+        /// </summary>
+        public HashSet<string> RemovedVersions { get; set; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>Забыть версию: все записи этапов обеих платформ; номер в каталоге остаётся занятым.</summary>
+        public void ForgetVersion(string version)
+        {
+            PatchedVersions.Remove(version);
+            DeliveredVersions.Remove(version);
+            VerifiedVersions.Remove(version);
+            AndroidSignedVersions.Remove(version);
+            AndroidRecords.Remove(version);
+            AndroidDeliveredVersions.Remove(version);
+            AndroidVerifiedVersions.Remove(version);
+            RemovedVersions.Add(version);
+        }
+
         /// <summary>Android: когда версия выложена в канал (версия → время).</summary>
         public Dictionary<string, DateTime> AndroidDeliveredVersions { get; set; } =
             new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
@@ -188,6 +208,15 @@ namespace UpdateManager.Core.Project
             LoadVersionDates(root.Element(AndroidDeliveredElement), meta.AndroidDeliveredVersions);
             LoadVerification(root.Element(AndroidVerifiedElement), meta.AndroidVerifiedVersions);
             LoadAndroidRecords(root.Element(AndroidRecordsElement), meta.AndroidRecords);
+
+            var removed = root.Element(RemovedVersionsElement);
+            if (removed != null)
+                foreach (var item in removed.Elements(DeliveredVersionElement))
+                {
+                    var id = (string)item.Attribute(DeliveredVersionIdAttribute);
+                    if (!string.IsNullOrEmpty(id))
+                        meta.RemovedVersions.Add(id);
+                }
 
             return meta;
         }
@@ -327,7 +356,11 @@ namespace UpdateManager.Core.Project
                     SaveVersionDates(AndroidSignedElement, AndroidSignedVersions),
                     SaveVersionDates(AndroidDeliveredElement, AndroidDeliveredVersions),
                     SaveVerification(AndroidVerifiedElement, AndroidVerifiedVersions),
-                    SaveAndroidRecords(AndroidRecords)
+                    SaveAndroidRecords(AndroidRecords),
+                    RemovedVersions.Count > 0
+                        ? new XElement(RemovedVersionsElement, RemovedVersions.OrderBy(v => v, StringComparer.OrdinalIgnoreCase)
+                            .Select(v => new XElement(DeliveredVersionElement, new XAttribute(DeliveredVersionIdAttribute, v))))
+                        : null
                 ));
             doc.Save(Path.Combine(projectRoot, FileName));
         }

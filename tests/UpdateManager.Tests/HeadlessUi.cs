@@ -29,15 +29,32 @@ public static class HeadlessUi
     public static async Task Click(Window window, object dataContext)
     {
         Flush();
-        var button = window.GetVisualDescendants().OfType<Button>()
-            .First(b => ReferenceEquals(b.DataContext, dataContext) && b.IsEffectivelyVisible);
-        var center = button.TranslatePoint(new Point(button.Bounds.Width / 2, button.Bounds.Height / 2), window)!.Value;
+        var center = CenterOf<Button>(window, dataContext);
         window.MouseDown(center, MouseButton.Left);
         window.MouseUp(center, MouseButton.Left);
-        for (int i = 0; i < 20; i++)
+        await Wait(TimeSpan.FromMilliseconds(200));
+    }
+
+    /// <summary>Центр (в координатах окна) видимого контрола с этим DataContext: по умолчанию — записи списка.</summary>
+    public static Point CenterOf(Window window, object dataContext) => CenterOf<ListBoxItem>(window, dataContext);
+
+    public static Point CenterOf<T>(Window window, object dataContext) where T : Control
+    {
+        Flush();
+        var control = window.GetVisualDescendants().OfType<T>()
+            .First(c => ReferenceEquals(c.DataContext, dataContext) && c.IsEffectivelyVisible);
+        return control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window)!.Value;
+    }
+
+    /// <summary>Подождать настоящее время, прокручивая UI-поток (таймеры, команды).</summary>
+    public static async Task Wait(TimeSpan time)
+    {
+        var until = DateTime.Now + time;
+        while (DateTime.Now < until)
         {
-            await Task.Delay(10);
+            await Task.Delay(20);
             Flush();
         }
+        Flush();
     }
 }

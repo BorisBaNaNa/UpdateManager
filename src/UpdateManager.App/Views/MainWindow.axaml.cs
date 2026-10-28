@@ -2,6 +2,8 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 using UpdateManager.App.ViewModels;
 
 namespace UpdateManager.App.Views;
@@ -25,7 +27,82 @@ public partial class MainWindow : Window
         TrackCarousel.AddHandler(PointerPressedEvent, OnSwipePressed, RoutingStrategies.Tunnel, true);
         TrackCarousel.AddHandler(PointerReleasedEvent, OnSwipeReleased, RoutingStrategies.Tunnel, true);
         TrackCarousel.AddHandler(PointerWheelChangedEvent, OnSwipeWheel, RoutingStrategies.Tunnel, true);
+
+        CatalogList.AddHandler(PointerPressedEvent, OnCatalogPressed, RoutingStrategies.Tunnel, true);
+        CatalogList.AddHandler(PointerMovedEvent, OnCatalogMoved, RoutingStrategies.Tunnel, true);
+        CatalogList.AddHandler(PointerReleasedEvent, OnCatalogReleased, RoutingStrategies.Tunnel, true);
+        _holdTimer.Tick += OnHoldElapsed;
     }
+
+    // --- Каталог: удержание записи 2 с → режим отметки; протяжка отмечает задетое; отпускание → меню ---
+
+    private const double HoldSlop = 8;
+    private readonly DispatcherTimer _holdTimer = new() { Interval = TimeSpan.FromSeconds(2) };
+    private Point _holdStart;
+    private IPointer? _holdPointer;
+    private ReleaseItem? _holdItem;
+    private bool _dragMarking;
+
+    private void OnCatalogPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!e.GetCurrentPoint(CatalogList).Properties.IsLeftButtonPressed)
+            return;
+        _holdStart = e.GetPosition(CatalogList);
+        _holdPointer = e.Pointer;
+        _holdItem = ReleaseAt(_holdStart);
+        if (_holdItem == null)
+            return;
+
+        if (Vm?.IsMarkingReleases == true)
+            BeginDragMarking(); // режим уже включён — протяжка сразу, без ожидания
+        else
+            _holdTimer.Start();
+    }
+
+    private void OnHoldElapsed(object? sender, EventArgs e)
+    {
+        _holdTimer.Stop();
+        Vm?.StartMarking(_holdItem);
+        BeginDragMarking();
+    }
+
+    private void BeginDragMarking()
+    {
+        _dragMarking = true;
+        if (_holdItem != null)
+            Vm?.Mark(_holdItem);
+        _holdPointer?.Capture(CatalogList); // протяжка за пределы списка не теряет отпускание
+    }
+
+    private void OnCatalogMoved(object? sender, PointerEventArgs e)
+    {
+        var position = e.GetPosition(CatalogList);
+        if (_holdTimer.IsEnabled)
+        {
+            if (Math.Abs(position.X - _holdStart.X) > HoldSlop || Math.Abs(position.Y - _holdStart.Y) > HoldSlop)
+                _holdTimer.Stop(); // сдвинули раньше двух секунд — это не удержание
+            return;
+        }
+        if (_dragMarking && ReleaseAt(position) is { } item)
+            Vm?.Mark(item);
+    }
+
+    private void OnCatalogReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        _holdTimer.Stop();
+        if (!_dragMarking)
+            return;
+
+        _dragMarking = false;
+        _holdPointer?.Capture(null);
+        _holdPointer = null;
+        e.Handled = true;
+        if (Vm?.MarkedCount > 0)
+            CatalogList.ContextMenu?.Open(CatalogList);
+    }
+
+    private ReleaseItem? ReleaseAt(Point position) =>
+        (CatalogList.InputHitTest(position) as Visual)?.FindAncestorOfType<ListBoxItem>(includeSelf: true)?.DataContext as ReleaseItem;
 
     private MainWindowViewModel? Vm => DataContext as MainWindowViewModel;
 
