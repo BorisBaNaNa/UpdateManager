@@ -125,7 +125,7 @@ components:
 
 **Creative North Star: "The Catalog Sleeve"**
 
-The world borrows from a record-label catalog sleeve (Saville / Factory): a matte ground, hairline rules, ink type, and colour that appears only as code. Every version of an application is a catalog entry. Its state is a strip of square stage blocks (Билд, Патч, Файлы, Доставка, Проверка) read left to right: filled means done, a hairline outline means not yet, a heavy red outline means failed. The strip is always spelled out in words beside or inside it, so colour is never the only carrier of meaning.
+The world borrows from a record-label catalog sleeve (Saville / Factory): a matte ground, hairline rules, ink type, and colour that appears only as code. Every version of an application is a catalog entry. Its state is a strip of square stage blocks per platform (Windows: Билд, Патч, Доставка, Проверка; Android: Билд, Подпись, Доставка, Проверка) read left to right: filled means done, a hairline outline means not yet, a heavy red outline means failed. The strip is always spelled out in words beside or inside it, so colour is never the only carrier of meaning.
 
 The surface is a tool, not a showcase. Density is calm: one oversized version number per screen, one row of stage blocks, one primary ink button that names the next step, and a quiet label/value/action table under a hairline. Everything else is neutral grey on matte ground. Light and dark themes are the same world with the values inverted; stage colours are identical in both because they are code, not decoration.
 
@@ -148,7 +148,7 @@ A near-achromatic warm-grey ground with ink type, plus five saturated stage hues
 ### Secondary (stage code)
 - **Build Blue** (`stage-build`): Билд stage when done. Also the Fluent accent colour for stock controls.
 - **Patch Amber** (`stage-patch`): Патч stage when done.
-- **Files Violet** (`stage-files`): Файлы stage when done (Android track, modelled, not yet produced).
+- **Files Violet** (`stage-files`): Подпись stage of the Android track when done (files signed by mask).
 - **Delivery Teal** (`stage-delivery`): Доставка stage when done.
 - **Verify Green** (`stage-verify`): Проверка stage when done.
 - **Stage Ink** (`stage-ink`): text on any filled stage block, dark in both themes because all stage hues are light enough to carry it.
@@ -203,7 +203,7 @@ Vertical rhythm in the content column: display number → 24px → stage strip �
 The stage strip is a custom grid: all blocks in one row with 6px gaps while each block keeps at least 150px; otherwise two per row (2×2 for a four-stage track). Gaps exist only between blocks; the strip's outer edges align with the column. Cell positions snap to whole pixels so outlines never clip.
 
 ### Named Rules
-**The Single Strip Rule.** Stages render as one strip per platform track; never as a dashboard of equal cards spread across the screen.
+**The Single Strip Rule.** Stages render as one strip per platform track; never as a dashboard of equal cards spread across the screen. When a release carries two platforms, the strips stack (Windows first) and each gets a muted 14px caption above it, «Windows · проверка не прошла» / «Android · не проверялся»; with one platform there is no caption. In the catalog the chip strips stack the same way.
 
 ## Elevation & Depth
 
@@ -242,7 +242,7 @@ The world's defining component. A square rectangle, min 112px tall, padding 12px
 - **Done:** filled with the stage's hue, Stage Ink text, no border.
 - **Pending:** transparent, 1px Pending Grey outline, Muted text («не собран», «не доставлен», «не проверялся», «устарела: патч пересобран»).
 - **Failed:** transparent, 2px Failure Red outline, red text («не прошла 27.10.2026 21:16» + reason).
-- **Actionable:** in the latest release, done stages and the first not-done stage are buttons (no Fluent chrome). An underlined 12px SemiBold action line sits at the bottom («Сменить папку билда», «Пересобрать», «Доставить снова», «Проверить снова»). Hover sets an Ink outline, or opacity 0.88 on filled blocks; pressed sets opacity 0.74. Stages after the first not-done one, archive releases and the start-screen preview are not clickable and show no action line.
+- **Actionable:** in each platform's current release (the newest entry carrying that platform), done stages and the first not-done stage are buttons (no Fluent chrome). An underlined 12px SemiBold action line sits at the bottom («Сменить папку билда», «Пересобрать», «Подписать заново», «Доставить снова», «Проверить снова»). Hover sets an Ink outline, or opacity 0.88 on filled blocks; pressed sets opacity 0.74. Stages after the first not-done one, archive releases and the start-screen preview are not clickable and show no action line.
 
 ### Label / Value / Action Table
 Under a hairline: muted label (150px), value in body text trimmed with path ellipsis and a full-text tooltip, quiet button (128px) at the end of each row («Выбрать…», «Настройки…», «Настроить…», «Открыть»).

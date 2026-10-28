@@ -39,7 +39,8 @@ A universal, standalone front end for the SimplePatchTool engine: works for any 
 - RSA signing (key generation, signing manifests, uploading the private key to colleagues over FTP).
 - Self-update of UpdateManager.
 - Light, dark and "as in Windows" theme.
-- Planned (not built yet): Android projects. No patches for them: the pipeline is build (apk) → generate server files (version file, license) → deliver to the server → verify. The release pipeline is therefore per platform with a variable set of stages; Windows keeps build → patch → deliver → verify. One release can carry several platforms at once (e.g. Windows and Android builds of the same version updated together).
+- Platforms (2.1): Windows and Android are switched on per project; a release can carry both or either. Android has no patches: build folder (apk, manifest; built outside) → sign files by mask with the project's RSA key (`<file>.sig`, the same key as Windows patches) → deliver to a channel folder (`AndroidPatch` inside the patch folder) → verify by downloading the channel and checking bytes and signatures. UpdateManager stays universal: it does not know what the files are or read versions from them; the version is asked at signing. The release pipeline is per platform with its own stages; Windows keeps build → patch → deliver → verify.
+- Delivery mirrors: after a successful upload the target holds exactly the new set (the Android channel folder inside the Windows patch folder is kept).
 - Terminology stays the engine's and the team's: патч, билд, версия, доставка, проверка, `BaseDownloadURL`, repair/installer/incremental.
 
 ## Brand Commitments
