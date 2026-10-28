@@ -22,6 +22,9 @@ public sealed partial class MainWindowViewModel
     [ObservableProperty] private bool _isWindowsEnabled = true;
     [ObservableProperty] private bool _isAndroidEnabled;
 
+    // Версия нового Windows-билда в папке-источнике (ещё без патча) — её берёт привязанный Android. Ставит ShowProject.
+    private string? _newWindowsVersion;
+
     /// <summary>Подпись Android включена в настройках (выключена — этап только записывает версию).</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(AndroidSignMenuText))]
@@ -82,11 +85,27 @@ public sealed partial class MainWindowViewModel
             return;
         }
 
-        var version = await _dialogs.PromptAsync("Версия Android-выпуска",
-            "Под какой версией записать выпуск в каталог? (UpdateManager не читает её из файлов.)",
-            SuggestAndroidVersion());
-        if (version == null)
-            return; // отмена
+        // Обе платформы в проекте — один продукт: Android выпускается под версией Windows (новый билд Windows,
+        // иначе последняя собранная) и не спрашивает её. Только Android — версию спрашиваем: из файлов её не прочесть.
+        string? version;
+        if (IsAndroidBoundToWindows(meta))
+        {
+            version = BoundAndroidVersion();
+            if (version == null)
+            {
+                await _dialogs.ShowErrorAsync("Android в этом проекте выпускается вместе с Windows и под его версией.\n" +
+                    "Сначала выберите папку билда Windows (или соберите патч) — версия Android берётся из неё.");
+                return;
+            }
+        }
+        else
+        {
+            version = await _dialogs.PromptAsync("Версия Android-выпуска",
+                "Под какой версией записать выпуск в каталог? (UpdateManager не читает её из файлов.)",
+                SuggestAndroidVersion());
+            if (version == null)
+                return; // отмена
+        }
 
         if (!VersionRules.IsValid(version))
         {
@@ -347,6 +366,12 @@ public sealed partial class MainWindowViewModel
     // Маски подписи версии — какими её записали (настройки могли поменяться после); у записей 2.1.0 — текущие.
     private List<string> AndroidMasks(string version) =>
         _project!.Meta.AndroidRecords.TryGetValue(version, out var record) ? record.Masks : _project.Meta.Android.ActiveSignMasks;
+
+    /// <summary>Обе платформы включены — Android привязан к Windows: тот же выпуск, та же версия.</summary>
+    internal static bool IsAndroidBoundToWindows(ProjectMeta meta) => meta.WindowsEnabled && meta.AndroidEnabled;
+
+    // Версия Windows, под которой пишется привязанный Android: новый билд Windows (ещё без патча), иначе последняя собранная.
+    private string? BoundAndroidVersion() => _newWindowsVersion ?? _service.GetMaxVersion(_project!.RootPath);
 
     // Подсказка версии при подписи: выбранный выпуск, иначе самый новый с известной версией.
     private string SuggestAndroidVersion()

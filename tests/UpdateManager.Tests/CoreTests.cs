@@ -370,14 +370,18 @@ public sealed class StoresTests : IDisposable
         meta.PatchedVersions["1.0.0"] = DateTime.Now;
         meta.AndroidSignedVersions["1.0.0"] = DateTime.Now;
         meta.AndroidRecords["1.0.0"] = new AndroidRecord();
-        meta.ForgetVersion("1.0.0");
+        meta.ForgetVersion("1.0.0", windowsBuilt: false);
+        meta.AndroidSignedVersions["2.0.0"] = DateTime.Now; // выпуск только Android
+        meta.ForgetVersion("2.0.0", windowsBuilt: false);
         meta.Save(_root);
 
         var loaded = ProjectMeta.Load(_root);
         Assert.Empty(loaded.PatchedVersions);
         Assert.Empty(loaded.AndroidSignedVersions);
         Assert.Empty(loaded.AndroidRecords);
-        Assert.Contains("1.0.0", loaded.RemovedVersions);
+        Assert.Equal(new[] { "1.0.0", "2.0.0" }, loaded.RemovedVersions.OrderBy(v => v));
+        Assert.Equal(new[] { "1.0.0" }, loaded.RemovedWindowsVersions); // 2.0.0 Windows не выпускал — номер свободен
+        Assert.Equal(new[] { "1.0.0", "2.0.0" }, loaded.RemovedAndroidVersions.OrderBy(v => v));
     }
 
     [Fact]

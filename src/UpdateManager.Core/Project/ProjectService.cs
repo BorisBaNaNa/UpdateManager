@@ -167,10 +167,11 @@ namespace UpdateManager.Core.Project
             var meta = ProjectMeta.Load(projectRoot);
             foreach (var version in list)
             {
+                var windowsBuilt = Directory.Exists(WindowsVersionPath(projectRoot, version));
                 foreach (var folder in new[] { WindowsVersionPath(projectRoot, version), AndroidVersionPath(projectRoot, version) })
                     if (Directory.Exists(folder))
                         DeleteFolder(folder);
-                meta.ForgetVersion(version);
+                meta.ForgetVersion(version, windowsBuilt);
             }
             meta.Save(projectRoot);
         }

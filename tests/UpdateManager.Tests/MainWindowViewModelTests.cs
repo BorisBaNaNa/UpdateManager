@@ -420,8 +420,9 @@ public sealed class MainWindowViewModelTests : IDisposable
     private StageItem AndroidStage(string version, StageKind kind) =>
         _vm.Releases.First(r => r.Version == version).Platforms.Single(p => p.IsAndroid).Stages.Single(s => s.Kind == kind);
 
-    // Проект с обеими платформами: сервер — папка (доставка и BaseDownloadURL через file:///), Android-билд рядом.
-    private async Task<(string Server, string Android)> CreateProjectWithAndroid()
+    // Проект с Android: сервер — папка (доставка и BaseDownloadURL через file:///), Android-билд рядом.
+    // windows: true — обе платформы, Android привязан к версии Windows; иначе проект только Android (версию спрашивает).
+    private async Task<(string Server, string Android)> CreateProjectWithAndroid(bool windows = false)
     {
         await CreateProjectWithBuild();
         var server = Path.Combine(_root, "server");
@@ -435,6 +436,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         _dialogs.SettingsAnswer = s =>
         {
             s.BaseDownloadURL = new Uri(server + Path.DirectorySeparatorChar).AbsoluteUri;
+            s.WindowsEnabled = windows;
             s.AndroidEnabled = true;
             s.Android.SignMasks.Add("latest.json");
             s.Android.ExcludeMasks.Add("*-x86_64.apk");
@@ -469,7 +471,13 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.True(ProjectMeta.Load(ProjectDir).AndroidVerifiedVersions["1.0.0"].Succeeded);
         Assert.Equal(StageState.Done, AndroidStage("1.0.0", StageKind.Verify).State);
 
-        // Windows той же версии: одна запись с двумя полосами; доставка патча не трогает канал Android.
+        // Включили Windows — той же версии: одна запись с двумя полосами; доставка патча не трогает канал Android.
+        _dialogs.SettingsAnswer = s =>
+        {
+            s.WindowsEnabled = true;
+            return s;
+        };
+        await _vm.EditSettingsCommand.ExecuteAsync(null);
         _dialogs.Prompts.Enqueue("1.0.0");
         await _vm.CreatePatchCommand.ExecuteAsync(null);
         File.WriteAllText(Path.Combine(server, "old-junk.txt"), "старое");
@@ -480,6 +488,39 @@ public sealed class MainWindowViewModelTests : IDisposable
         var release = _vm.Releases.Single(r => r.Version == "1.0.0");
         Assert.Equal(new[] { "Windows", "Android" }, release.Platforms.Select(p => p.Platform));
         Assert.Empty(_dialogs.Errors);
+    }
+
+    [Fact]
+    public async Task AndroidBoundToWindows_TakesWindowsVersion_NoPrompt_NoStandaloneNew()
+    {
+        var (_, android) = await CreateProjectWithAndroid(windows: true);
+        Assert.DoesNotContain(_vm.Releases, r => r.Version == ReleaseItem.UnknownVersion); // без Windows Android ждёт
+
+        // Windows ещё нет — Android записать нельзя: его версия берётся из Windows.
+        await _vm.SignAndroidCommand.ExecuteAsync(null);
+        Assert.Contains(_dialogs.Errors, e => e.Contains("вместе с Windows"));
+        _dialogs.Errors.Clear();
+
+        _dialogs.Prompts.Enqueue("1.0.0");
+        await _vm.CreatePatchCommand.ExecuteAsync(null);
+        var prompts = _dialogs.Prompts.Count;
+        await _vm.SignAndroidCommand.ExecuteAsync(null); // версию не спрашивает
+        Assert.Empty(_dialogs.Errors);
+        Assert.Equal(prompts, _dialogs.Prompts.Count);
+        Assert.True(ProjectMeta.Load(ProjectDir).AndroidSignedVersions.ContainsKey("1.0.0"));
+        Assert.Equal(new[] { "Windows", "Android" }, _vm.Releases.Single().Platforms.Select(p => p.Platform));
+
+        // Билд Android поменялся — отдельной записи «новый» нет: Android следующего выпуска пойдёт с Windows.
+        File.SetLastWriteTime(Path.Combine(android, "App.apk"), DateTime.Now.AddMinutes(1));
+        await _vm.DeliverAndroidCommand.ExecuteAsync(null);
+        Assert.DoesNotContain(_vm.Releases, r => r.Version == ReleaseItem.UnknownVersion);
+
+        File.WriteAllText(Path.Combine(BuildDir, "app.txt"), "v2");
+        _dialogs.Prompts.Enqueue("1.0.1");
+        await _vm.CreatePatchCommand.ExecuteAsync(null);
+        Assert.Equal(StageState.Pending, AndroidStage("1.0.1", StageKind.Files).State); // в новом выпуске Windows
+        await _vm.SignAndroidCommand.ExecuteAsync(null);
+        Assert.True(ProjectMeta.Load(ProjectDir).AndroidSignedVersions.ContainsKey("1.0.1"));
     }
 
     [Fact]
@@ -638,6 +679,38 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task DeleteAndroidOnlyRelease_WindowsCanStillBuildThatNumber()
+    {
+        // Случай из жизни: Android выпустил 1.0.0 и 1.0.1, Windows ещё ничего; 1.0.0 удалили —
+        // Windows-билд 1.0.0 после этого должен собираться (Windows этот номер не выпускал).
+        var (_, android) = await CreateProjectWithAndroid();
+        _dialogs.Prompts.Enqueue("1.0.0");
+        await _vm.SignAndroidCommand.ExecuteAsync(null);
+        File.SetLastWriteTime(Path.Combine(android, "App.apk"), DateTime.Now.AddMinutes(1));
+        _dialogs.Prompts.Enqueue("1.0.1");
+        await _vm.SignAndroidCommand.ExecuteAsync(null);
+
+        _vm.SelectedRelease = _vm.Releases.Single(r => r.Version == "1.0.0");
+        await _vm.DeleteReleaseCommand.ExecuteAsync(null);
+        Assert.DoesNotContain(_vm.Releases, r => r.Version == "1.0.0");
+        var meta = ProjectMeta.Load(ProjectDir);
+        Assert.Contains("1.0.0", meta.RemovedAndroidVersions); // Android этот номер повторно не запишет
+        Assert.DoesNotContain("1.0.0", meta.RemovedWindowsVersions);
+
+        _dialogs.SettingsAnswer = s =>
+        {
+            s.WindowsEnabled = true;
+            return s;
+        };
+        await _vm.EditSettingsCommand.ExecuteAsync(null);
+        _dialogs.Prompts.Enqueue("1.0.0");
+        await _vm.CreatePatchCommand.ExecuteAsync(null);
+        Assert.Empty(_dialogs.Errors);
+        Assert.True(VersionStaged("1.0.0"));
+        Assert.Contains(_vm.Releases, r => r.Version == "1.0.0" && r.Platforms.Any(p => p.Platform == "Windows"));
+    }
+
+    [Fact]
     public async Task OpenProject_From21_AndroidReleaseSavedIntoProject()
     {
         var (_, android) = await CreateProjectWithAndroid();
@@ -688,11 +761,10 @@ public sealed class MainWindowViewModelTests : IDisposable
     public Task PlatformSwitch_InWindow_SurvivesStageAction() => HeadlessUi.Run(async () =>
     {
         // Carousel при смене полос сам выбирает первую — выбор Android не должен от этого слетать на Windows.
-        await CreateProjectWithAndroid();
-        _dialogs.Prompts.Enqueue("1.0.0");
-        await _vm.SignAndroidCommand.ExecuteAsync(null);
+        await CreateProjectWithAndroid(windows: true);
         _dialogs.Prompts.Enqueue("1.0.0");
         await _vm.CreatePatchCommand.ExecuteAsync(null);
+        await _vm.SignAndroidCommand.ExecuteAsync(null); // версия — от Windows
 
         var window = new UpdateManager.App.Views.MainWindow { DataContext = _vm };
         window.Show();
@@ -890,11 +962,10 @@ public sealed class MainWindowViewModelTests : IDisposable
     [Fact]
     public async Task PlatformSwitch_OneTrackOnScreen_ButtonFollowsIt()
     {
-        await CreateProjectWithAndroid();
-        _dialogs.Prompts.Enqueue("1.0.0");
-        await _vm.SignAndroidCommand.ExecuteAsync(null);
+        await CreateProjectWithAndroid(windows: true);
         _dialogs.Prompts.Enqueue("1.0.0");
         await _vm.CreatePatchCommand.ExecuteAsync(null);
+        await _vm.SignAndroidCommand.ExecuteAsync(null); // версия — от Windows
 
         // Выпуск 1.0.0 с двумя полосами: на экране одна, кнопка — её следующий шаг.
         var release = _vm.SelectedRelease!;

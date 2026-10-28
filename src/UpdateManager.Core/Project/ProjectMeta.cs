@@ -54,6 +54,7 @@ namespace UpdateManager.Core.Project
         private const string AndroidRecordsElement = "AndroidRecords";
         private const string RemovedVersionsElement = "RemovedVersions";
         private const string RemovedAndroidVersionsElement = "RemovedAndroidVersions";
+        private const string RemovedWindowsVersionsElement = "RemovedWindowsVersions";
         private const string AndroidRecordSignedAttribute = "signed";
         private const string AndroidRecordMaskElement = "Mask";
         private const string AndroidRecordFileElement = "File";
@@ -126,38 +127,56 @@ namespace UpdateManager.Core.Project
             new Dictionary<string, AndroidRecord>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
-        /// Удалённые версии («Удалить версию…»): их нет ни в Versions/, ни в записях этапов, но каталог
-        /// учитывает их в нумерации — «№ N» остальных выпусков не сдвигается.
+        /// Удалённые и откатанные версии любой платформы: их нет ни в Versions/, ни в записях этапов, но каталог
+        /// учитывает их в нумерации — «№ N» остальных выпусков не сдвигается. Повторную сборку не запрещает —
+        /// это делают множества по платформам.
         /// </summary>
         public HashSet<string> RemovedVersions { get; set; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        /// <summary>Удалённые или откатанные Android-версии: их номер повторно не записывается (клиент не обновился бы).</summary>
+        /// <summary>
+        /// Windows-версии, которые выпускались и были удалены или откатаны: номер повторно не собирается (клиент с ним
+        /// не увидел бы обновления). Только если Windows эту версию действительно выпускал — удаление Android-выпуска
+        /// того же номера Windows не запрещает.
+        /// </summary>
+        public HashSet<string> RemovedWindowsVersions { get; set; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>То же для Android: номер повторно не записывается.</summary>
         public HashSet<string> RemovedAndroidVersions { get; set; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        /// <summary>Забыть Windows-версию (откат): записи патча, доставки и проверки; номер в каталоге остаётся занятым.</summary>
+        /// <summary>Забыть Windows-версию (была собрана): записи патча, доставки и проверки; номер больше не собирается.</summary>
         public void ForgetWindowsVersion(string version)
         {
             PatchedVersions.Remove(version);
             DeliveredVersions.Remove(version);
             VerifiedVersions.Remove(version);
             RemovedVersions.Add(version);
+            RemovedWindowsVersions.Add(version);
         }
 
-        /// <summary>Забыть Android-версию (откат): все её записи этапов; номер повторно не записывается.</summary>
+        /// <summary>Забыть Android-версию (была записана): все её записи этапов; номер больше не записывается.</summary>
         public void ForgetAndroidVersion(string version)
         {
             AndroidSignedVersions.Remove(version);
             AndroidRecords.Remove(version);
             AndroidDeliveredVersions.Remove(version);
             AndroidVerifiedVersions.Remove(version);
+            RemovedVersions.Add(version);
             RemovedAndroidVersions.Add(version);
         }
 
-        /// <summary>Забыть версию: все записи этапов обеих платформ; номер в каталоге остаётся занятым.</summary>
-        public void ForgetVersion(string version)
+        /// <summary>
+        /// Удалить выпуск из каталога: забыть его на тех платформах, где он был (Windows — есть папка версии
+        /// <paramref name="windowsBuilt"/> или записи этапов; Android — записи этапов). Номер в каталоге остаётся занятым.
+        /// </summary>
+        public void ForgetVersion(string version, bool windowsBuilt)
         {
-            ForgetWindowsVersion(version);
-            ForgetAndroidVersion(version);
+            if (windowsBuilt || PatchedVersions.ContainsKey(version) || DeliveredVersions.ContainsKey(version) ||
+                VerifiedVersions.ContainsKey(version))
+                ForgetWindowsVersion(version);
+            if (AndroidSignedVersions.ContainsKey(version) || AndroidDeliveredVersions.ContainsKey(version) ||
+                AndroidVerifiedVersions.ContainsKey(version))
+                ForgetAndroidVersion(version);
+            RemovedVersions.Add(version);
         }
 
         /// <summary>Android: когда версия выложена в канал (версия → время).</summary>
@@ -227,6 +246,7 @@ namespace UpdateManager.Core.Project
             LoadAndroidRecords(root.Element(AndroidRecordsElement), meta.AndroidRecords);
 
             LoadVersionSet(root.Element(RemovedVersionsElement), meta.RemovedVersions);
+            LoadVersionSet(root.Element(RemovedWindowsVersionsElement), meta.RemovedWindowsVersions);
             LoadVersionSet(root.Element(RemovedAndroidVersionsElement), meta.RemovedAndroidVersions);
 
             return meta;
@@ -390,6 +410,7 @@ namespace UpdateManager.Core.Project
                     SaveVerification(AndroidVerifiedElement, AndroidVerifiedVersions),
                     SaveAndroidRecords(AndroidRecords),
                     SaveVersionSet(RemovedVersionsElement, RemovedVersions),
+                    SaveVersionSet(RemovedWindowsVersionsElement, RemovedWindowsVersions),
                     SaveVersionSet(RemovedAndroidVersionsElement, RemovedAndroidVersions)
                 ));
             doc.Save(Path.Combine(projectRoot, FileName));

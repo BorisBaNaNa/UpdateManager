@@ -282,7 +282,7 @@ public static class ReleaseCatalog
             }
 
         // Номер — место среди всех версий проекта, включая удалённые: «№ N» не сдвигается после удаления.
-        var numbered = tracks.Keys.Concat(meta.RemovedVersions).Concat(meta.RemovedAndroidVersions)
+        var numbered = tracks.Keys.Concat(meta.RemovedVersions).Concat(meta.RemovedWindowsVersions).Concat(meta.RemovedAndroidVersions)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(VersionKey).ThenBy(v => v, StringComparer.OrdinalIgnoreCase).ToList();
         var result = numbered
@@ -319,13 +319,16 @@ public static class ReleaseCatalog
         }
 
         // Android без текущей полосы (ещё не выпускался или билд изменился после подписи) — полоса «новый».
+        // Обе платформы включены — Android привязан к Windows: полоса только в последнем выпуске Windows,
+        // отдельной записи «новый» с неизвестной версией нет (её версия — версия Windows).
+        var bound = meta.WindowsEnabled && meta.AndroidEnabled;
         if (meta.AndroidEnabled && !result.Any(r => r.IsNew && r.Platforms.Any(p => p.IsAndroid)) && AndroidBuildIsNew(meta))
         {
             var last = result.Count > 0 ? result[^1] : null;
-            if (last != null && !last.Platforms.Any(p => p.IsAndroid))
+            if (last != null && !last.Platforms.Any(p => p.IsAndroid) && (!bound || last.Platforms.Any(p => p.Platform == Windows)))
                 result[^1] = new ReleaseItem(last.Number, last.Version, last.IsNew, isLatest: false,
                     last.Platforms.Append(AndroidPendingTrack(meta)).ToList());
-            else
+            else if (!bound)
                 result.Add(new ReleaseItem(nextNumber, ReleaseItem.UnknownVersion, isNew: true, isLatest: false,
                     new[] { AndroidPendingTrack(meta) }));
         }

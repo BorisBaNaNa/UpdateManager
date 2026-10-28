@@ -881,7 +881,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         // Номер откатанной или удалённой версии повторять нельзя: клиент, успевший её получить, сравнит
         // версии, увидит «то же самое» и не обновится, хотя файлы другие.
-        if (_project.Meta.RemovedVersions.Contains(version))
+        if (_project.Meta.RemovedWindowsVersions.Contains(version))
         {
             await _dialogs.ShowErrorAsync("Версия " + version + " уже выпускалась и была откатана или удалена.\n" +
                 "Клиенты, успевшие её получить, не увидят обновления с тем же номером. Соберите следующую версию.");
@@ -1173,7 +1173,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             // Откатанная версия в папке билда — не «новый» выпуск: её номер больше не используется.
             if (build.Version != null && VersionRules.IsValid(build.Version) &&
                 !_service.VersionExists(project.RootPath, build.Version) &&
-                !project.Meta.RemovedVersions.Contains(build.Version) &&
+                !project.Meta.RemovedWindowsVersions.Contains(build.Version) &&
                 !_service.IsBelowMaxVersion(project.RootPath, build.Version, out _))
             {
                 newVersion = build.Version;
@@ -1185,6 +1185,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             BuildSource = "не выбрана";
             MainExecutableText = "—";
         }
+
+        _newWindowsVersion = project.Meta.WindowsEnabled ? newVersion : null;
 
         // Выбран архивный выпуск — остаёмся на нём; выбран последний — следуем за новым последним.
         var keep = SelectedRelease is { IsLatest: false } ? SelectedRelease.Version : null;

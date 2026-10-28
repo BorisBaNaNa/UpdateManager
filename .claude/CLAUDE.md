@@ -65,8 +65,10 @@
   залито `MarkedBrush`. Удалять можно только
   `ReleaseItem.CanDelete` (не «новый», ни одна полоса не текущая). `ProjectService.DeleteVersions`: папки в Корзину,
   `ProjectMeta.ForgetVersion`; Output/ и сервер не трогает. Номера выпусков стабильны: удалённые/откатанные — в
-  `RemovedVersions` (Windows) и `RemovedAndroidVersions`, каталог считает их в нумерации; их номера повторно не
-  собираются/не записываются (клиент с той же версией не обновится) и не дают записи «новый». Откат (`CanRollback` —
+  `RemovedVersions` (любая платформа — только нумерация каталога). Повтор номера запрещают `RemovedWindowsVersions` /
+  `RemovedAndroidVersions` — и только на платформе, которая этот номер действительно выпускала (`ForgetVersion(v,
+  windowsBuilt)`): иначе удаление Android-выпуска 0.9.8.0 запрещало Windows собрать свой 0.9.8.0 (так и сломалось).
+  Клиент с той же версией не обновился бы; такие номера не дают и записи «новый». Откат (`CanRollback` —
   архивная полоса с `PlatformTrack.CanRestore`: Windows всегда, Android — если есть `Versions/Android/<версия>`), по
   каждой такой платформе. Windows — `ProjectService.RollbackTo`: версии новее в Корзину (`ForgetWindowsVersion`), из
   `Output/IncrementalPatch` и из `VersionInfo.info` убираются инкрементальные патчи к ним/от них (движок переносит
@@ -125,9 +127,12 @@
   записи нет — прежнее поведение);
   маски — `Core/Common/FileMask` (glob). Что выкладывается — `Core/Delivery/AndroidPackage` (без исключённых и
   чужих `.sig`); канал = папка патча + `AndroidPatch`, публичный адрес = `BaseDownloadURL` + канал; проверка —
-  `Core/Operations/AndroidChannelVerifier` (скачать, сверить байты и подписи). Версия спрашивается при подписи,
-  из файлов не читается; файл, изменённый после подписи, выкладывать нельзя; билд новее подписи — запись «новый».
-  Записи этапов — `AndroidSigned/Delivered/VerifiedVersions`.
+  `Core/Operations/AndroidChannelVerifier` (скачать, сверить байты и подписи). Версия из файлов не читается.
+  **Привязка к Windows** (решение пользователя: разные версии — это разные проекты): включены обе платформы
+  (`IsAndroidBoundToWindows`) — Android пишется под версией Windows без вопроса (`BoundAndroidVersion`: новый
+  Windows-билд `_newWindowsVersion`, иначе последняя собранная; Windows-версии нет — ошибка), его полоса — только в
+  последнем выпуске Windows, отдельной записи «новый» нет. Только Android — версия спрашивается, билд новее записи —
+  запись «новый». Записи этапов — `AndroidSigned/Delivered/VerifiedVersions`.
 - **Доставка зеркальная** (с 2.1): после успешной отправки в папке назначения остаётся ровно новая выкладка
   (FTP — атомарная подмена `_new`/`_old`, папка — удаление лишнего); сохраняется только папка канала Android
   внутри папки патча (`keepNames`). Папка: отказ на корне диска и пересечении с источником.
