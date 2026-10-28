@@ -346,6 +346,34 @@ public sealed class StoresTests : IDisposable
         Assert.Equal(new DateTime(2026, 10, 28, 9, 0, 0), loaded.AndroidSignedVersions["0.9.24"]);
         Assert.Equal(new DateTime(2026, 10, 28, 9, 5, 0), loaded.AndroidDeliveredVersions["0.9.24"]);
         Assert.True(loaded.AndroidVerifiedVersions["0.9.24"].Succeeded);
+        Assert.True(loaded.Android.Sign);
+    }
+
+    [Fact]
+    public void ProjectMeta_AndroidSignOff_RoundTripAndNoActiveMasks()
+    {
+        var meta = new ProjectMeta { AndroidEnabled = true };
+        meta.Android.Sign = false;
+        meta.Android.SignMasks.Add("latest.json");
+        meta.Save(_root);
+
+        var loaded = ProjectMeta.Load(_root);
+        Assert.False(loaded.Android.Sign);
+        Assert.Equal(new[] { "latest.json" }, loaded.Android.SignMasks); // маски помнятся до включения подписи
+        Assert.Empty(loaded.Android.ActiveSignMasks);
+    }
+
+    [Theory]
+    [InlineData("<Sign>latest.json</Sign>", true)]
+    [InlineData("", false)]
+    public void ProjectMeta_AndroidWithoutSignAttribute_SignFollowsMasks(string masks, bool sign)
+    {
+        // Мета 2.1.0: флажка нет, подписью управляли маски (пусто — выпуск без подписи).
+        File.WriteAllText(Path.Combine(_root, ProjectMeta.FileName),
+            "<UpdateManagerProject schemaVersion=\"1\"><Android buildSource=\"\" channel=\"AndroidPatch\">" + masks +
+            "</Android></UpdateManagerProject>");
+
+        Assert.Equal(sign, ProjectMeta.Load(_root).Android.Sign);
     }
 }
 

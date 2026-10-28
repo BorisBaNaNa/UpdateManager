@@ -12,7 +12,8 @@ namespace UpdateManager.App.ViewModels;
 
 /// <summary>
 /// Платформа Android главного окна: без патчей — папка билда (собирается вне UpdateManager) →
-/// подпись файлов по маске RSA-ключом проекта → выкладка в папку канала → проверка канала.
+/// подпись файлов по маске RSA-ключом проекта (выключаемая, как SignPatch у Windows) → выкладка в папку канала →
+/// проверка канала.
 /// Версию UpdateManager из файлов не читает — спрашивает при подписи.
 /// </summary>
 public sealed partial class MainWindowViewModel
@@ -20,6 +21,13 @@ public sealed partial class MainWindowViewModel
     [ObservableProperty] private string _androidBuildSource = "";
     [ObservableProperty] private bool _isWindowsEnabled = true;
     [ObservableProperty] private bool _isAndroidEnabled;
+
+    /// <summary>Подпись Android включена в настройках (выключена — этап только записывает версию).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AndroidSignMenuText))]
+    private bool _isAndroidSigned = true;
+
+    public string AndroidSignMenuText => IsAndroidSigned ? "Подписать файлы Android" : "Записать версию Android";
 
     [RelayCommand(CanExecute = nameof(HasProject))]
     private async Task BrowseAndroidBuild()
@@ -56,19 +64,23 @@ public sealed partial class MainWindowViewModel
             return;
         }
 
-        var masks = meta.Android.SignMasks;
+        // Подпись выключена — как SignPatch у Windows: ни ключ, ни маски не нужны, этап только записывает версию.
+        var masks = meta.Android.ActiveSignMasks;
+        if (meta.Android.Sign && masks.Count == 0)
+        {
+            await _dialogs.ShowErrorAsync("Подпись Android включена, но маски не заданы.\n" +
+                "Укажите, какие файлы подписывать (настройки проекта → Android → Подписывать), " +
+                "или снимите «Подписывать файлы RSA-ключом» — тогда выпуск уйдёт без .sig.");
+            return;
+        }
         if (masks.Count > 0 && !_keys.HasKeys(_project.RootPath))
         {
             await _dialogs.ShowErrorAsync("Для подписи нужны RSA-ключи проекта (" + RsaKeyManager.PrivateKeyFileName +
                 " и " + RsaKeyManager.PublicKeyFileName + " в папке проекта) — те же, что подписывают патчи Windows.\n" +
                 "Положите их в папку проекта или сгенерируйте («Безопасность → Сгенерировать RSA-ключи…»; " +
-                "новые ключи не примут клиенты со старым публичным ключом).");
+                "новые ключи не примут клиенты со старым публичным ключом), либо выключите подпись в настройках проекта.");
             return;
         }
-        if (masks.Count == 0 && !await _dialogs.ConfirmAsync(
-                "Маска подписи не задана (настройки проекта → Android) — файлы уйдут без .sig, и клиент, " +
-                "который проверяет подпись, обновление не примет.\nПродолжить без подписи?"))
-            return;
 
         var version = await _dialogs.PromptAsync("Версия Android-выпуска",
             "Под какой версией записать выпуск в каталог? (UpdateManager не читает её из файлов.)",
@@ -91,18 +103,21 @@ public sealed partial class MainWindowViewModel
         }
 
         ResetAndroidFrom(version, StageKind.Files);
-        try
+        if (masks.Count > 0)
         {
-            var root = _project.RootPath;
-            var privateKey = masks.Count > 0 ? _keys.ReadPrivateKey(root) : "";
-            var publicKey = masks.Count > 0 ? File.ReadAllText(_keys.PublicKeyPath(root)) : "";
-            await Task.Run(() => new FileSigner().Sign(folder, masks, privateKey, publicKey));
-        }
-        catch (Exception ex)
-        {
-            ShowProject();
-            await _dialogs.ShowErrorAsync("Подпись не выполнена:\n" + ex.Message);
-            return;
+            try
+            {
+                var root = _project.RootPath;
+                var privateKey = _keys.ReadPrivateKey(root);
+                var publicKey = File.ReadAllText(_keys.PublicKeyPath(root));
+                await Task.Run(() => new FileSigner().Sign(folder, masks, privateKey, publicKey));
+            }
+            catch (Exception ex)
+            {
+                ShowProject();
+                await _dialogs.ShowErrorAsync("Подпись не выполнена:\n" + ex.Message);
+                return;
+            }
         }
 
         meta.AndroidSignedVersions[version] = DateTime.Now;
@@ -120,7 +135,9 @@ public sealed partial class MainWindowViewModel
         var version = ReleaseCatalog.LatestAndroidVersion(meta);
         if (version == null || !meta.AndroidSignedVersions.ContainsKey(version))
         {
-            await _dialogs.ShowErrorAsync("Сначала подпишите файлы Android-выпуска.");
+            await _dialogs.ShowErrorAsync(meta.Android.Sign
+                ? "Сначала подпишите файлы Android-выпуска."
+                : "Сначала запишите версию Android-выпуска.");
             return;
         }
 
@@ -201,7 +218,9 @@ public sealed partial class MainWindowViewModel
         var version = ReleaseCatalog.LatestAndroidVersion(meta);
         if (version == null)
         {
-            await _dialogs.ShowErrorAsync("Android ещё не выпускался — сначала подпишите и доставьте файлы.");
+            await _dialogs.ShowErrorAsync(meta.Android.Sign
+                ? "Android ещё не выпускался — сначала подпишите и доставьте файлы."
+                : "Android ещё не выпускался — сначала запишите версию и доставьте файлы.");
             return;
         }
 
@@ -217,7 +236,7 @@ public sealed partial class MainWindowViewModel
             return;
         var (folder, files) = package.Value;
 
-        var signed = AndroidPackage.SignedFiles(files, meta.Android.SignMasks);
+        var signed = AndroidPackage.SignedFiles(files, meta.Android.ActiveSignMasks);
         var publicKey = signed.Count > 0 && _keys.HasPublicKey(_project.RootPath)
             ? File.ReadAllText(_keys.PublicKeyPath(_project.RootPath)) : "";
         if (signed.Count > 0 && publicKey.Length == 0)
@@ -250,7 +269,7 @@ public sealed partial class MainWindowViewModel
             return null;
         }
 
-        var files = AndroidPackage.Files(folder, meta.Android.SignMasks, meta.Android.ExcludeMasks);
+        var files = AndroidPackage.Files(folder, meta.Android.ActiveSignMasks, meta.Android.ExcludeMasks);
         if (files.Count == 0)
         {
             await _dialogs.ShowErrorAsync("В папке билда Android нечего выкладывать: " + folder);
@@ -259,7 +278,7 @@ public sealed partial class MainWindowViewModel
 
         if (checkSignatures)
         {
-            var signed = AndroidPackage.SignedFiles(files, meta.Android.SignMasks);
+            var signed = AndroidPackage.SignedFiles(files, meta.Android.ActiveSignMasks);
             if (signed.Count > 0)
             {
                 var publicKey = File.ReadAllText(_keys.PublicKeyPath(_project.RootPath));
@@ -312,6 +331,7 @@ public sealed partial class MainWindowViewModel
     {
         IsWindowsEnabled = meta.WindowsEnabled;
         IsAndroidEnabled = meta.AndroidEnabled;
+        IsAndroidSigned = meta.Android.Sign;
         var folder = meta.Android.BuildSource ?? "";
         AndroidBuildSource = folder.Length > 0 ? folder : "не выбрана";
     }

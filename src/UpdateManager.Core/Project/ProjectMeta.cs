@@ -45,6 +45,7 @@ namespace UpdateManager.Core.Project
         private const string AndroidElement = "Android";
         private const string AndroidBuildSourceAttribute = "buildSource";
         private const string AndroidChannelAttribute = "channel";
+        private const string AndroidSignAttribute = "sign";
         private const string AndroidSignElement = "Sign";
         private const string AndroidExcludeElement = "Exclude";
         private const string AndroidSignedElement = "AndroidSigned";
@@ -166,6 +167,8 @@ namespace UpdateManager.Core.Project
                 meta.Android.Channel = (string)android.Attribute(AndroidChannelAttribute) ?? AndroidConfig.DefaultChannel;
                 meta.Android.SignMasks = android.Elements(AndroidSignElement).Select(e => e.Value).ToList();
                 meta.Android.ExcludeMasks = android.Elements(AndroidExcludeElement).Select(e => e.Value).ToList();
+                // До флажка (2.1.0) подписью управляли маски: пусто — выпуск без подписи.
+                meta.Android.Sign = (bool?)android.Attribute(AndroidSignAttribute) ?? meta.Android.SignMasks.Count > 0;
             }
 
             LoadVersionDates(root.Element(AndroidSignedElement), meta.AndroidSignedVersions);
@@ -262,6 +265,7 @@ namespace UpdateManager.Core.Project
                     new XElement(AndroidElement,
                         new XAttribute(AndroidBuildSourceAttribute, Android.BuildSource ?? ""),
                         new XAttribute(AndroidChannelAttribute, Android.Channel ?? AndroidConfig.DefaultChannel),
+                        new XAttribute(AndroidSignAttribute, Android.Sign),
                         Android.SignMasks.Select(m => new XElement(AndroidSignElement, m)),
                         Android.ExcludeMasks.Select(m => new XElement(AndroidExcludeElement, m))),
                     SaveVersionDates(AndroidSignedElement, AndroidSignedVersions),

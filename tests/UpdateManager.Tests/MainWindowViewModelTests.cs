@@ -509,6 +509,56 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task Android_SignOff_RecordsVersionWithoutKey_DeliversWithoutSig()
+    {
+        var (server, android) = await CreateProjectWithAndroid();
+        File.WriteAllText(Path.Combine(android, "latest.json.sig"), "старая подпись");
+        File.Delete(Path.Combine(ProjectDir, RsaKeyManager.PrivateKeyFileName)); // без подписи ключ не нужен
+        _dialogs.SettingsAnswer = s =>
+        {
+            s.Android.Sign = false;
+            return s;
+        };
+        await _vm.EditSettingsCommand.ExecuteAsync(null);
+        Assert.Equal("Записать версию", _vm.NextStepText);
+
+        _dialogs.Prompts.Enqueue("1.0.0");
+        await _vm.SignAndroidCommand.ExecuteAsync(null);
+        var files = AndroidStage("1.0.0", StageKind.Files);
+        Assert.Equal(StageState.Done, files.State);
+        Assert.Equal("Версия", files.Title);
+        Assert.Equal("старая подпись", File.ReadAllText(Path.Combine(android, "latest.json.sig"))); // не подписывали
+        Assert.Empty(_dialogs.Confirms.Where(m => m.Contains("подпис")));
+
+        await _vm.DeliverAndroidCommand.ExecuteAsync(null);
+        var channel = Path.Combine(server, "AndroidPatch");
+        Assert.Equal(new[] { "App.apk", "latest.json" },
+            Directory.GetFiles(channel).Select(Path.GetFileName).OrderBy(n => n, StringComparer.Ordinal));
+
+        await _vm.VerifyAndroidCommand.ExecuteAsync(null);
+        Assert.Empty(_dialogs.Errors);
+        Assert.True(ProjectMeta.Load(ProjectDir).AndroidVerifiedVersions["1.0.0"].Succeeded);
+    }
+
+    [Fact]
+    public async Task Android_SignOnWithoutMasks_Error()
+    {
+        var (_, android) = await CreateProjectWithAndroid();
+        _dialogs.SettingsAnswer = s =>
+        {
+            s.Android.SignMasks.Clear();
+            return s;
+        };
+        await _vm.EditSettingsCommand.ExecuteAsync(null);
+
+        _dialogs.Prompts.Enqueue("1.0.0");
+        await _vm.SignAndroidCommand.ExecuteAsync(null);
+        Assert.Contains(_dialogs.Errors, e => e.Contains("маски не заданы"));
+        Assert.False(ProjectMeta.Load(ProjectDir).AndroidSignedVersions.ContainsKey("1.0.0"));
+        Assert.False(File.Exists(Path.Combine(android, "latest.json.sig")));
+    }
+
+    [Fact]
     public async Task PlatformSwitch_OneTrackOnScreen_ButtonFollowsIt()
     {
         await CreateProjectWithAndroid();

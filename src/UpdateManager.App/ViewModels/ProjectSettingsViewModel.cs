@@ -38,6 +38,7 @@ public sealed partial class ProjectSettingsViewModel : DialogViewModel
         _windowsEnabled = settings.WindowsEnabled;
         _androidEnabled = settings.AndroidEnabled;
         _androidChannel = settings.Android.Channel;
+        _androidSign = settings.Android.Sign;
         _androidSignMasks = string.Join(Environment.NewLine, settings.Android.SignMasks);
         _androidExcludeMasks = string.Join(Environment.NewLine, settings.Android.ExcludeMasks);
         _android = settings.Android;
@@ -74,6 +75,7 @@ public sealed partial class ProjectSettingsViewModel : DialogViewModel
     [NotifyPropertyChangedFor(nameof(AndroidChannelUrlText))]
     private string _androidChannel;
 
+    [ObservableProperty] private bool _androidSign;
     [ObservableProperty] private string _androidSignMasks;
     [ObservableProperty] private string _androidExcludeMasks;
 
@@ -118,6 +120,7 @@ public sealed partial class ProjectSettingsViewModel : DialogViewModel
     {
         var android = _android.Clone();
         android.Channel = ChannelName();
+        android.Sign = AndroidSign;
         android.SignMasks = FileMask.ParseLines(AndroidSignMasks);
         android.ExcludeMasks = FileMask.ParseLines(AndroidExcludeMasks);
 

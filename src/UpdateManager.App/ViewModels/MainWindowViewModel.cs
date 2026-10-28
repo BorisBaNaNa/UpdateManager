@@ -1284,8 +1284,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 (_nextStep, StatusText) = next.Kind switch
                 {
                     StageKind.Build => (NextStepKind.AndroidPickBuild, "Выберите папку билда Android."),
-                    StageKind.Files => (NextStepKind.AndroidSign, "Билд Android готов — подпишите файлы."),
-                    StageKind.Delivery => (NextStepKind.AndroidDeliver, "Файлы подписаны — выложите их в канал."),
+                    StageKind.Files => (NextStepKind.AndroidSign, next.Unsigned
+                        ? "Билд Android готов — запишите версию выпуска (подпись выключена)."
+                        : "Билд Android готов — подпишите файлы."),
+                    StageKind.Delivery => (NextStepKind.AndroidDeliver, IsAndroidSigned
+                        ? "Файлы подписаны — выложите их в канал."
+                        : "Версия записана — выложите файлы в канал."),
                     _ => (NextStepKind.AndroidVerify, next.IsFailed
                         ? "Проверка канала не прошла: " + OneLine(next.Reason) + ".\n" +
                           "Проверьте адрес сервера и что файлы выложены, затем проверьте снова."
@@ -1303,7 +1307,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             NextStepKind.Deliver or NextStepKind.AndroidDeliver => "Доставить",
             NextStepKind.Verify or NextStepKind.AndroidVerify => failed ? "Проверить снова" : "Проверить",
             NextStepKind.AndroidPickBuild => "Выбрать папку Android…",
-            NextStepKind.AndroidSign => "Подписать файлы",
+            NextStepKind.AndroidSign => IsAndroidSigned ? "Подписать файлы" : "Записать версию",
             _ => ""
         };
         HasNextStep = _nextStep != NextStepKind.None;

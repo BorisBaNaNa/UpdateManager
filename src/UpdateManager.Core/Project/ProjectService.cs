@@ -281,6 +281,7 @@ namespace UpdateManager.Core.Project
                 meta.Android.Channel = (settings.Android.Channel ?? "").Trim().Trim('/');
                 if (meta.Android.Channel.Length == 0)
                     meta.Android.Channel = AndroidConfig.DefaultChannel;
+                meta.Android.Sign = settings.Android.Sign;
                 meta.Android.SignMasks = new List<string>(settings.Android.SignMasks);
                 meta.Android.ExcludeMasks = new List<string>(settings.Android.ExcludeMasks);
             }

@@ -8,7 +8,7 @@ namespace UpdateManager.App.ViewModels;
 
 /// <summary>
 /// Этап выпуска. Набор этапов зависит от платформы: Windows — Билд → Патч → Доставка → Проверка,
-/// Android — Билд → Подпись (Files) → Доставка → Проверка.
+/// Android — Билд → Подпись (Files; без подписи — «Версия») → Доставка → Проверка.
 /// </summary>
 public enum StageKind { Build, Patch, Files, Delivery, Verify }
 
@@ -29,6 +29,9 @@ public sealed class StageItem
     public StageKind Kind { get; }
     public StageState State { get; }
 
+    /// <summary>Этап Files без подписи (выключена в настройках Android): только записывает версию выпуска.</summary>
+    public bool Unsigned { get; init; }
+
     /// <summary>Платформа полосы («Windows», «Android») — задаёт <see cref="PlatformTrack"/>.</summary>
     public string Platform { get; internal set; } = ReleaseCatalog.Windows;
 
@@ -45,7 +48,7 @@ public sealed class StageItem
     {
         StageKind.Build => "Билд",
         StageKind.Patch => "Патч",
-        StageKind.Files => "Подпись",
+        StageKind.Files => Unsigned ? "Версия" : "Подпись",
         StageKind.Delivery => "Доставка",
         _ => "Проверка"
     };
@@ -63,6 +66,7 @@ public sealed class StageItem
     {
         StageKind.Build => "Сменить папку билда",
         StageKind.Patch => State == StageState.Done ? "Пересобрать" : "Собрать",
+        StageKind.Files when Unsigned => State == StageState.Done ? "Записать заново" : "Записать версию",
         StageKind.Files => State == StageState.Done ? "Подписать заново" : "Подписать",
         StageKind.Delivery => State == StageState.Done ? "Доставить снова" : "Доставить",
         _ => State == StageState.Pending ? "Проверить" : "Проверить снова"
@@ -118,6 +122,7 @@ public sealed partial class PlatformTrack : ObservableObject
         null => "проверен",
         { Kind: StageKind.Build } => "нет билда",
         { Kind: StageKind.Patch } => "патч не собран",
+        { Kind: StageKind.Files, Unsigned: true } => "версия не записана",
         { Kind: StageKind.Files } => "не подписан",
         { Kind: StageKind.Delivery } => "не доставлен",
         { IsFailed: true } => "проверка не прошла",
@@ -371,16 +376,17 @@ public static class ReleaseCatalog
         var stages = new List<StageItem> { new(StageKind.Build, StageState.Done, BuildFolderLabel(meta)) };
 
         DateTime? signedAt = meta.AndroidSignedVersions.TryGetValue(version, out var s) ? s : null;
+        var masks = meta.Android.ActiveSignMasks;
         stages.Add(signedAt.HasValue
             ? new StageItem(StageKind.Files, StageState.Done,
-                (meta.Android.SignMasks.Count > 0 ? "подписан " : "без подписи · ") + Stamp(signedAt.Value),
-                (meta.Android.SignMasks.Count > 0 ? "подписан " : "без подписи · ") + Stamp(signedAt.Value) +
-                (meta.Android.SignMasks.Count > 0 ? "\nмаски: " + string.Join(", ", meta.Android.SignMasks) : ""))
-            : new StageItem(StageKind.Files, StageState.Pending, "не подписан"));
+                (masks.Count > 0 ? "подписан " : "без подписи · ") + Stamp(signedAt.Value),
+                (masks.Count > 0 ? "подписан " : "без подписи · ") + Stamp(signedAt.Value) +
+                (masks.Count > 0 ? "\nмаски: " + string.Join(", ", masks) : "")) { Unsigned = !meta.Android.Sign }
+            : FilesPending(meta));
 
         DateTime? deliveredAt = meta.AndroidDeliveredVersions.TryGetValue(version, out var d) ? d : null;
         AddDeliveryAndVerify(stages, meta, signedAt.HasValue, signedAt, deliveredAt, meta.AndroidVerifiedVersions, version,
-            "подписан заново");
+            meta.Android.Sign ? "подписан заново" : "версия записана заново");
         return new PlatformTrack(Android, stages);
     }
 
@@ -393,11 +399,15 @@ public static class ReleaseCatalog
             hasBuild
                 ? new StageItem(StageKind.Build, StageState.Done, BuildFolderLabel(meta))
                 : new StageItem(StageKind.Build, StageState.Pending, "папка не выбрана"),
-            new(StageKind.Files, StageState.Pending, "не подписан"),
+            FilesPending(meta),
             new(StageKind.Delivery, StageState.Pending, "не доставлен"),
             new(StageKind.Verify, StageState.Pending, "не проверялся")
         });
     }
+
+    private static StageItem FilesPending(ProjectMeta meta) => meta.Android.Sign
+        ? new StageItem(StageKind.Files, StageState.Pending, "не подписан")
+        : new StageItem(StageKind.Files, StageState.Pending, "версия не записана") { Unsigned = true };
 
     // Android ещё не выпускался или в папке билда есть файлы новее последней подписи.
     private static bool AndroidBuildIsNew(ProjectMeta meta)

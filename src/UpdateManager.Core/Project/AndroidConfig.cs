@@ -17,8 +17,17 @@ namespace UpdateManager.Core.Project
         /// <summary>Папка канала на сервере относительно папки Windows-патча (BaseDownloadURL).</summary>
         public string Channel { get; set; } = DefaultChannel;
 
-        /// <summary>Маски подписываемых файлов (glob относительно папки билда). Пусто — ничего не подписывается.</summary>
+        /// <summary>
+        /// Подписывать файлы RSA-ключом проекта (как SignPatch у Windows). Выключено — этап только записывает
+        /// версию выпуска: ключ и маски не нужны, .sig в канал не уходят.
+        /// </summary>
+        public bool Sign { get; set; } = true;
+
+        /// <summary>Маски подписываемых файлов (glob относительно папки билда).</summary>
         public List<string> SignMasks { get; set; } = new List<string>();
+
+        /// <summary>Маски, по которым подписывают и сверяют подписи сейчас: при выключенной подписи — никакие.</summary>
+        public List<string> ActiveSignMasks => Sign ? SignMasks : new List<string>();
 
         /// <summary>Маски файлов, которые не выкладываются.</summary>
         public List<string> ExcludeMasks { get; set; } = new List<string>();
@@ -29,6 +38,7 @@ namespace UpdateManager.Core.Project
             {
                 BuildSource = BuildSource,
                 Channel = Channel,
+                Sign = Sign,
                 SignMasks = new List<string>(SignMasks),
                 ExcludeMasks = new List<string>(ExcludeMasks)
             };

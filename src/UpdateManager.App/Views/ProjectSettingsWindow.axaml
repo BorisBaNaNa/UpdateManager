@@ -122,10 +122,13 @@
 
                         <TextBlock Grid.Row="2" Classes="field" VerticalAlignment="Top" Margin="0,6,0,0"
                                    Text="Подписывать" />
-                        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding AndroidSignMasks}" AcceptsReturn="True"
-                                 Height="72" PlaceholderText="latest.json" ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                        <StackPanel Grid.Row="2" Grid.Column="1" Spacing="8">
+                            <CheckBox Content="Подписывать файлы RSA-ключом" IsChecked="{Binding AndroidSign}" />
+                            <TextBox Text="{Binding AndroidSignMasks}" AcceptsReturn="True" IsEnabled="{Binding AndroidSign}"
+                                     Height="72" PlaceholderText="latest.json" ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                        </StackPanel>
                         <TextBlock Grid.Row="3" Grid.Column="1" Margin="0,-2,0,4" Classes="detail"
-                                   Text="Маски от папки билда, по одной в строке (latest.json, *.apk, manifests/*.json). Рядом с каждым файлом появится .sig — RSA-ключом проекта. Маска без совпадений — ошибка." />
+                                   Text="Маски от папки билда, по одной в строке (latest.json, *.apk, manifests/*.json). Рядом с каждым файлом появится .sig — RSA-ключом проекта. Маска без совпадений — ошибка. Без подписи этап только записывает версию выпуска, .sig в канал не уходят." />
 
                         <TextBlock Grid.Row="4" Classes="field" VerticalAlignment="Top" Margin="0,6,0,0"
                                    Text="Не выкладывать" />

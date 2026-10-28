@@ -106,7 +106,7 @@
                 <Separator IsVisible="{Binding IsAndroidEnabled}" />
                 <MenuItem Header="Папка Android…" IsVisible="{Binding IsAndroidEnabled}"
                           Command="{Binding BrowseAndroidBuildCommand}" />
-                <MenuItem Header="Подписать файлы Android" IsVisible="{Binding IsAndroidEnabled}"
+                <MenuItem Header="{Binding AndroidSignMenuText}" IsVisible="{Binding IsAndroidEnabled}"
                           Command="{Binding SignAndroidCommand}" />
                 <MenuItem Header="Доставить Android" IsVisible="{Binding IsAndroidEnabled}"
                           Command="{Binding DeliverAndroidCommand}" />
