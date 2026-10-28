@@ -1102,7 +1102,53 @@ public sealed partial class MainWindowViewModel : ObservableObject
         return "FTP · " + conn.Host + DownloadUrl.CombineRemote(conn.RemotePath, GetUploadDirectory());
     }
 
-    partial void OnSelectedReleaseChanged(ReleaseItem? value) => UpdateNextStep();
+    // Выбранный выпуск показывает одну полосу — выбранной платформы (переключатель возле версии).
+    // Выбор платформы запоминается при переходе между выпусками, где она есть.
+    [ObservableProperty] private PlatformTrack? _selectedTrack;
+    private string? _preferredPlatform;
+    private bool _syncingTrack;
+
+    partial void OnSelectedReleaseChanged(ReleaseItem? value)
+    {
+        _syncingTrack = true;
+        SelectedTrack = value?.Platforms.FirstOrDefault(p => p.Platform == _preferredPlatform)
+            ?? value?.Platforms.FirstOrDefault();
+        _syncingTrack = false;
+        UpdateNextStep();
+    }
+
+    partial void OnSelectedTrackChanged(PlatformTrack? oldValue, PlatformTrack? newValue)
+    {
+        if (oldValue != null)
+            oldValue.IsSelected = false;
+        if (newValue != null)
+            newValue.IsSelected = true;
+        if (_syncingTrack)
+            return;
+        if (newValue != null)
+            _preferredPlatform = newValue.Platform;
+        UpdateNextStep();
+    }
+
+    // Переключатель платформ возле версии (клик по имени).
+    [RelayCommand]
+    private void SelectTrack(PlatformTrack? track)
+    {
+        if (track != null && SelectedRelease?.Platforms.Contains(track) == true)
+            SelectedTrack = track;
+    }
+
+    /// <summary>Свайп: +1 — следующая платформа (въезжает справа), −1 — предыдущая. Без зацикливания.</summary>
+    public void ShiftTrack(int direction)
+    {
+        var platforms = SelectedRelease?.Platforms;
+        if (platforms == null || platforms.Count < 2 || SelectedTrack == null)
+            return;
+
+        var index = platforms.ToList().IndexOf(SelectedTrack) + direction;
+        if (index >= 0 && index < platforms.Count)
+            SelectedTrack = platforms[index];
+    }
 
     // Главная кнопка и строка состояния для выбранного выпуска.
     private void UpdateNextStep()
@@ -1121,19 +1167,18 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 ? "Версия билда не определилась — укажите главный exe."
                 : "Версий пока нет. Начните с папки билда приложения.";
         }
-        else if (!release.HasCurrentTrack)
-        {
-            StatusText = "Архивный выпуск: клиенты получают более новую версию.";
-        }
         else
         {
-            // Одна главная кнопка: следующий шаг первой незавершённой полосы (Windows, затем Android).
-            var track = release.Platforms.FirstOrDefault(p => p.IsCurrent && p.NextStage != null);
-            var next = track?.NextStage;
-            if (track == null || next == null)
+            // Главная кнопка — следующий шаг выбранной платформы (переключатель возле версии).
+            var track = SelectedTrack ?? release.Platforms[0];
+            var next = track.NextStage;
+            if (!track.IsCurrent)
             {
-                StatusText = release.IsMultiPlatform ? "Выпуск по всем платформам доставлен и проверен."
-                    : release.Platforms[0].IsAndroid ? "Выпуск подписан, доставлен и проверен."
+                StatusText = "Архивный выпуск " + track.Platform + ": клиенты получают более новую версию.";
+            }
+            else if (next == null)
+            {
+                StatusText = track.IsAndroid ? "Выпуск Android подписан, доставлен и проверен."
                     : "Выпуск собран, доставлен и проверен.";
             }
             else if (!track.IsAndroid)
@@ -1162,31 +1207,22 @@ public sealed partial class MainWindowViewModel : ObservableObject
                         : "Файлы в канале — проверьте, что клиент их скачает.")
                 };
             }
-
-            // В выпуске двух платформ кнопка говорит, о какой речь.
-            if (track != null && release.IsMultiPlatform && _nextStep != NextStepKind.None)
-                StatusText = track.Platform + ": " + char.ToLower(StatusText[0]) + StatusText[1..];
         }
 
-        var failed = release?.Platforms.FirstOrDefault(p => p.IsCurrent && p.NextStage != null)?.NextStage?.IsFailed == true;
-        var suffix = release is { IsMultiPlatform: true } ? (IsAndroidStep(_nextStep) ? " Android" : " Windows") : "";
+        var failed = SelectedTrack?.IsCurrent == true && SelectedTrack.NextStage?.IsFailed == true;
         NextStepText = _nextStep switch
         {
             NextStepKind.PickBuild => "Выбрать папку билда…",
             NextStepKind.PickExecutable => "Выбрать главный exe…",
             NextStepKind.CreatePatch => "Создать патч",
-            NextStepKind.Deliver => "Доставить" + suffix,
-            NextStepKind.Verify or NextStepKind.AndroidVerify => (failed ? "Проверить снова" : "Проверить") + suffix,
+            NextStepKind.Deliver or NextStepKind.AndroidDeliver => "Доставить",
+            NextStepKind.Verify or NextStepKind.AndroidVerify => failed ? "Проверить снова" : "Проверить",
             NextStepKind.AndroidPickBuild => "Выбрать папку Android…",
             NextStepKind.AndroidSign => "Подписать файлы",
-            NextStepKind.AndroidDeliver => "Доставить" + suffix,
             _ => ""
         };
         HasNextStep = _nextStep != NextStepKind.None;
     }
-
-    private static bool IsAndroidStep(NextStepKind step) => step is NextStepKind.AndroidPickBuild or
-        NextStepKind.AndroidSign or NextStepKind.AndroidDeliver or NextStepKind.AndroidVerify;
 
     private static string OneLine(string text) =>
         string.Join(" ", text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)).TrimEnd('.');

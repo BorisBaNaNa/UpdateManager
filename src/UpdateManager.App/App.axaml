@@ -257,6 +257,33 @@
             <Setter Property="Padding" Value="12,10" />
         </Style>
 
+        <!-- Переключатель платформ у версии: имя-кнопка; выбранная — краской и 2 px линией снизу. -->
+        <Style Selector="Button.platformtab">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0,0,0,2" />
+            <Setter Property="Padding" Value="0,0,0,3" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.platformtab:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
+        </Style>
+        <Style Selector="Button.platformtab:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="Button.platformtab.selected">
+            <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="BorderBrush" Value="{DynamicResource InkBrush}" />
+        </Style>
+        <Style Selector="Button.platformtab.selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="BorderBrush" Value="{DynamicResource InkBrush}" />
+        </Style>
+
         <!-- Недавний проект, чья папка пропала: приглушён, клик предлагает убрать из списка. -->
         <Style Selector="Button.missing">
             <Setter Property="Opacity" Value="0.55" />

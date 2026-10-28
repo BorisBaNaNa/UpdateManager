@@ -203,7 +203,7 @@ Vertical rhythm in the content column: display number → 24px → stage strip �
 The stage strip is a custom grid: all blocks in one row with 6px gaps while each block keeps at least 150px; otherwise two per row (2×2 for a four-stage track). Gaps exist only between blocks; the strip's outer edges align with the column. Cell positions snap to whole pixels so outlines never clip.
 
 ### Named Rules
-**The Single Strip Rule.** Stages render as one strip per platform track; never as a dashboard of equal cards spread across the screen. When a release carries two platforms, the strips stack (Windows first) and each gets a muted 14px caption above it, «Windows · проверка не прошла» / «Android · не проверялся»; with one platform there is no caption. In the catalog the chip strips stack the same way.
+**The Single Strip Rule.** Stages render as one strip per platform track; never as a dashboard of equal cards spread across the screen. The project screen shows exactly one strip under the version. When a release carries two platforms, the platform names beside the version become a switcher (14px; selected in Ink, SemiBold, with a 2px Ink underline; the other Muted), the strip gets a muted 14px caption «Windows · проверка не прошла», and the other platform's strip waits off-screen to the right: a horizontal swipe (drag or touchpad) or a click on its name slides it in. The primary button and status line always belong to the strip on screen. With one platform there is no switcher, caption or swipe. In the catalog and on the start screen the chip strips / strips stack instead.
 
 ## Elevation & Depth
 
@@ -212,7 +212,7 @@ Flat. There are no shadows anywhere. Depth is conveyed by tonal steps only: Grou
 ### Named Rules
 **The No Lift Rule.** Nothing casts a shadow or floats. Hover and selection change fill (Selected Grey) or opacity, never elevation.
 
-**The Still Catalog Rule.** No motion. State changes are instant: after an operation the catalog is rebuilt and the strip simply shows the new state, spelled out in words. Only Fluent's own control feedback (scrollbar expand, progress bar) moves.
+**The Still Catalog Rule.** No motion. State changes are instant: after an operation the catalog is rebuilt and the strip simply shows the new state, spelled out in words. Only Fluent's own control feedback (scrollbar expand, progress bar) moves, plus one authored movement: switching platforms slides the strip horizontally (250 ms, quadratic ease-out, clipped to the column), because the other platform lives off-screen to the right.
 
 ## Shapes
 

@@ -257,14 +257,43 @@
                             <TextBlock Classes="number" Text="{Binding SelectedRelease.Version, FallbackValue=''}"
                                        FontSize="72" LetterSpacing="-2" Margin="0,0,20,0" />
                             <TextBlock Classes="muted" FontSize="14" VerticalAlignment="Bottom" Margin="0,0,0,14"
+                                       IsVisible="{Binding !SelectedRelease.IsMultiPlatform, FallbackValue=True}"
                                        Text="{Binding SelectedRelease.Kicker, FallbackValue=''}" />
+                            <!-- Две платформы: имена — переключатель полосы (и свайп по полосе). -->
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Margin="0,0,0,14" Spacing="14"
+                                        IsVisible="{Binding SelectedRelease.IsMultiPlatform, FallbackValue=False}">
+                                <ItemsControl ItemsSource="{Binding SelectedRelease.Platforms, FallbackValue={x:Null}}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal" Spacing="14" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:PlatformTrack">
+                                            <Button Classes="platformtab" Classes.selected="{Binding IsSelected}"
+                                                    Content="{Binding Platform}" ToolTip.Tip="{Binding Caption}"
+                                                    Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).SelectTrackCommand, FallbackValue={x:Null}}"
+                                                    CommandParameter="{Binding}" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <TextBlock Classes="muted" FontSize="14"
+                                           Text="{Binding SelectedRelease.KickerTail, FallbackValue=''}" />
+                            </StackPanel>
                         </WrapPanel>
                         <TextBlock IsVisible="{Binding !HasReleases}" Text="Первый выпуск" FontSize="56"
                                    LetterSpacing="-1.5" />
 
-                        <!-- Полосы этапов: по одной на платформу выпуска. -->
-                        <ItemsControl ItemsSource="{Binding SelectedRelease.Platforms, FallbackValue={x:Null}}"
-                                      ItemTemplate="{StaticResource StageBlocks}" Margin="0,24,0,0" />
+                        <!-- Одна полоса — выбранной платформы; вторая въезжает из-за правого края (свайп, клик по имени). -->
+                        <Carousel x:Name="TrackCarousel" Margin="0,24,0,0" ClipToBounds="True"
+                                  ItemsSource="{Binding SelectedRelease.Platforms, FallbackValue={x:Null}}"
+                                  SelectedItem="{Binding SelectedTrack}"
+                                  ItemTemplate="{StaticResource StageBlocks}">
+                            <Carousel.PageTransition>
+                                <PageSlide Duration="0:0:0.25" Orientation="Horizontal"
+                                           SlideInEasing="QuadraticEaseOut" SlideOutEasing="QuadraticEaseOut" />
+                            </Carousel.PageTransition>
+                        </Carousel>
 
                         <!-- Следующий шаг -->
                         <WrapPanel Margin="0,18,0,0">

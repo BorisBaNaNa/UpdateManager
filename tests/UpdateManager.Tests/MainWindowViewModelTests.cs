@@ -508,6 +508,38 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.Equal(ReleaseItem.UnknownVersion, _vm.Releases[0].Version);
     }
 
+    [Fact]
+    public async Task PlatformSwitch_OneTrackOnScreen_ButtonFollowsIt()
+    {
+        await CreateProjectWithAndroid();
+        _dialogs.Prompts.Enqueue("1.0.0");
+        await _vm.SignAndroidCommand.ExecuteAsync(null);
+        _dialogs.Prompts.Enqueue("1.0.0");
+        await _vm.CreatePatchCommand.ExecuteAsync(null);
+
+        // Выпуск 1.0.0 с двумя полосами: на экране одна, кнопка — её следующий шаг.
+        var release = _vm.SelectedRelease!;
+        Assert.True(release.IsMultiPlatform);
+        Assert.Equal("Windows", _vm.SelectedTrack!.Platform);
+        Assert.True(_vm.SelectedTrack.IsSelected);
+        Assert.Equal(NextStepKind.Deliver.ToString(), NextStepFor());
+
+        _vm.ShiftTrack(1); // свайп влево — Android
+        Assert.Equal("Android", _vm.SelectedTrack!.Platform);
+        Assert.False(release.Platforms[0].IsSelected);
+        Assert.Equal(NextStepKind.AndroidDeliver.ToString(), NextStepFor());
+        _vm.ShiftTrack(1); // дальше некуда
+        Assert.Equal("Android", _vm.SelectedTrack!.Platform);
+
+        // Выбор платформы переживает перерисовку каталога.
+        await _vm.DeliverAndroidCommand.ExecuteAsync(null);
+        Assert.Equal("Android", _vm.SelectedTrack!.Platform);
+        Assert.Equal(NextStepKind.AndroidVerify.ToString(), NextStepFor());
+
+        _vm.SelectTrackCommand.Execute(_vm.SelectedRelease!.Platforms[0]); // клик по «Windows»
+        Assert.Equal("Windows", _vm.SelectedTrack!.Platform);
+    }
+
     private string NextStepFor() =>
         typeof(MainWindowViewModel).GetField("_nextStep",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(_vm)!.ToString()!;

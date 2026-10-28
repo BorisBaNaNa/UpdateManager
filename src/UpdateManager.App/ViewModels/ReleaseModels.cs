@@ -1,3 +1,4 @@
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using UpdateManager.Core.Common;
 using UpdateManager.Core.Project;
@@ -78,8 +79,11 @@ public sealed class StageItem
 }
 
 /// <summary>Полоса этапов одной платформы внутри выпуска (в выпуске их может быть несколько).</summary>
-public sealed class PlatformTrack
+public sealed partial class PlatformTrack : ObservableObject
 {
+    /// <summary>Эта полоса сейчас на экране (переключатель платформ возле версии).</summary>
+    [ObservableProperty] private bool _isSelected;
+
     public PlatformTrack(string platform, IReadOnlyList<StageItem> stages)
     {
         Platform = platform;
@@ -167,6 +171,9 @@ public sealed class ReleaseItem
 
     public string Kicker => string.Join(" · ", Platforms.Select(p => p.Platform)) +
         (IsNew ? " · новый билд" : " · выпуск " + Number);
+
+    /// <summary>Хвост строки у версии, когда платформы показаны переключателем: «выпуск 5» / «новый билд».</summary>
+    public string KickerTail => IsNew ? "новый билд" : "выпуск " + Number;
 }
 
 /// <summary>Карточка недавнего проекта на стартовом экране.</summary>

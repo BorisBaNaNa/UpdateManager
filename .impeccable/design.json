@@ -70,7 +70,8 @@
     },
     "shadows": [],
     "motion": [
-      { "name": "none", "value": "none", "purpose": "The Still Catalog Rule: no transitions or animations are authored; state changes are instant. Only Fluent's own control feedback (scrollbar expand, indeterminate progress bar) moves." }
+      { "name": "none", "value": "none", "purpose": "The Still Catalog Rule: state changes are instant. Only Fluent's own control feedback (scrollbar expand, indeterminate progress bar) moves." },
+      { "name": "platform-slide", "value": "PageSlide horizontal 250ms QuadraticEaseOut", "purpose": "The one authored movement: switching platforms slides the stage strip in from off-screen right (Carousel TrackCarousel, swipe or click on the platform name)." }
     ],
     "states": [
       { "name": "button-primary-hover", "value": "opacity: 0.86", "purpose": "Primary ink button on pointer-over." },
@@ -202,9 +203,9 @@
       { "name": "The Spelled-Out Rule", "body": "Every stage state shown in colour is also present as words: the block title and detail, the catalog line («новый · патч не собран»), and the tooltip («Проверка: не прошла …»).", "section": "colors" },
       { "name": "The One Big Number Rule", "body": "The version number is the only display-size text on the project screen; platform and release number sit beside it on the baseline in muted body text, never above it.", "section": "typography" },
       { "name": "The Tabular Figures Rule", "body": "Any text that is a version, date, number or count uses tabular figures so catalog columns and dates align.", "section": "typography" },
-      { "name": "The Single Strip Rule", "body": "Stages render as one strip per platform track; never as a dashboard of equal cards spread across the screen. When a release carries two platforms, the strips stack (Windows first) and each gets a muted 14px caption above it, «Windows · проверка не прошла» / «Android · не проверялся»; with one platform there is no caption. In the catalog the chip strips stack the same way.", "section": "layout" },
+      { "name": "The Single Strip Rule", "body": "Stages render as one strip per platform track; never as a dashboard of equal cards spread across the screen. The project screen shows exactly one strip under the version. When a release carries two platforms, the platform names beside the version become a switcher (14px; selected in Ink, SemiBold, with a 2px Ink underline; the other Muted), the strip gets a muted 14px caption «Windows · проверка не прошла», and the other platform's strip waits off-screen to the right: a horizontal swipe (drag or touchpad) or a click on its name slides it in. The primary button and status line always belong to the strip on screen. With one platform there is no switcher, caption or swipe. In the catalog and on the start screen the chip strips / strips stack instead.", "section": "layout" },
       { "name": "The No Lift Rule", "body": "Nothing casts a shadow or floats. Hover and selection change fill (Selected Grey) or opacity, never elevation.", "section": "elevation" },
-      { "name": "The Still Catalog Rule", "body": "No motion. State changes are instant: after an operation the catalog is rebuilt and the strip simply shows the new state, spelled out in words. Only Fluent's own control feedback (scrollbar expand, progress bar) moves.", "section": "elevation" }
+      { "name": "The Still Catalog Rule", "body": "No motion. State changes are instant: after an operation the catalog is rebuilt and the strip simply shows the new state, spelled out in words. Only Fluent's own control feedback (scrollbar expand, progress bar) moves, plus one authored movement: switching platforms slides the strip horizontally (250 ms, quadratic ease-out, clipped to the column), because the other platform lives off-screen to the right.", "section": "elevation" }
     ],
     "dos": [
       "Do keep colour exclusively on stage blocks and chips: fill for done, 1px Pending outline for not yet, 2px Failure Red outline for failed.",
