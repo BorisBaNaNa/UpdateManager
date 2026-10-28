@@ -141,7 +141,10 @@ MVVM + доменный слой, домен не знает про UI:
 - **Каждый выпуск сопровождается тегом git**: когда патч собран, доставлен и проверен — коммит подъёма версии,
   затем аннотированный тег `vX.Y.Z` на коммите, из которого собран `Release/`
   (`git tag -a vX.Y.Z -m "UpdateManager X.Y.Z"`); по тегу пользователь публикует GitHub Release
-  (заголовок «UpdateManager vX.Y.Z.0», текст — `docs/releases/X.Y.Z.md`, по темам, как у `v1.0.3`). Тег ставит Claude, push — пользователь.
+  (заголовок «UpdateManager vX.Y.Z.0», текст — `docs/releases/X.Y.Z.md`, по темам, как у `v1.0.3`;
+  к выпуску прикрепляется архив содержимого `Release/` — `UpdateManager.vX.Y.Z.zip`). Тег ставит Claude, push — пользователь.
+  После push Release можно создать через `gh` (`C:\Program Files\GitHub CLI\gh.exe`, вход выполнен):
+  `gh release create vX.Y.Z --verify-tag --title … --notes-file docs/releases/X.Y.Z.md` + `gh release upload vX.Y.Z <zip>`.
   Схема версий — SemVer из трёх чисел: новая возможность → minor, иначе patch.
   Скрипт — Windows PowerShell 5.1, сохранять в UTF-8 **с BOM** (иначе кириллица ломается).
 
