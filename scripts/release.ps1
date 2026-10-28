@@ -141,30 +141,34 @@ if ($Publish) {
         return
     }
 
+    # Архив — во временной папке вне репозитория; удаляется после отправки, удачной или нет.
     # Записи по одной: Compress-Archive и ZipFile.CreateFromDirectory в Windows PowerShell 5.1
     # пишут пути с обратной косой (SPPatcher\SelfPatcher.exe), а в zip разделитель — '/'.
     Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
     $zipDir = Join-Path ([IO.Path]::GetTempPath()) "UpdateManager-release-$tag"
     if (Test-Path $zipDir) { Remove-Item $zipDir -Recurse -Force }
     New-Item -ItemType Directory $zipDir | Out-Null
-    $zip = Join-Path $zipDir $zipName
-    Write-Host ""
-    Write-Host "== Архив → $zip" -ForegroundColor Cyan
-    $archive = [IO.Compression.ZipFile]::Open($zip, [IO.Compression.ZipArchiveMode]::Create)
     try {
-        foreach ($file in Get-ChildItem $ReleaseDir -Recurse -File) {
-            $entry = $file.FullName.Substring($ReleaseDir.Length + 1).Replace('\', '/')
-            [IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $file.FullName, $entry, [IO.Compression.CompressionLevel]::Optimal) | Out-Null
+        $zip = Join-Path $zipDir $zipName
+        Write-Host ""
+        Write-Host "== Архив → $zip" -ForegroundColor Cyan
+        $archive = [IO.Compression.ZipFile]::Open($zip, [IO.Compression.ZipArchiveMode]::Create)
+        try {
+            foreach ($file in Get-ChildItem $ReleaseDir -Recurse -File) {
+                $entry = $file.FullName.Substring($ReleaseDir.Length + 1).Replace('\', '/')
+                [IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $file.FullName, $entry, [IO.Compression.CompressionLevel]::Optimal) | Out-Null
+            }
+        } finally {
+            $archive.Dispose()
         }
-    } finally {
-        $archive.Dispose()
-    }
 
-    Write-Host ""
-    Write-Host "== GitHub Release $tag" -ForegroundColor Cyan
-    & $ghPath release create $tag --verify-tag --title $title --notes-file $NotesFile $zip
-    if ($LASTEXITCODE -ne 0) { throw "gh release create не удался (вход: gh auth status)" }
-    Remove-Item $zipDir -Recurse -Force
+        Write-Host ""
+        Write-Host "== GitHub Release $tag" -ForegroundColor Cyan
+        & $ghPath release create $tag --verify-tag --title $title --notes-file $NotesFile $zip
+        if ($LASTEXITCODE -ne 0) { throw "gh release create не удался (вход: gh auth status)" }
+    } finally {
+        Remove-Item $zipDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
 
     Write-Host ""
     Write-Host "Опубликовано: $title" -ForegroundColor Green
