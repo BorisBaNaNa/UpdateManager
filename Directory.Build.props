@@ -4,8 +4,8 @@
        Product/Company — по ним SelfIdentity узнаёт билд самого UpdateManager (FileVersionInfo
        exe в папке билда) и предлагает пресет самообновления. Совпадают с 1.x. -->
   <PropertyGroup>
-    <Version>2.2.0</Version>
-    <FileVersion>2.2.0.0</FileVersion>
+    <Version>2.3.0</Version>
+    <FileVersion>2.3.0.0</FileVersion>
     <Product>UpdateManager</Product>
     <Company>BorealisSoft</Company>
     <Copyright>Copyright © 2026</Copyright>
