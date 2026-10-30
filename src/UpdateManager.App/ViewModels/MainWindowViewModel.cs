@@ -99,7 +99,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         nameof(EditSettingsCommand), nameof(DeliverCommand), nameof(VerifyCommand),
         nameof(ConfigureFtpCommand), nameof(ConfigureDeliveryCommand), nameof(GenerateKeysCommand),
         nameof(RunStageCommand), nameof(BrowseAndroidBuildCommand), nameof(SignAndroidCommand),
-        nameof(DeliverAndroidCommand), nameof(VerifyAndroidCommand))]
+        nameof(DeliverAndroidCommand), nameof(VerifyAndroidCommand), nameof(RescanBuildsCommand))]
     [NotifyPropertyChangedFor(nameof(IsStartScreen))]
     private bool _hasProject;
 

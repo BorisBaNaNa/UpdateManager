@@ -13,6 +13,13 @@ namespace UpdateManager.App.ViewModels;
 /// </summary>
 public sealed partial class MainWindowViewModel
 {
+    [RelayCommand(CanExecute = nameof(HasProject))]
+    private void RescanBuilds()
+    {
+        if (_project != null)
+            ShowProject();
+    }
+
     [ObservableProperty] private bool _isMarkingReleases;
 
     [ObservableProperty]

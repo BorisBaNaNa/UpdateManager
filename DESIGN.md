@@ -239,6 +239,7 @@ There are no cards. Grouping is done by the left panel's tonal step and by hairl
 ### Navigation
 - **Menu bar:** stock Fluent menu (Проект, Выпуск, Безопасность, Вид, Справка), with a 1px hairline beneath it. Secondary and repeat actions (rebuild, redeliver, keys, theme) live here, not on the surface.
 - **Catalog list:** rows separated by hairlines; version (Entry) over a muted Detail line «№ N · состояние» or «новый · …», chip strip right-aligned. Hover and selection fill Selected Grey; no accent bar. A recent project whose folder is gone renders at 0.55 opacity with «папка не найдена — нажмите, чтобы убрать из списка».
+- **Catalog rescan:** a 30px square Quiet button at the right of «ВЫПУСКИ», in the same row above the release list. A 14px neutral stroked refresh icon, tooltip and accessible name «Сканировать сборки заново»; updates source detection without changing saved stages. Available for an open project even when the catalog is empty.
 
 ### Stage Block (signature)
 The world's defining component. A square rectangle, min 112px tall, padding 12px × 14px, Title Small stage name over a Detail line (date, method, or first line of the failure reason, max 3 lines).

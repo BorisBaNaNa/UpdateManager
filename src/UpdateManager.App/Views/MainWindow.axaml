@@ -193,7 +193,16 @@
                             <TextBlock Classes="muted" FontSize="12" Text="{Binding ProjectPath}"
                                        TextTrimming="PathSegmentEllipsis" ToolTip.Tip="{Binding ProjectPath}" />
                         </StackPanel>
-                        <TextBlock DockPanel.Dock="Top" Classes="caps" Text="ВЫПУСКИ" Margin="20,10,20,8" />
+                        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="20,10,20,8">
+                            <TextBlock Classes="caps" Text="ВЫПУСКИ" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" x:Name="RescanBuildsButton" Classes="quiet"
+                                    Width="30" Height="30" Padding="7" Command="{Binding RescanBuildsCommand}"
+                                    ToolTip.Tip="Сканировать сборки заново"
+                                    AutomationProperties.Name="Сканировать сборки заново">
+                                <Path Width="14" Height="14" Stretch="Uniform" Stroke="{DynamicResource InkBrush}"
+                                      StrokeThickness="1.5" Data="M 12,5 A 5,5 0 1 0 12,10 M 12,1 L 12,5 L 8,5" />
+                            </Button>
+                        </Grid>
                         <TextBlock DockPanel.Dock="Top" Classes="muted" Margin="20,4" TextWrapping="Wrap"
                                    IsVisible="{Binding !HasReleases}" Text="Пока пусто." />
                         <!-- Правый клик — меню выпуска. Удержание 1 с и протяжка — выделение областью

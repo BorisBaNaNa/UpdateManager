@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using UpdateManager.Core.Common;
 using UpdateManager.Core.Project;
 using UpdateManager.Core.Security;
+using UpdateManager.Core.Versioning;
 
 namespace UpdateManager.App.ViewModels;
 
@@ -251,7 +252,7 @@ public static class ReleaseCatalog
     /// <summary>
     /// Выпуски от нового к старому. <paramref name="newBuildVersion"/> — версия Windows-билда в папке-источнике,
     /// которой ещё нет в Versions/ (null — нет такой): становится записью «новый билд». Android-билд, изменённый
-    /// после последней подписи, — полоса «новый» (версию спросят при подписи).
+    /// после последней подписи, — полоса «новый». В отдельном Android-проекте номер берётся из JSON, иначе вручную.
     /// </summary>
     public static List<ReleaseItem> Build(UpdateProject project, string? newBuildVersion, string newBuildDetail = "")
     {
@@ -322,7 +323,13 @@ public static class ReleaseCatalog
         // Обе платформы включены — Android привязан к Windows: полоса только в последнем выпуске Windows,
         // отдельной записи «новый» с неизвестной версией нет (её версия — версия Windows).
         var bound = meta.WindowsEnabled && meta.AndroidEnabled;
-        if (meta.AndroidEnabled && !result.Any(r => r.IsNew && r.Platforms.Any(p => p.IsAndroid)) && AndroidBuildIsNew(meta))
+        var androidVersion = meta.AndroidEnabled && !bound ? AndroidVersionDetector.Detect(meta.Android.BuildSource) : null;
+        var latestAndroid = LatestAndroidVersion(meta);
+        if (androidVersion != null && !meta.RemovedAndroidVersions.Contains(androidVersion) &&
+            (latestAndroid == null || VersionKey(androidVersion).CompareTo(VersionKey(latestAndroid)) > 0))
+            result.Add(new ReleaseItem(nextNumber, androidVersion, isNew: true, isLatest: false,
+                new[] { AndroidPendingTrack(meta) }));
+        else if (meta.AndroidEnabled && androidVersion == null && !result.Any(r => r.IsNew && r.Platforms.Any(p => p.IsAndroid)) && AndroidBuildIsNew(meta))
         {
             var last = result.Count > 0 ? result[^1] : null;
             if (last != null && !last.Platforms.Any(p => p.IsAndroid) && (!bound || last.Platforms.Any(p => p.Platform == Windows)))

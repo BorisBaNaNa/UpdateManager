@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Headless;
 using UpdateManager.App.Services;
 using UpdateManager.App.ViewModels;
@@ -553,6 +554,73 @@ public sealed class MainWindowViewModelTests : IDisposable
         File.WriteAllText(Path.Combine(ProjectService.AndroidVersionPath(ProjectDir, "1.0.0"), "latest.json"), "подмена");
         await _vm.DeliverAndroidCommand.ExecuteAsync(null);
         Assert.Contains(_dialogs.Errors, e => e.Contains("изменился после подписи"));
+    }
+
+    [Fact]
+    public Task Android_ManifestVersion_RescanButtonFindsRebuild_RecordsWithoutPrompt() => HeadlessUi.Run(async () =>
+    {
+        Assert.False(_vm.RescanBuildsCommand.CanExecute(null));
+        var (_, android) = await CreateProjectWithAndroid();
+        var manifest = Path.Combine(android, "latest.json");
+        File.WriteAllText(manifest, "{\"versionCode\":911,\"versionName\":\"0.9.11\"}");
+        // Даже со старой датой файла новый номер должен быть обнаружен.
+        File.SetLastWriteTime(manifest, DateTime.Now.AddDays(-1));
+        var window = new UpdateManager.App.Views.MainWindow { DataContext = _vm };
+        window.Show();
+        try
+        {
+            HeadlessUi.Flush();
+            var button = Avalonia.Controls.ControlExtensions.FindControl<Avalonia.Controls.Button>(window, "RescanBuildsButton")!;
+            Assert.True(button.IsEnabled);
+            var point = button.TranslatePoint(new Avalonia.Point(15, 15), window)!.Value;
+            window.MouseDown(point, Avalonia.Input.MouseButton.Left);
+            window.MouseUp(point, Avalonia.Input.MouseButton.Left);
+            HeadlessUi.Flush();
+            Assert.Equal("0.9.11", _vm.SelectedRelease!.Version);
+            Assert.True(_vm.SelectedRelease.IsNew);
+            _dialogs.Prompts.Enqueue(null); // любой запрос версии отменил бы запись
+            await _vm.SignAndroidCommand.ExecuteAsync(null);
+            Assert.True(ProjectMeta.Load(ProjectDir).AndroidSignedVersions.ContainsKey("0.9.11"));
+            Assert.Single(_dialogs.Prompts);
+            _vm.RescanBuildsCommand.Execute(null);
+            Assert.False(_vm.SelectedRelease!.IsNew);
+            Assert.Equal(StageState.Done, _vm.SelectedTrack!.Stages[1].State);
+
+            File.WriteAllText(manifest, "{\"versionName\":\"0.9.12\"}");
+            File.SetLastWriteTime(manifest, DateTime.Now.AddDays(-1));
+            _vm.RescanBuildsCommand.Execute(null);
+            Assert.Equal("0.9.12", _vm.SelectedRelease!.Version);
+            Assert.True(_vm.SelectedRelease.IsNew);
+            Assert.Equal(StageState.Pending, _vm.SelectedTrack!.Stages[1].State);
+            Assert.Empty(_dialogs.Errors);
+        }
+        finally { window.Close(); }
+    });
+
+    [Fact]
+    public async Task RescanBuilds_RereadsWindowsVersionHolder()
+    {
+        await CreateProjectWithBuild();
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "UpdateManager.exe"), Path.Combine(BuildDir, "TestApp.exe"));
+        File.WriteAllText(Path.Combine(BuildDir, "TestApp_vers.sptv"), "3.0.0");
+        _vm.RescanBuildsCommand.Execute(null);
+        Assert.Equal("3.0.0", _vm.SelectedRelease!.Version);
+        File.WriteAllText(Path.Combine(BuildDir, "TestApp_vers.sptv"), "3.0.1");
+        _vm.RescanBuildsCommand.Execute(null);
+        Assert.Equal("3.0.1", _vm.SelectedRelease!.Version);
+    }
+
+    [Fact]
+    public async Task Android_ManifestVersion_DoesNotOverrideWindowsBinding()
+    {
+        var (_, android) = await CreateProjectWithAndroid(windows: true);
+        File.WriteAllText(Path.Combine(android, "latest.json"), "{\"versionName\":\"9.0.0\"}");
+        _dialogs.Prompts.Enqueue("1.0.0");
+        await _vm.CreatePatchCommand.ExecuteAsync(null);
+        await _vm.SignAndroidCommand.ExecuteAsync(null);
+        Assert.True(ProjectMeta.Load(ProjectDir).AndroidSignedVersions.ContainsKey("1.0.0"));
+        Assert.DoesNotContain(_vm.Releases, r => r.Version == "9.0.0");
+        Assert.Empty(_dialogs.Errors);
     }
 
     [Fact]

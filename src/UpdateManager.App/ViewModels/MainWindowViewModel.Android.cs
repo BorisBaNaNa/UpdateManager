@@ -14,7 +14,7 @@ namespace UpdateManager.App.ViewModels;
 /// Платформа Android главного окна: без патчей — папка билда (собирается вне UpdateManager) →
 /// подпись файлов по маске RSA-ключом проекта (выключаемая, как SignPatch у Windows) → выкладка в папку канала →
 /// проверка канала.
-/// Версию UpdateManager из файлов не читает — спрашивает при подписи.
+/// Версия — из JSON-манифеста Android, вручную или из Windows при связанных платформах.
 /// </summary>
 public sealed partial class MainWindowViewModel
 {
@@ -86,7 +86,7 @@ public sealed partial class MainWindowViewModel
         }
 
         // Обе платформы в проекте — один продукт: Android выпускается под версией Windows (новый билд Windows,
-        // иначе последняя собранная) и не спрашивает её. Только Android — версию спрашиваем: из файлов её не прочесть.
+        // иначе последняя собранная). Только Android — манифест билда, иначе ручной ввод.
         string? version;
         if (IsAndroidBoundToWindows(meta))
         {
@@ -100,8 +100,8 @@ public sealed partial class MainWindowViewModel
         }
         else
         {
-            version = await _dialogs.PromptAsync("Версия Android-выпуска",
-                "Под какой версией записать выпуск в каталог? (UpdateManager не читает её из файлов.)",
+            version = AndroidVersionDetector.Detect(folder) ?? await _dialogs.PromptAsync("Версия Android-выпуска",
+                "Под какой версией записать выпуск в каталог? Однозначная версия в JSON-манифестах (versionName) не найдена.",
                 SuggestAndroidVersion());
             if (version == null)
                 return; // отмена
