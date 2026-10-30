@@ -112,7 +112,7 @@
   в корне проекта (не в `Output/`); при `SignPatch` манифесты подписываются после сборки (`PatchSigner`);
   приватный ключ можно залить коллегам в отдельную FTP-папку (`FtpKeyUploader`).
 - **Самообновление** (`Core/SelfUpdate/`, `SelfUpdateViewModel`) — тихая проверка при старте +
-  «Справка → Проверить обновления…»; `Run(true)` в кэш → `ApplySelfPatch` → выход. URL и RSA-ключ —
+  «Справка → О разработчике… → Проверить обновления»; `Run(true)` в кэш → `ApplySelfPatch` → выход. URL и RSA-ключ —
   `appsettings.json` (секция `SelfUpdate`). Билд самого UpdateManager распознаётся по
   ProductName/CompanyName (`SelfIdentity`) → предложение пресета (`IsSelfPatchingApp`, `BaseDownloadURL`,
   `IgnoredPaths`). Спек: `docs/superpowers/specs/2026-10-27-self-update-design.md`.

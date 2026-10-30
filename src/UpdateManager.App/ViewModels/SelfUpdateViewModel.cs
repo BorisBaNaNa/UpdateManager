@@ -72,7 +72,7 @@ public sealed partial class SelfUpdateViewModel : ObservableObject
 
     private bool CanCheck() => _config.IsEnabled;
 
-    // «Справка → Проверить обновления…»
+    // «Справка → О разработчике… → Проверить обновления»
     [RelayCommand(CanExecute = nameof(CanCheck), AllowConcurrentExecutions = true)]
     private async Task Check()
     {
@@ -161,7 +161,7 @@ public sealed partial class SelfUpdateViewModel : ObservableObject
             return; // ошибку (в т.ч. подписи) окно прогресса уже показало
 
         if (!await _dialogs.ConfirmAsync("Обновление скачано. Перезапустить UpdateManager сейчас?\n" +
-                "(Если нет — обновиться можно позже: «Справка → Проверить обновления…».)"))
+                "(Если нет — обновиться можно позже: «Справка → О разработчике… → Проверить обновления».)"))
             return;
 
         try

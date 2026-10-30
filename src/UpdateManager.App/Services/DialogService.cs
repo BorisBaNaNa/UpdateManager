@@ -159,6 +159,9 @@ public sealed class DialogService : IDialogService
     public Task ShowReleaseNotesAsync(IReadOnlyList<ReleaseNote> notes, string subtitle) =>
         ShowAsync(new ReleaseNotesWindow { DataContext = new ReleaseNotesViewModel(notes, subtitle) });
 
+    public Task ShowAboutAsync(SelfUpdateViewModel selfUpdate) =>
+        ShowAsync(new AboutWindow { DataContext = new AboutViewModel(selfUpdate) });
+
     public Task ShowUpdateGuideAsync()
     {
         if (_guide != null)

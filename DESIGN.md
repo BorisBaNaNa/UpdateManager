@@ -274,6 +274,13 @@ Footer: «Документы», позиция, «Назад», «Закрыть
 этапе Primary закрывает окно. HTTPS-ссылки подчёркнуты, нейтральны и открываются в браузере.
 Содержание берётся из одного Markdown-документа, текст можно выделять; инструкция не меняет проект.
 
+### О разработчике
+
+Компактное окно в общей грамматике диалогов: название UpdateManager, версия из атрибутов сборки,
+Quiet-кнопка проверки обновлений; под тонкими линиями — разработчик и нейтральное указание
+используемой библиотеки SimplePatchTool. Ссылки на профили и репозитории подчёркнуты и нейтральны.
+Одна Primary «Закрыть» в footer. Длинное содержимое прокручивается при уменьшении окна.
+
 ### Stock Chrome
 The parts Fluent draws itself carry the palette too (overridden by resource key in `App.axaml`, per theme):
 - **Focus ring:** keyboard focus only; a 2px Ink outline with a 1px Ground gap inside (`SystemControlFocusVisualPrimaryBrush` / `SecondaryBrush`), square.

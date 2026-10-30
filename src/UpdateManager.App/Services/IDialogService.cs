@@ -41,5 +41,7 @@ public interface IDialogService
     /// <summary>Немодальное руководство: можно читать рядом с настройками проекта.</summary>
     Task ShowUpdateGuideAsync();
 
+    Task ShowAboutAsync(ViewModels.SelfUpdateViewModel selfUpdate);
+
     void OpenInExplorer(string path);
 }

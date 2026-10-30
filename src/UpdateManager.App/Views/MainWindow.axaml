@@ -133,7 +133,7 @@
                 <MenuItem Header="Как подключить обновления…" Command="{Binding ShowUpdateGuideCommand}" />
                 <Separator />
                 <MenuItem Header="Что нового…" Command="{Binding SelfUpdate.ShowReleaseNotesCommand}" />
-                <MenuItem Header="Проверить обновления…" Command="{Binding SelfUpdate.CheckCommand}" />
+                <MenuItem Header="О разработчике…" Command="{Binding ShowAboutCommand}" />
             </MenuItem>
         </Menu>
 

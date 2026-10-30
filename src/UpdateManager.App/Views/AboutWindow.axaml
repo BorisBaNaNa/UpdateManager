@@ -1,0 +1,49 @@
+<v:DialogWindow xmlns="https://github.com/avaloniaui"
+                xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                xmlns:vm="using:UpdateManager.App.ViewModels"
+                xmlns:v="using:UpdateManager.App.Views"
+                x:Class="UpdateManager.App.Views.AboutWindow"
+                x:DataType="vm:AboutViewModel"
+                Title="О разработчике" Width="560" Height="580" MinWidth="460" MinHeight="440"
+                ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
+    <Window.Styles>
+        <Style Selector="HyperlinkButton">
+            <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
+            <Setter Property="Padding" Value="0,4" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+        </Style>
+    </Window.Styles>
+    <DockPanel>
+        <Border DockPanel.Dock="Bottom" Classes="footer">
+            <Button Classes="primary" Content="Закрыть" HorizontalAlignment="Right"
+                    Command="{Binding DismissCommand}" IsDefault="True" IsCancel="True" />
+        </Border>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="32,26,32,28" Spacing="6">
+                <TextBlock Text="UpdateManager" FontSize="32" />
+                <TextBlock Classes="muted number" Text="{Binding VersionText}" Margin="0,0,0,12" />
+                <Button x:Name="CheckUpdatesButton" Classes="quiet" Content="Проверить обновления"
+                        HorizontalAlignment="Left" Command="{Binding SelfUpdate.CheckCommand}" />
+                <TextBlock Classes="muted" Text="Проверка обновлений…" IsVisible="{Binding SelfUpdate.IsChecking}"
+                           TextWrapping="Wrap" />
+                <TextBlock Classes="muted" Text="Проверка обновлений не настроена для этой сборки."
+                           IsVisible="{Binding !IsUpdateConfigured}" TextWrapping="Wrap" />
+                <Border Classes="rule" Margin="0,18,0,12" />
+                <TextBlock Classes="heading" Text="Разработчик" />
+                <TextBlock Text="BorisBaNaNa · BorealisSoft" TextWrapping="Wrap" />
+                <HyperlinkButton Content="GitHub разработчика" NavigateUri="https://github.com/BorisBaNaNa"
+                                 ToolTip.Tip="https://github.com/BorisBaNaNa" />
+                <HyperlinkButton Content="Исходный код UpdateManager" NavigateUri="https://github.com/BorisBaNaNa/UpdateManager"
+                                 ToolTip.Tip="https://github.com/BorisBaNaNa/UpdateManager" />
+                <Border Classes="rule" Margin="0,18,0,12" />
+                <TextBlock Classes="heading" Text="Используемый движок" />
+                <TextBlock Text="UpdateManager использует SimplePatchTool — библиотеку yasirkula для создания патчей и самообновления приложений."
+                           TextWrapping="Wrap" />
+                <HyperlinkButton Content="GitHub автора SimplePatchTool" NavigateUri="https://github.com/yasirkula"
+                                 ToolTip.Tip="https://github.com/yasirkula" />
+                <HyperlinkButton Content="Репозиторий SimplePatchTool" NavigateUri="https://github.com/yasirkula/SimplePatchTool"
+                                 ToolTip.Tip="https://github.com/yasirkula/SimplePatchTool" />
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</v:DialogWindow>

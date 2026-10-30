@@ -32,6 +32,7 @@ public sealed class FakeDialogService : IDialogService
 
     public bool IsBusy => false;
     public int UpdateGuideShown { get; private set; }
+    public Task ShowAboutAsync(UpdateManager.App.ViewModels.SelfUpdateViewModel selfUpdate) => Task.CompletedTask;
     public Task ShowUpdateGuideAsync()
     {
         UpdateGuideShown++;
