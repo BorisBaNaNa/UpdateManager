@@ -10,7 +10,7 @@ Impeccable has no desktop value; `web` is the nearest (no native mobile design l
 
 ## Users
 
-The developer who wrote the tool plus a couple of colleagues: a small team that ships updates for its own Windows applications (Interactive Book, UpdateManager itself). Everyone knows what a build, patch, version and FTP are; nobody needs the domain explained, but everyone forgets the exact sequence between releases.
+The developer who wrote the tool plus a couple of colleagues: a small team that ships updates for its own Windows applications (including UpdateManager itself). Everyone knows what a build, patch, version and FTP are; nobody needs the domain explained, but everyone forgets the exact sequence between releases.
 
 ## Product Purpose
 

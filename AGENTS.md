@@ -21,7 +21,7 @@
 | Доставка, FTP, RSA | `.claude/CLAUDE.md`, `Core/Delivery`, `Core/Security`, `Core/Operations/AndroidChannelVerifier.cs` |
 | UI, дизайн, жесты, headless-проверки | `PRODUCT.md`, `DESIGN.md`, `.impeccable/surfaces/`, skill `.agents/skills/impeccable/SKILL.md`, `tests/UpdateManager.Tests/HeadlessUi.cs` |
 | Самообновление | `docs/superpowers/specs/2026-10-27-self-update-design.md`, `Core/SelfUpdate`, `.claude/CLAUDE.md` |
-| Подключение обновлений к приложению-потребителю, инструкция | `docs/UPDATE_SYSTEM_USER_GUIDE.md`, `docs/UPDATE_SYSTEM_AGENT_GUIDE.md`; ссылки на исходники донора требуют отдельного репозитория |
+| Подключение обновлений к приложению-потребителю, инструкция | `docs/UPDATE_SYSTEM_USER_GUIDE.md`, `docs/UPDATE_SYSTEM_AGENT_GUIDE.md`; примеры и карта компонентов обезличены |
 | Выпуск, версия, заметки, GitHub Release | skill `.agents/skills/release-updatemanager/SKILL.md`, `scripts/release.ps1`, `docs/releases/` |
 | Планы / CLI umcli | `.claude/docs/plan.md`, `docs/superpowers/specs/2026-10-28-cli-release-design.md`; CLI запланирован, не реализован |
 | История и исходный потребитель | `.claude/docs/idea.md`, `.claude/docs/source-project-context.md`; исторический контекст, не текущие требования |
@@ -30,6 +30,7 @@
 
 ## Сквозные ограничения
 
+- Примеры, подсказки и инструкции обезличены: `App`, `MyApp`, `example.org`, маски вроде `*-x86_64.apk`. Не переносить названия, пути, идентификаторы и реквизиты приложений-потребителей в интерфейс, документацию или тестовые примеры. Рабочие настройки самого UpdateManager и указания авторства библиотек — не примеры потребителя.
 - Настройки движка изменяет `ProjectService`. Создавай движок через `ProjectService.CreateEngine`: он перенаправляет `versionsPath` на `Versions/Windows`, иначе DLL считает `Android` номером версии. DLL движка не менять ради обхода.
 - `BaseDownloadURL` обязателен до сборки, нормализуется с завершающим `/`. «Проверить» реально скачивает патч клиентом, одной HTTP-пробы манифеста недостаточно.
 - Повтор этапа сбрасывает его и следующие этапы версии. Удаление версии не меняет сервер и `Output/`; откат требует последующей доставки и проверки. Выпущенные удалённые номера повторно не использовать на соответствующей платформе.

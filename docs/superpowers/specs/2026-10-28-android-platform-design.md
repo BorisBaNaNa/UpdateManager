@@ -1,7 +1,7 @@
 # Платформа Android — дизайн
 
 Статус: согласовано 2026-10-28, реализовано (выйдет в **2.1.0**).
-Источник требований: манифест владельца «UpdateManager: подпись файлов по маске» (Android-выпуск AlmaProfile).
+Источник требований: манифест владельца «UpdateManager: подпись файлов по маске» (Android-выпуск приложения-потребителя).
 
 Уточнение после выпуска 2.3.0: исходные решения о ручном вводе версии ниже описывают 2.1.
 В отдельном Android-проекте теперь читается `versionName` из JSON-манифестов сборки; при отсутствии
@@ -38,16 +38,16 @@
 - По версиям: `<AndroidSigned>`, `<AndroidDelivered>` (как `PatchedVersions`), `<AndroidVerified>` (как `VerifiedVersions`).
 - Старые проекты: Windows включён, Android выключен.
 
-## Настройки AlmaProfile (пример)
+## Настройки приложения (пример)
 
 | Что | Значение |
 |---|---|
-| Папка билда Android | `D:\AvaloniaProjects\AlmaProfile\build\android\` |
+| Папка билда Android | `D:\Projects\App\build\android\` |
 | Маска подписи | `latest.json` |
-| Не выкладывать | `AlmaProfile-x86_64.apk` |
+| Не выкладывать | `App-x86_64.apk` |
 | Канал | `AndroidPatch` (внутри `…/06a0…/`) |
 
-Итог на сервере: `AndroidPatch/AlmaProfile.apk`, `latest.json`, `latest.json.sig`.
+Итог на сервере: `AndroidPatch/App.apk`, `latest.json`, `latest.json.sig`.
 Проверка совместимости: подпись PKCS#1 v1.5 детерминирована — `latest.json.sig` от сборки 0.9.23 должен совпасть
 байт в байт с подписью UpdateManager тем же ключом.
 

@@ -133,7 +133,7 @@
                         <TextBlock Grid.Row="4" Classes="field" VerticalAlignment="Top" Margin="0,6,0,0"
                                    Text="Не выкладывать" />
                         <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding AndroidExcludeMasks}" AcceptsReturn="True"
-                                 Height="72" PlaceholderText="AlmaProfile-x86_64.apk" ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                                 Height="72" PlaceholderText="ignored_file.format" ScrollViewer.VerticalScrollBarVisibility="Auto" />
                         <TextBlock Grid.Row="5" Grid.Column="1" Margin="0,-2,0,0" Classes="detail"
                                    Text="Всё остальное из папки билда уходит в канал. Старое в канале после успешной выкладки удаляется." />
                     </Grid>

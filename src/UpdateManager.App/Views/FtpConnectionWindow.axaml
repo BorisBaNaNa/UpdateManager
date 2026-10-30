@@ -28,7 +28,7 @@
             <Grid Margin="0,14,0,0" ColumnDefinitions="140,*,16,Auto,10,96"
                   RowDefinitions="Auto,Auto,Auto" RowSpacing="10">
                 <TextBlock Grid.Row="0" Classes="field" Text="Хост" />
-                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Host}" PlaceholderText="192.168.0.100" />
+                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Host}" PlaceholderText="ftp.example.org" />
                 <TextBlock Grid.Row="0" Grid.Column="3" Classes="field" Text="Порт" />
                 <NumericUpDown Grid.Row="0" Grid.Column="5" ShowButtonSpinner="False"
                                Minimum="1" Maximum="65535" Increment="1" FormatString="0"

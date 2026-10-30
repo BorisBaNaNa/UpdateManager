@@ -21,8 +21,8 @@ public sealed class AndroidTests : IDisposable
         Directory.CreateDirectory(_keys);
         Directory.CreateDirectory(Path.Combine(_build, "manifests"));
         new RsaKeyManager().Generate(_keys);
-        File.WriteAllBytes(Path.Combine(_build, "AlmaProfile.apk"), new byte[] { 0x50, 0x4B, 3, 4, 0, 1, 2 });
-        File.WriteAllBytes(Path.Combine(_build, "AlmaProfile-x86_64.apk"), new byte[] { 0x50, 0x4B, 9 });
+        File.WriteAllBytes(Path.Combine(_build, "App.apk"), new byte[] { 0x50, 0x4B, 3, 4, 0, 1, 2 });
+        File.WriteAllBytes(Path.Combine(_build, "App-x86_64.apk"), new byte[] { 0x50, 0x4B, 9 });
         // Манифест с BOM и CRLF — подпись обязана быть по сырым байтам, без «нормализации» текста.
         File.WriteAllBytes(Path.Combine(_build, "latest.json"),
             Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes("{\r\n  \"version\": \"0.9.24\"\r\n}")).ToArray());
@@ -40,7 +40,7 @@ public sealed class AndroidTests : IDisposable
     [Theory]
     [InlineData("latest.json", "latest.json", true)]
     [InlineData("LATEST.JSON", "latest.json", true)]
-    [InlineData("AlmaProfile.apk", "*.apk", true)]
+    [InlineData("App.apk", "*.apk", true)]
     [InlineData("manifests/extra.json", "*.json", false)]
     [InlineData("manifests/extra.json", "manifests/*.json", true)]
     [InlineData(@"manifests\extra.json", "manifests/*.json", true)]
@@ -94,12 +94,12 @@ public sealed class AndroidTests : IDisposable
     [Fact]
     public void Package_ExcludesMasksAndForeignSignatures()
     {
-        File.WriteAllText(Path.Combine(_build, "AlmaProfile.apk.sig"), "старый чужой"); // apk не подписывается
+        File.WriteAllText(Path.Combine(_build, "App.apk.sig"), "старый чужой"); // apk не подписывается
         new FileSigner().Sign(_build, new[] { "latest.json" }, PrivateKey, PublicKey);
 
-        var files = AndroidPackage.Files(_build, new[] { "latest.json" }, new[] { "AlmaProfile-x86_64.apk" });
+        var files = AndroidPackage.Files(_build, new[] { "latest.json" }, new[] { "App-x86_64.apk" });
 
-        Assert.Equal(new[] { "AlmaProfile.apk", "latest.json", "latest.json.sig", "manifests/extra.json" }, files);
+        Assert.Equal(new[] { "App.apk", "latest.json", "latest.json.sig", "manifests/extra.json" }, files);
         Assert.Equal(new[] { "latest.json" }, AndroidPackage.SignedFiles(files, new[] { "latest.json" }));
     }
 
@@ -135,7 +135,7 @@ public sealed class AndroidTests : IDisposable
     {
         var signMasks = new[] { "latest.json" };
         new FileSigner().Sign(_build, signMasks, PrivateKey, PublicKey);
-        var files = AndroidPackage.Files(_build, signMasks, new[] { "AlmaProfile-x86_64.apk" });
+        var files = AndroidPackage.Files(_build, signMasks, new[] { "App-x86_64.apk" });
         var channel = Path.Combine(_root, "server", "AndroidPatch");
         new FolderDeliveryTarget(channel).Deliver(AndroidPackage.Stage(_build, files), Array.Empty<string>());
         var url = new Uri(channel + Path.DirectorySeparatorChar).AbsoluteUri;

@@ -1,6 +1,6 @@
 # Справочник по движку SimplePatchTool
 
-Извлечено из эталонного редакторного окна Unity `PatcherEditorLegacy.cs` (проект Interactive Book).
+Извлечено из эталонного редакторного окна Unity `PatcherEditorLegacy.cs` (исходный проект).
 DLL движка лежат в `lib/`:
 
 - `SimplePatchTool.dll` — namespace `SimplePatchToolCore` (`PatchCreator`, `PatchUpdater`,

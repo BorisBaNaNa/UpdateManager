@@ -1,6 +1,6 @@
 # lib/
 
-DLL движка SimplePatchTool, скопированы из Unity-проекта Interactive Book
+DLL движка SimplePatchTool, скопированы из исходного Unity-проекта
 (`Assets/Plugins/SimplePatchTool/DLL/`). Собраны под CLR 2.0, в .NET 10 грузятся как есть
 (проверяет `tests/UpdateManager.Tests/EnginePipelineTests`).
 

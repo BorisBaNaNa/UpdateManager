@@ -1,45 +1,30 @@
-# Контекст проекта-донора (Interactive Book)
+# Пример интеграции приложения-потребителя
 
-UpdateManager **универсален**, но первым потребителем будет Interactive Book (Unity, Windows).
-Здесь — как устроены обновления там, как образец интеграции. Это НЕ требования к инструменту,
-а пример раскладки и параметров.
+UpdateManager универсален. Ниже — обезличенный пример подготовки Windows-приложения на Unity.
+Это иллюстрация интеграции, а не требования к конкретному продукту или готовый пресет.
 
-## Сервер обновлений
+## Адрес обновлений
 
-Адрес НЕ хардкодится — в Unity он в ассете
-`Assets/Resources/UpdateModue/UpdateConnectionSettings.asset` (папка называется `UpdateModue`,
-без `l` — так в проекте). Это `ScriptableObject` типа `ConnectionSettings` с тремя полями:
+Настройки клиента задаются в самом приложении, например:
 
-- `RemoteUrl` — напр. `http://195.144.244.42:180`
-- `ProjectName` — напр. `InteractiveBook`
-- `VersionFolder` — напр. `Output`
+- `RemoteUrl` — `https://updates.example.org`.
+- `ProjectName` — `App`.
+- `VersionFolder` — `Output`.
 
-`GetURL()` собирает version-info URL: `{RemoteUrl}/{ProjectName}/{VersionFolder}/VersionInfo.info`.
-В DEVELOPMENT_BUILD сначала ищет папку проекта на локальных дисках (для локального теста).
+Полный адрес манифеста: `{RemoteUrl}/{ProjectName}/{VersionFolder}/VersionInfo.info`.
+Публичный адрес клиента и ссылки внутри манифеста должны указывать на один канал.
+Для тестового выпуска используйте отдельный адрес.
 
-Патч раскладывается в эту же расшаренную по HTTP папку: `VersionInfo.info`, `RepairPatch/`
-(файлы сжаты, расширение `.lzdat`), `InstallerPatch/`. → целевые значения для полей UpdateManager
-(`ProjectName`, `VersionFolder`/output, `BaseDownloadURL`).
+## Подготовка папки билда
 
-## Как готовится папка билда (build-хук)
+1. Соберите приложение в отдельную папку публикации.
+2. Запишите числовую версию в главный EXE или `App_vers.sptv`. Суффиксы вроде `-beta`
+   движком не принимаются; источник продуктовой версии и правила её роста определяет сборка.
+3. Вынесите пользовательские настройки, базы и документы за пределы папки программы.
+   Если старое приложение хранит их рядом с EXE, сначала проверьте безопасный перенос с резервной копией.
+4. Уберите вспомогательные файлы из публикации или задайте подходящие `IgnoredPaths`.
+   Конкретные исключения зависят от вашего приложения, готового списка для всех продуктов нет.
 
-`Assets/Scripts/Editor/VersionReminder.cs` (`VersionReminderBuildHook`) после Windows-сборки
-главного приложения:
-
-1. **Version holder**: пишет `InteractiveBook_vers.sptv` с числовой версией (всё после `-`
-   отбрасывается — патчер понимает только `X.Y.Z`). Из `PlayerSettings.bundleVersion`.
-2. **Удаляет `CameraConfig.json`** из `<Product>_Data/StreamingAssets/` — он специфичен для
-   машины клиента и не должен попасть в манифест патча (иначе перезатрёт калибровку при обновлении).
-   → кандидат в `IgnoredPaths`.
-3. **Докладывает сменщик пароля** (`Password Changer.exe` + `_Data`) из `Build/CleanPassCh` в
-   папку билда (без `StreamingAssets`).
-
-Итог: `rootPath` для `PatchCreator` = папка готового билда после этого хука.
-
-## Практические выводы для UpdateManager
-
-- В пресет Interactive Book: `ProjectName=InteractiveBook`, `VersionFolder=Output`,
-  `RemoteUrl/BaseDownloadURL` под сервер `http://195.144.244.42:180`.
-- `IgnoredPaths` должен уметь исключать `CameraConfig.json` и `*output_log.txt`.
-- Version holder `*.sptv` пишется отдельно (build-хуком Unity), к UpdateManager прямого
-  отношения не имеет — но полезно помнить про числовой формат версии.
+Готовая папка — источник билда UpdateManager. Папка проекта обновлений должна быть отдельной.
+Клиентская интеграция, проверки подписей и SelfPatcher описаны в
+[инструкции подключения](../../docs/UPDATE_SYSTEM_USER_GUIDE.md).
