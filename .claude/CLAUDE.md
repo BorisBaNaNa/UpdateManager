@@ -223,7 +223,8 @@ MVVM + доменный слой, домен не знает про UI:
 - [DESIGN.md](../DESIGN.md) — дизайн-система (мир «каталог»): токены, типографика, компоненты, диалоги.
 - [docs/plan.md](docs/plan.md) — план: что дальше (самообновление, CLI, Android, FTPS), что сделано, от чего отказались.
 - [docs/superpowers/specs/](../docs/superpowers/specs/) — спеки 2.0 (переезд на Avalonia), самообновления и CLI выпуска.
-- `lib/README` — откуда DLL движка. Справочника по API SimplePatchTool в репозитории нет.
+- `lib/README.md` — откуда DLL движка; [docs/engine-reference.md](docs/engine-reference.md) — справочник API и исторические примеры, которые нужно сверять с текущими DLL и кодом.
+- [AGENTS.md](../AGENTS.md) — краткая вводная и маршруты для Codex; подробная общая справка остаётся здесь.
 
 ## Правила работы (от пользователя)
 
