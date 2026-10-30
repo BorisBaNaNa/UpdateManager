@@ -8,7 +8,7 @@ namespace UpdateManager.App.Views;
 
 /// <summary>
 /// Markdown заметок выпуска в стиле «каталога» — ровно то подмножество, которым они пишутся:
-/// «## версия», «### раздел», «- пункт», абзацы, **жирный** и `код` внутри строки.
+/// «## версия», «### раздел», «- пункт», абзацы, **жирный**, `код` и HTTPS-ссылки внутри строки.
 /// Остальное выводится как обычный текст.
 /// </summary>
 public sealed partial class MarkdownView : StackPanel
@@ -100,14 +100,28 @@ public sealed partial class MarkdownView : StackPanel
     private static SelectableTextBlock Body() =>
         new() { TextWrapping = TextWrapping.Wrap, LineHeight = 21, Inlines = new InlineCollection() };
 
-    // **жирный** и `код` — единственная разметка внутри строки.
+    // **жирный**, `код` и именованные HTTPS-ссылки — разметка внутри строки.
     private static void AddInlines(InlineCollection inlines, string text)
     {
         foreach (var part in InlineToken().Split(text))
         {
             if (part.Length == 0)
                 continue;
-            if (part.Length > 4 && part.StartsWith("**") && part.EndsWith("**"))
+            var link = LinkToken().Match(part);
+            if (link.Success && Uri.TryCreate(link.Groups[2].Value, UriKind.Absolute, out var uri) &&
+                uri.Scheme == Uri.UriSchemeHttps)
+            {
+                var button = new HyperlinkButton
+                {
+                    Content = new TextBlock { Text = link.Groups[1].Value, TextWrapping = TextWrapping.Wrap },
+                    NavigateUri = uri,
+                    Padding = new Thickness(0),
+                    VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+                };
+                ToolTip.SetTip(button, uri.AbsoluteUri);
+                inlines.Add(new InlineUIContainer { Child = button });
+            }
+            else if (part.Length > 4 && part.StartsWith("**") && part.EndsWith("**"))
                 inlines.Add(new Run(part[2..^2]) { FontWeight = FontWeight.SemiBold });
             else if (part.Length > 2 && part.StartsWith('`') && part.EndsWith('`'))
                 inlines.Add(new Run(part[1..^1]) { FontFamily = CodeFont, FontSize = 13 });
@@ -116,6 +130,9 @@ public sealed partial class MarkdownView : StackPanel
         }
     }
 
-    [GeneratedRegex(@"(\*\*[^*]+\*\*|`[^`]+`)")]
+    [GeneratedRegex(@"(\[[^\]]+\]\(https://[^\s)]+\)|\*\*[^*]+\*\*|`[^`]+`)")]
     private static partial Regex InlineToken();
+
+    [GeneratedRegex(@"^\[([^\]]+)\]\((https://[^\s)]+)\)$")]
+    private static partial Regex LinkToken();
 }

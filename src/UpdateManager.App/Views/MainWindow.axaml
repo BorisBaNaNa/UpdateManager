@@ -130,6 +130,8 @@
                           Command="{Binding SetThemeCommand}" CommandParameter="{x:Static svc:AppTheme.System}" />
             </MenuItem>
             <MenuItem Header="Справка">
+                <MenuItem Header="Как подключить обновления…" Command="{Binding ShowUpdateGuideCommand}" />
+                <Separator />
                 <MenuItem Header="Что нового…" Command="{Binding SelfUpdate.ShowReleaseNotesCommand}" />
                 <MenuItem Header="Проверить обновления…" Command="{Binding SelfUpdate.CheckCommand}" />
             </MenuItem>

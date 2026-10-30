@@ -36,6 +36,10 @@
     <AvaloniaResource Include="Assets\Fonts\*.ttf" />
     <!-- Заметки выпусков (тот же текст, что в GitHub Release) — окно «Что нового» (ReleaseNotesService). -->
     <EmbeddedResource Include="..\..\docs\releases\*.md" LogicalName="ReleaseNotes.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\docs\UPDATE_SYSTEM_USER_GUIDE.md" LogicalName="UpdateSystem.UserGuide.md" />
+    <Content Include="..\..\docs\UPDATE_SYSTEM_*_GUIDE.md" Link="docs\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Assets\Fonts\OFL.txt" Link="licenses\GolosText-OFL.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

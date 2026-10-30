@@ -1,0 +1,109 @@
+<v:DialogWindow xmlns="https://github.com/avaloniaui"
+                xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                xmlns:vm="using:UpdateManager.App.ViewModels"
+                xmlns:v="using:UpdateManager.App.Views"
+                x:Class="UpdateManager.App.Views.UpdateGuideWindow"
+                x:DataType="vm:UpdateGuideViewModel"
+                Title="Как подключить обновления" Width="1000" Height="720"
+                MinWidth="720" MinHeight="520" WindowStartupLocation="CenterOwner">
+    <Window.Styles>
+        <Style Selector="HyperlinkButton">
+            <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
+        </Style>
+        <Style Selector="ToggleButton.guide-topic">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0,16" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        </Style>
+        <Style Selector="ToggleButton.guide-topic:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+        </Style>
+        <Style Selector="ToggleButton.guide-topic:checked">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
+        </Style>
+        <Style Selector="ToggleButton.guide-topic:checked:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+        </Style>
+        <Style Selector="ToggleButton.guide-topic:checked /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
+        </Style>
+        <Style Selector="Button.guide-step">
+            <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,1,0" />
+            <Setter Property="Padding" Value="18,16" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+        </Style>
+        <Style Selector="Button.guide-step.selected">
+            <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.guide-step:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SelectedBrush}" />
+        </Style>
+    </Window.Styles>
+    <DockPanel>
+        <Border DockPanel.Dock="Bottom" Classes="footer">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="10">
+                <Button Classes="quiet" Content="Документы" Command="{Binding OpenDocumentsCommand}"
+                        ToolTip.Tip="Открыть инструкции для пользователя и агента" />
+                <TextBlock Grid.Column="1" Classes="muted" Text="{Binding Position}" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                <Button Grid.Column="2" Classes="quiet" Content="Назад" IsEnabled="{Binding CanGoBack}" Command="{Binding PreviousCommand}" />
+                <Button Grid.Column="3" Classes="quiet" Content="Закрыть" IsVisible="{Binding !IsLast}" Command="{Binding DismissCommand}" IsCancel="True" />
+                <Button Grid.Column="4" Classes="primary" Content="{Binding NextText}" Command="{Binding NextCommand}" />
+            </Grid>
+        </Border>
+        <StackPanel DockPanel.Dock="Top" Margin="32,24,32,20" Spacing="6">
+            <TextBlock Text="Как подключить обновления" FontSize="23" FontWeight="SemiBold" />
+            <TextBlock Classes="muted" Text="Первый выпуск по шагам. Руководство ничего не меняет в проекте." TextWrapping="Wrap" />
+        </StackPanel>
+        <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,1">
+            <ItemsControl ItemsSource="{Binding Steps}">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:GuideStep">
+                        <Button Classes="guide-step" Classes.selected="{Binding IsSelected}"
+                                Command="{Binding $parent[v:UpdateGuideWindow].((vm:UpdateGuideViewModel)DataContext).SelectStepCommand}"
+                                CommandParameter="{Binding}">
+                            <TextBlock Text="{Binding Title}" TextWrapping="Wrap" />
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Border>
+        <ScrollViewer x:Name="GuideScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="40,28,40,32" MaxWidth="760" HorizontalAlignment="Stretch" Spacing="12">
+                <TextBlock Text="{Binding SelectedStep.Heading}" FontSize="28" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding SelectedStep.Description}" TextWrapping="Wrap" Margin="0,0,0,8" />
+                <ItemsControl ItemsSource="{Binding SelectedStep.Topics}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:GuideTopic">
+                            <Border BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="0,1,0,0" Margin="0,0,0,10">
+                                <StackPanel>
+                                    <ToggleButton Classes="guide-topic" IsChecked="{Binding IsExpanded}"
+                                                  AutomationProperties.Name="{Binding Title}">
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <TextBlock Text="{Binding Title}" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                            <Path Grid.Column="1" Width="12" Height="6" Margin="16,0,0,0" VerticalAlignment="Center"
+                                                  Stretch="Uniform" Stroke="{DynamicResource InkBrush}" StrokeThickness="1.5"
+                                                  IsVisible="{Binding !IsExpanded}" Data="M 0,0 L 6,6 L 12,0" />
+                                            <Path Grid.Column="1" Width="12" Height="6" Margin="16,0,0,0" VerticalAlignment="Center"
+                                                  Stretch="Uniform" Stroke="{DynamicResource InkBrush}" StrokeThickness="1.5"
+                                                  IsVisible="{Binding IsExpanded}" Data="M 0,6 L 6,0 L 12,6" />
+                                        </Grid>
+                                    </ToggleButton>
+                                    <v:MarkdownView Markdown="{Binding Markdown}" IsVisible="{Binding IsExpanded}" Margin="0,0,0,16" />
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</v:DialogWindow>

@@ -57,6 +57,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public SelfUpdateViewModel SelfUpdate { get; }
 
+    [RelayCommand]
+    private Task ShowUpdateGuide() => _dialogs.ShowUpdateGuideAsync();
+
     /// <summary>Окно просит закрыть приложение (меню «Выход»).</summary>
     public event EventHandler? ExitRequested;
 

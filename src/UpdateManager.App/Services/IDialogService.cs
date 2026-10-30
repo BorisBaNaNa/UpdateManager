@@ -38,5 +38,8 @@ public interface IDialogService
     /// <summary>Окно «Что нового»: заметки выпусков (от новых к старым) и строка под заголовком.</summary>
     Task ShowReleaseNotesAsync(IReadOnlyList<ReleaseNote> notes, string subtitle);
 
+    /// <summary>Немодальное руководство: можно читать рядом с настройками проекта.</summary>
+    Task ShowUpdateGuideAsync();
+
     void OpenInExplorer(string path);
 }

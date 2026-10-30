@@ -21,6 +21,7 @@
 | Доставка, FTP, RSA | `.claude/CLAUDE.md`, `Core/Delivery`, `Core/Security`, `Core/Operations/AndroidChannelVerifier.cs` |
 | UI, дизайн, жесты, headless-проверки | `PRODUCT.md`, `DESIGN.md`, `.impeccable/surfaces/`, skill `.agents/skills/impeccable/SKILL.md`, `tests/UpdateManager.Tests/HeadlessUi.cs` |
 | Самообновление | `docs/superpowers/specs/2026-10-27-self-update-design.md`, `Core/SelfUpdate`, `.claude/CLAUDE.md` |
+| Подключение обновлений к приложению-потребителю, инструкция | `docs/UPDATE_SYSTEM_USER_GUIDE.md`, `docs/UPDATE_SYSTEM_AGENT_GUIDE.md`; ссылки на исходники донора требуют отдельного репозитория |
 | Выпуск, версия, заметки, GitHub Release | skill `.agents/skills/release-updatemanager/SKILL.md`, `scripts/release.ps1`, `docs/releases/` |
 | Планы / CLI umcli | `.claude/docs/plan.md`, `docs/superpowers/specs/2026-10-28-cli-release-design.md`; CLI запланирован, не реализован |
 | История и исходный потребитель | `.claude/docs/idea.md`, `.claude/docs/source-project-context.md`; исторический контекст, не текущие требования |

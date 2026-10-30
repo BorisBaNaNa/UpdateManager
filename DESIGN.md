@@ -264,6 +264,16 @@ One grammar for every modal window.
 ### Release Notes («Что нового»)
 A reading surface inside the dialog grammar: Title heading «Что нового» with a muted line under it («Обновлено до 2.0.1» / «Версия 2.0.1»), a hairline, then releases newest first, separated by hairlines. Each release opens with its version at 32px regular, tabular, -0.8 tracking (a smaller echo of the display number, never larger); `###` sections use the Title heading; bullets are an en dash in Muted in an 18px column; inline code is Cascadia Mono 13px. Text column capped at 640px for reading. One primary «Закрыть» in the footer.
 
+### Руководство подключения обновлений
+
+Read surface внутри существующего Catalog Sleeve: немодальное окно 1000×720 (минимум 720×520),
+три равных этапа сверху, одна колонка чтения до 760px, раскрываемые темы с тонкими верхними линиями.
+Выбранный этап — Selected Grey и SemiBold; раскрытие темы — нейтральный заголовок и контурная стрелка,
+без цветного состояния Fluent. Переключение этапа мгновенно возвращает прокрутку к началу.
+Footer: «Документы», позиция, «Назад», «Закрыть» и одна Primary следующего этапа; на последнем
+этапе Primary закрывает окно. HTTPS-ссылки подчёркнуты, нейтральны и открываются в браузере.
+Содержание берётся из одного Markdown-документа, текст можно выделять; инструкция не меняет проект.
+
 ### Stock Chrome
 The parts Fluent draws itself carry the palette too (overridden by resource key in `App.axaml`, per theme):
 - **Focus ring:** keyboard focus only; a 2px Ink outline with a 1px Ground gap inside (`SystemControlFocusVisualPrimaryBrush` / `SecondaryBrush`), square.

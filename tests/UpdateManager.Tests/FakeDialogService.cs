@@ -31,6 +31,12 @@ public sealed class FakeDialogService : IDialogService
     }
 
     public bool IsBusy => false;
+    public int UpdateGuideShown { get; private set; }
+    public Task ShowUpdateGuideAsync()
+    {
+        UpdateGuideShown++;
+        return Task.CompletedTask;
+    }
 
     public Task<string?> PickFolderAsync(string title) => Task.FromResult(Folders.Dequeue());
 

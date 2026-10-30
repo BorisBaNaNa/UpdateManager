@@ -18,6 +18,7 @@ public sealed class DialogService : IDialogService
     private readonly Func<Window?> _mainWindow;
     private readonly List<Window> _open = new();
     private int _pickers; // открыт системный диалог выбора файла/папки
+    private UpdateGuideWindow? _guide;
 
     public DialogService(Func<Window?> mainWindow)
     {
@@ -157,6 +158,19 @@ public sealed class DialogService : IDialogService
 
     public Task ShowReleaseNotesAsync(IReadOnlyList<ReleaseNote> notes, string subtitle) =>
         ShowAsync(new ReleaseNotesWindow { DataContext = new ReleaseNotesViewModel(notes, subtitle) });
+
+    public Task ShowUpdateGuideAsync()
+    {
+        if (_guide != null)
+            _guide.Activate();
+        else
+        {
+            _guide = new UpdateGuideWindow { DataContext = new UpdateGuideViewModel(this) };
+            _guide.Closed += (_, _) => _guide = null;
+            _guide.Show(_mainWindow() ?? throw new InvalidOperationException("Главное окно ещё не создано."));
+        }
+        return Task.CompletedTask;
+    }
 
     public void OpenInExplorer(string path)
     {
