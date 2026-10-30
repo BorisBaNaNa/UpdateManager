@@ -10,7 +10,7 @@ related_targets: ["src/UpdateManager.App/App.axaml"]
 Mode: Operate. Desktop window (Avalonia), min 720×520, light + dark + system theme. Russian UI.
 
 ## Job
-A developer (or one of two colleagues) opens the tool every few days or weeks to ship a release. They have forgotten the step order; one look must say where the latest release stands and what to press next. Releases may carry several platforms at once (Windows now; Android later: build apk → files (version, license) → delivery → verification, no patch).
+A developer (or one of two colleagues) opens the tool every few days or weeks to ship a release. They have forgotten the step order; one look must say where the latest release stands and what to press next. Releases may carry Windows and Android together or separately. Android uses build → optional file signing or version recording → delivery → verification, without patches. Android-only builds read versionName from JSON manifests, with manual fallback; combined releases use the Windows version. The quiet rescan button beside «ВЫПУСКИ» rereads both build sources.
 
 ## Scope
 Main window: start screen (no project: recent projects + create/open) and project screen (release catalog + selected release). Other windows (settings, delivery, FTP, operation log) are out of scope for this round and inherit the tokens only.
@@ -24,5 +24,4 @@ FORM: Saville / Factory catalog sleeve (challenger, chosen by the user over the 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 
 ## Open decisions
-- Android stages and platform tags are modelled (PlatformTrack per platform) but only Windows is produced today.
-- Re-run actions (rebuild same version, redeliver) live in the «Выпуск» menu, not on the surface.
+- Android stages and platform switching are implemented. Re-run actions are available on actionable stages of the current release and in the «Выпуск» menu; archive stages are read-only.
